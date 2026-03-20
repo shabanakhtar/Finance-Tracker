@@ -1,6 +1,5 @@
 import csv
 
-
 def add_transaction():
     amount = input("Enter amount: ")
     category = input("Enter category (food, rent, etc): ")
@@ -69,13 +68,49 @@ def calculate_balance():
     except FileNotFoundError:
         print("No data found.\n")
 
+def category_summary():
+    summary = {}
+
+    try:
+        with open("data.csv", mode="r") as file:
+            reader = csv.reader(file)
+
+            for i, row in enumerate(reader):
+                if i == 0 and row == ["amount", "category", "type"]:
+                    continue
+
+                if len(row) < 3:
+                    continue
+
+                try:
+                    amount = float(row[0])
+                except ValueError:
+                    continue
+
+                category = row[1].strip().lower()
+
+                if category in summary:
+                    summary[category] += amount
+                else:
+                    summary[category] = amount
+
+        print("\nCategory Summary:")
+        for category, total in summary.items():
+            print(f"{category}: {total}")
+        print()
+
+    except FileNotFoundError:
+        print("No data found.\n")
+
+
 
 def main():
     while True:
         print("1. Add Transaction")
         print("2. View Transactions")
         print("3. Show Balance")
-        print("4. Exit")
+        print("4. Category Summary")
+        print("5. Exit")
 
         choice = input("Choose an option: ").strip()
 
@@ -86,6 +121,8 @@ def main():
         elif choice == "3":
             calculate_balance()
         elif choice == "4":
+            category_summary()
+        elif choice == "5":
             print("Goodbye!")
             break
         else:
