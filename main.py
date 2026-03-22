@@ -3,6 +3,35 @@ import csv
 budgets = {}
 
 
+def load_data():
+    data = []
+
+    try:
+        with open("data.csv", "r") as file:
+            reader = csv.reader(file)
+
+            for i, row in enumerate(reader):
+                if i == 0:
+                    continue
+                if len(row) < 4:
+                    continue
+
+                try:
+                    data.append({
+                        "amount": float(row[0]),
+                        "category": row[1].lower(),
+                        "type": row[2].lower(),
+                        "date": row[3]
+                    })
+                except:
+                    continue
+
+    except:
+        pass
+
+    return data
+
+
 def add_transaction():
     amount = input("Enter amount: ")
     category = input("Enter category (food, rent, etc): ").strip().lower()
@@ -43,80 +72,46 @@ def calculate_balance():
     total_income = 0
     total_expense = 0
 
-    try:
-        with open("data.csv", mode="r") as file:
-            reader = csv.reader(file)
+    data = load_data()
 
-            for i, row in enumerate(reader):
-                if i == 0 and row == ["amount", "category", "type", "date"]:
-                    continue
+    for row in data:
+        if row["type"] == "income":
+            total_income += row["amount"]
+        elif row["type"] == "expense":
+            total_expense += row["amount"]
 
-                if len(row) < 4:
-                    continue
+    balance = total_income - total_expense
 
-                try:
-                    amount = float(row[0])
-                except ValueError:
-                    continue
-
-                type_ = row[2].strip().lower()
-
-                if type_ == "income":
-                    total_income += amount
-                elif type_ == "expense":
-                    total_expense += amount
-
-        balance = total_income - total_expense
-
-        print("\nFinancial Summary:")
-        print(f"Total Income: {total_income}")
-        print(f"Total Expense: {total_expense}")
-        print(f"Balance: {balance}\n")
-
-    except FileNotFoundError:
-        print("No data found.\n")
+    print("\nFinancial Summary:")
+    print(f"Total Income: {total_income}")
+    print(f"Total Expense: {total_expense}")
+    print(f"Balance: {balance}\n")
 
 
 def category_summary():
     summary = {}
 
-    try:
-        with open("data.csv", mode="r") as file:
-            reader = csv.reader(file)
+    data = load_data()
 
-            for i, row in enumerate(reader):
-                if i == 0 and row == ["amount", "category", "type", "date"]:
-                    continue
+    for row in data:
+        category = row["category"]
+        type_ = row["type"]
+        amount = row["amount"]
 
-                if len(row) < 4:
-                    continue
+        if category not in summary:
+            summary[category] = {"income": 0, "expense": 0}
 
-                try:
-                    amount = float(row[0])
-                except ValueError:
-                    continue
+        if type_ == "income":
+            summary[category]["income"] += amount
+        elif type_ == "expense":
+            summary[category]["expense"] += amount
 
-                category = row[1].strip().lower()
-                type_ = row[2].strip().lower()
+    print("\nCategory Summary:")
+    for category, data in summary.items():
+        print(f"{category} -> income: {data['income']} | expense: {data['expense']}")
+    print()
 
-                if category not in summary:
-                    summary[category] = {"income": 0, "expense": 0}
-
-                if type_ == "income":
-                    summary[category]["income"] += amount
-                elif type_ == "expense":
-                    summary[category]["expense"] += amount
-
-        print("\nCategory Summary:")
-        for category, data in summary.items():
-            print(f"{category} -> income: {data['income']} | expense: {data['expense']}")
-        print()
-
-        return summary
-
-    except FileNotFoundError:
-        print("No data found.\n")
-        return {}
+    return summary
 
 
 def set_budget():
@@ -144,6 +139,84 @@ def check_budget(summary):
     print()
 
 
+def monthly_summary():
+    summary = {}
+
+    data = load_data()
+
+    for row in data:
+        month = row["date"][:7]
+
+        if month not in summary:
+            summary[month] = {"income": 0, "expense": 0}
+
+        if row["type"] == "income":
+            summary[month]["income"] += row["amount"]
+        else:
+            summary[month]["expense"] += row["amount"]
+
+    print("\nMonthly Summary:")
+    for m, data in summary.items():
+        print(f"{m} -> income: {data['income']} | expense: {data['expense']}")
+    print()
+
+
+def top_categories():
+    totals = {}
+
+    data = load_data()
+
+    for row in data:
+        if row["type"] != "expense":
+            continue
+
+        category = row["category"]
+        amount = row["amount"]
+
+        if category not in totals:
+            totals[category] = 0
+
+        totals[category] += amount
+
+    sorted_totals = sorted(totals.items(), key=lambda x: x[1], reverse=True)
+
+    print("\nTop Spending Categories:")
+    for cat, val in sorted_totals[:3]:
+        print(f"{cat}: {val}")
+    print()
+
+
+def expense_breakdown():
+    totals = {}
+    total_expense = 0
+
+    data = load_data()
+
+    for row in data:
+        if row["type"] != "expense":
+            continue
+
+        category = row["category"]
+        amount = row["amount"]
+
+        total_expense += amount
+
+        if category not in totals:
+            totals[category] = 0
+
+        totals[category] += amount
+
+    if total_expense == 0:
+        print("No expenses found.\n")
+        return
+
+    print("\nExpense Breakdown (%):")
+    for cat, val in totals.items():
+        percent = (val / total_expense) * 100
+        print(f"{cat}: {percent:.2f}%")
+    print()
+
+
 def main():
     while True:
         print("1. Add Transaction")
@@ -151,7 +224,10 @@ def main():
         print("3. Show Balance")
         print("4. Category Summary")
         print("5. Set Budget")
-        print("6. Exit")
+        print("6. Monthly Summary")
+        print("7. Top Spending")
+        print("8. Expense Breakdown")
+        print("9. Exit")
 
         choice = input("Choose an option: ").strip()
 
@@ -167,6 +243,12 @@ def main():
         elif choice == "5":
             set_budget()
         elif choice == "6":
+            monthly_summary()
+        elif choice == "7":
+            top_categories()
+        elif choice == "8":
+            expense_breakdown()
+        elif choice == "9":
             print("Goodbye!")
             break
         else:
