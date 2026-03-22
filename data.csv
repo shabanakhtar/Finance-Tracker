@@ -1,4 +1,4 @@
-Amount,Category,Type
+amount,category,type,date
 5000,food,expense
 25000,rent,expense
 50000,pay,income
