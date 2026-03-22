@@ -12,11 +12,9 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 def generate_insights(data, summary):
     insights = []
 
-    # Rule 1: Overspending
     if summary["expense"] > summary["income"]:
-        insights.append("You are spending more than you earn.")
+        insights.append("You're currently spending more than you earn.")
 
-    # Rule 2: Highest Spending Category
     category_totals = {}
 
     for row in data:
@@ -26,21 +24,18 @@ def generate_insights(data, summary):
 
     if category_totals:
         top_category = max(category_totals, key=category_totals.get)
-        insights.append(f"Your highest spending category is {top_category}.")
+        insights.append(f"Most of your money is going into {top_category}.")
 
-    # Rule 3: Negative balance
     if summary["balance"] < 0:
-        insights.append("Your balance is negative. You should reduce expenses immediately.")
+        insights.append("Your balance is negative right now, which means you're running at a loss.")
 
-    # Rule 4: High spending ratio warning
     if summary["income"] > 0:
         ratio = summary["expense"] / summary["income"]
         if ratio > 0.8:
-            insights.append("You are spending a very high percentage of your income.")
+            insights.append("A large portion of your income is being spent, which could become risky over time.")
 
-    # Rule 5: Low activity warning
     if len(data) < 5:
-        insights.append("Very few transactions recorded. Insights may not be accurate.")
+        insights.append("There isn't much data yet, so the analysis might not be fully accurate.")
 
     return insights
 
@@ -69,53 +64,37 @@ def ask_ai(user_input, data):
     summary = calculate_balance(data)
     category_data = category_summary(data)
     insights = generate_insights(data, summary)
-
-    # ✅ MISSING LINE (CRITICAL FIX)
     personality = detect_spending_personality(summary)
 
-    # Format category data
     category_text = "\n".join(
         [f"{k}: income={v['income']}, expense={v['expense']}" for k, v in category_data.items()]
     )
 
-    # Format insights
     insights_text = "\n".join(insights)
 
     prompt = f"""
-You are an intelligent personal finance advisor for a student.
+You're a personal finance guide helping a student understand their money better.
 
-Your job:
-- Analyze real financial data
-- Identify patterns and risks
-- Give practical, specific advice
+Here’s their current situation:
 
-User Financial Summary:
 Income: {summary['income']}
 Expense: {summary['expense']}
 Balance: {summary['balance']}
 
-Spending Personality:
+Spending style:
 {personality}
 
-Category Breakdown:
+Where their money is going:
 {category_text}
 
-Detected Insights:
+What stands out:
 {insights_text}
 
-User Question:
+Their question:
 {user_input}
 
-Instructions:
-- Be specific to the data
-- Avoid generic advice
-- Explain what is happening
-- Suggest 2–3 clear actions the user can take immediately
-
-Format your answer as:
-1. Analysis
-2. Problems
-3. Actionable Advice
+Explain what's going on in simple terms, point out any problems, and give a few practical steps they can start with right away.
+Keep it clear, specific, and helpful.
 """
 
     response = client.models.generate_content(
