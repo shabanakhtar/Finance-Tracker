@@ -125,7 +125,15 @@ def main():
             print()
 
         elif choice == "9":
-            ask_ai()
+            data = load_data()
+            user_input = input("Ask AI: ")
+
+            response = ask_ai(user_input, data)
+
+            print("\nAI Response:")
+            print(response)
+            print()
+            
         elif choice == "10":
             print("Goodbye!")
             break
