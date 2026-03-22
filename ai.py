@@ -1,8 +1,9 @@
 from google import genai
 import os
 from dotenv import load_dotenv
-
+from analytics import detect_patterns
 from analytics import calculate_balance, category_summary
+from analytics import calculate_financial_score
 
 load_dotenv()
 
@@ -66,6 +67,11 @@ def ask_ai(user_input, data):
     insights = generate_insights(data, summary)
     personality = detect_spending_personality(summary)
 
+    patterns = detect_patterns(data)
+    patterns_text = "\n".join(patterns)
+
+    score = calculate_financial_score(data)
+
     category_text = "\n".join(
         [f"{k}: income={v['income']}, expense={v['expense']}" for k, v in category_data.items()]
     )
@@ -92,6 +98,12 @@ What stands out:
 
 Their question:
 {user_input}
+
+Spending Patterns:
+{patterns_text}
+
+Financial Health Score:
+{score}/100
 
 Explain what's going on in simple terms, point out any problems, and give a few practical steps they can start with right away.
 Keep it clear, specific, and helpful.
