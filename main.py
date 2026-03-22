@@ -1,15 +1,19 @@
 import csv
 
+budgets = {}
+
+
 def add_transaction():
     amount = input("Enter amount: ")
-    category = input("Enter category (food, rent, etc): ")
+    category = input("Enter category (food, rent, etc): ").strip().lower()
     type_ = input("Type (income/expense): ").strip().lower()
+    date = input("Enter date (YYYY-MM-DD): ")
 
     with open("data.csv", mode="a", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow([amount, category, type_])
+        writer.writerow([amount, category, type_, date])
 
-    print("Transaction added successfully.\n")
+    print("Transaction added.\n")
 
 
 def view_transactions():
@@ -20,19 +24,20 @@ def view_transactions():
             print("\nTransactions:")
 
             for i, row in enumerate(reader):
-                # Skip header safely
-                if i == 0 and row == ["amount", "category", "type"]:
+                if i == 0 and row == ["amount", "category", "type", "date"]:
                     continue
 
-                if len(row) < 3:
+                if len(row) < 4:
                     continue
 
-                print(f"Amount: {row[0]}, Category: {row[1]}, Type: {row[2]}")
+                amount, category, type_, date = row
+                print(f"{category} | {amount} | {type_} | {date}")
 
             print()
 
     except FileNotFoundError:
         print("No transactions found.\n")
+
 
 def calculate_balance():
     total_income = 0
@@ -43,9 +48,10 @@ def calculate_balance():
             reader = csv.reader(file)
 
             for i, row in enumerate(reader):
-                if i == 0 and row == ["amount", "category", "type"]:
+                if i == 0 and row == ["amount", "category", "type", "date"]:
                     continue
-                if len(row) < 3:
+
+                if len(row) < 4:
                     continue
 
                 try:
@@ -61,12 +67,15 @@ def calculate_balance():
                     total_expense += amount
 
         balance = total_income - total_expense
-        print(f"\nTotal Income: {total_income}")
+
+        print("\nFinancial Summary:")
+        print(f"Total Income: {total_income}")
         print(f"Total Expense: {total_expense}")
         print(f"Balance: {balance}\n")
 
     except FileNotFoundError:
         print("No data found.\n")
+
 
 def category_summary():
     summary = {}
@@ -76,10 +85,10 @@ def category_summary():
             reader = csv.reader(file)
 
             for i, row in enumerate(reader):
-                if i == 0 and row == ["amount", "category", "type"]:
+                if i == 0 and row == ["amount", "category", "type", "date"]:
                     continue
 
-                if len(row) < 3:
+                if len(row) < 4:
                     continue
 
                 try:
@@ -88,20 +97,51 @@ def category_summary():
                     continue
 
                 category = row[1].strip().lower()
+                type_ = row[2].strip().lower()
 
-                if category in summary:
-                    summary[category] += amount
-                else:
-                    summary[category] = amount
+                if category not in summary:
+                    summary[category] = {"income": 0, "expense": 0}
+
+                if type_ == "income":
+                    summary[category]["income"] += amount
+                elif type_ == "expense":
+                    summary[category]["expense"] += amount
 
         print("\nCategory Summary:")
-        for category, total in summary.items():
-            print(f"{category}: {total}")
+        for category, data in summary.items():
+            print(f"{category} -> income: {data['income']} | expense: {data['expense']}")
         print()
+
+        return summary
 
     except FileNotFoundError:
         print("No data found.\n")
+        return {}
 
+
+def set_budget():
+    category = input("Enter category: ").strip().lower()
+    amount = float(input("Enter budget amount: "))
+
+    budgets[category] = amount
+    print("Budget saved.\n")
+
+
+def check_budget(summary):
+    print("\nBudget Status:")
+
+    for category, data in summary.items():
+        spent = data["expense"]
+
+        if category in budgets:
+            limit = budgets[category]
+
+            if spent > limit:
+                print(f"{category}: OVER by {spent - limit}")
+            else:
+                print(f"{category}: within budget")
+
+    print()
 
 
 def main():
@@ -110,7 +150,8 @@ def main():
         print("2. View Transactions")
         print("3. Show Balance")
         print("4. Category Summary")
-        print("5. Exit")
+        print("5. Set Budget")
+        print("6. Exit")
 
         choice = input("Choose an option: ").strip()
 
@@ -121,8 +162,11 @@ def main():
         elif choice == "3":
             calculate_balance()
         elif choice == "4":
-            category_summary()
+            summary = category_summary()
+            check_budget(summary)
         elif choice == "5":
+            set_budget()
+        elif choice == "6":
             print("Goodbye!")
             break
         else:
