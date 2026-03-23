@@ -1,9 +1,8 @@
 from google import genai
 import os
 from dotenv import load_dotenv
-from analytics import detect_patterns
-from analytics import calculate_balance, category_summary
-from analytics import calculate_financial_score
+from analytics import detect_patterns, calculate_balance, category_summary, calculate_financial_score, analyze_budget, category_trends
+from budget import get_budgets
 
 load_dotenv()
 
@@ -70,7 +69,14 @@ def ask_ai(user_input, data):
     patterns = detect_patterns(data)
     patterns_text = "\n".join(patterns)
 
+    budgets = get_budgets()
+    budget_insights = analyze_budget(data, budgets)
+    budget_text = "\n".join(budget_insights) if budget_insights else "No budgets set."
+
     score = calculate_financial_score(data)
+
+    trends = category_trends(data)
+    trends_text = "\n".join(trends) if trends else "Not enough data for category trends."
 
     category_text = "\n".join(
         [f"{k}: income={v['income']}, expense={v['expense']}" for k, v in category_data.items()]
@@ -79,34 +85,67 @@ def ask_ai(user_input, data):
     insights_text = "\n".join(insights)
 
     prompt = f"""
-You're a personal finance guide helping a student understand their money better.
+You're a personal finance assistant helping a student understand their finances clearly and practically.
 
-Here’s their current situation:
+Here is their current situation:
 
 Income: {summary['income']}
 Expense: {summary['expense']}
 Balance: {summary['balance']}
 
-Spending style:
+Spending Style:
 {personality}
 
-Where their money is going:
+Category Breakdown:
 {category_text}
 
-What stands out:
+Key Insights:
 {insights_text}
-
-Their question:
-{user_input}
 
 Spending Patterns:
 {patterns_text}
 
+Category Trends:
+{trends_text}
+
 Financial Health Score:
 {score}/100
 
-Explain what's going on in simple terms, point out any problems, and give a few practical steps they can start with right away.
-Keep it clear, specific, and helpful.
+Budget Status:
+{budget_text}
+
+User Question:
+{user_input}
+
+Your task:
+- Explain what’s going on in simple, clear terms
+- Identify any problems or risks
+- Suggest practical steps the user can take
+
+Guidelines:
+- Base your response strictly on the provided data, insights, patterns, trends, budget status, and financial score
+- Use the financial score to judge overall financial health
+- Highlight overspending using the budget information and suggest specific corrections
+- Do NOT introduce external rules, benchmarks, or assumptions
+- If something is not supported by the data, do not mention it
+- Keep the response clear, direct, and helpful
+
+Response Style:
+- Adjust the length based on the question:
+  • If the question is simple → give a short, direct answer
+  • If the question is broad → give a more detailed explanation
+- Match your tone to the financial score:
+  • Low score → more serious and corrective
+  • Medium score → balanced and guiding
+  • High score → positive and encouraging
+
+Structure:
+- If detailed response is needed:
+  1. What’s happening
+  2. Main issues
+  3. What to do next
+- Otherwise:
+  Give a concise and focused answer
 """
 
     response = client.models.generate_content(
