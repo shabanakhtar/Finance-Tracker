@@ -35,10 +35,6 @@ def view_transactions():
         print("No transactions found.\n")
 
 
-
-
-
-
 def get_overall_summary():
     data = load_data()
 
