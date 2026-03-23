@@ -23,3 +23,7 @@ def check_budget(summary):
                 print(f"{category}: within budget")
 
     print()
+
+# To give AI access to budgets in other modules
+def get_budgets():
+    return budgets
