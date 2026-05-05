@@ -179,7 +179,7 @@ def detect_patterns(data):
         elif last_value < prev_value:
             patterns.append("Spending has gone down compared to last month.")
 
-    # Checking for category patterns - if one category is much higher than average, it could indicate a new habit or issue(anomaly)
+    # Checking for category patterns - if one category is much higher than average, it could indicate a new habit or issue(anomoly)
     if category_expense:
         average = sum(category_expense.values()) / len(category_expense)
 
@@ -228,7 +228,7 @@ def calculate_financial_score(data):
         if max_diff > avg * 0.5:
             score -= 10
 
-    # 3. To check data reliability
+    # 3. Data reliability
     if len(data) < 5:
         score -= 10
 
