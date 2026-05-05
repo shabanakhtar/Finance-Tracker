@@ -1,7 +1,21 @@
-from google import genai
 import os
 from dotenv import load_dotenv
-from analytics import detect_patterns, calculate_balance, category_summary, calculate_financial_score, analyze_budget, category_trends, spending_by_weekday, detect_recurring_expenses, detect_top_trends, generate_smart_warnings, calculate_savings_rate
+from google import genai
+
+from analytics import (
+    detect_patterns,
+    calculate_balance,
+    category_summary,
+    calculate_financial_score,
+    analyze_budget,
+    category_trends,
+    spending_by_weekday,
+    detect_recurring_expenses,
+    detect_top_trends,
+    generate_smart_warnings,
+    calculate_savings_rate
+)
+
 from budget import get_budgets
 
 load_dotenv()
@@ -9,7 +23,9 @@ load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
-def generate_insights(data, summary):
+# Ai logic to analyze financial data and generate insights, patterns, and personalized advice based on the user's transaction history. 
+# This will be used in the /ask-ai endpoint to provide users with intelligent responses to their financial questions.  
+def generate_insights(data, summary): 
     insights = []
 
     if summary["expense"] > summary["income"]:
@@ -27,15 +43,15 @@ def generate_insights(data, summary):
         insights.append(f"Most of your money is going into {top_category}.")
 
     if summary["balance"] < 0:
-        insights.append("Your balance is negative right now, which means you're running at a loss.")
+        insights.append("Your balance is negative right now.")
 
     if summary["income"] > 0:
         ratio = summary["expense"] / summary["income"]
         if ratio > 0.8:
-            insights.append("A large portion of your income is being spent, which could become risky over time.")
+            insights.append("A large portion of your income is being spent.")
 
     if len(data) < 5:
-        insights.append("There isn't much data yet, so the analysis might not be fully accurate.")
+        insights.append("Not enough data yet for accurate analysis.")
 
     return insights
 
@@ -45,7 +61,7 @@ def detect_spending_personality(summary):
     expense = summary["expense"]
 
     if income == 0:
-        return "No income data available"
+        return "No income data"
 
     ratio = expense / income
 
@@ -60,7 +76,6 @@ def detect_spending_personality(summary):
 
 
 def ask_ai(user_input, data):
-
     summary = calculate_balance(data)
     category_data = category_summary(data)
     insights = generate_insights(data, summary)
@@ -75,79 +90,59 @@ def ask_ai(user_input, data):
 
     score = calculate_financial_score(data)
 
-    # Behavior intelligence features
-    weekday_habits = spending_by_weekday(data)
-    weekday_text = "\n".join(weekday_habits) if weekday_habits else "No clear patterns by day."
-    
+    weekday = spending_by_weekday(data)
     recurring = detect_recurring_expenses(data)
-    recurring_text = "\n".join(recurring) if recurring else "No recurring expenses detected."
-    
-    trending = detect_top_trends(data)
-    trending_text = "\n".join(trending) if trending else "Not enough data for trends."
-    
+    trends = detect_top_trends(data)
     warnings = generate_smart_warnings(data, budgets)
-    warnings_text = "\n".join(warnings) if warnings else "No warnings."
 
-    # Personalized tone
-    personality_tone = ""
-    if personality == "Overspender":
-        personality_tone = "Use a direct, corrective tone. Identify overspending and suggest cuts."
-    elif personality == "High spender":
-        personality_tone = "Use a balanced, guiding tone. Acknowledge spending while suggesting optimizations."
-    elif personality == "Balanced spender":
-        personality_tone = "Use encouraging, optimization-focused tone. Find growth opportunities."
-    else:
-        personality_tone = "Use positive, encouraging tone. Acknowledge good habits and suggest growth."
-    
-    if score < 40:
-        personality_tone += " Given the low score, be serious and action-oriented."
-    elif score > 75:
-        personality_tone += " Given the high score, be positive and encouraging."
+    prompt = f"""
+You are a personal finance assistant helping a student improve their financial habits.
 
-
-    prompt = f"""You're a personal finance assistant helping a student understand their finances clearly and make better decisions.
-
-Current Situation:
+### Financial Overview
 - Income: {summary['income']}
 - Expense: {summary['expense']}
 - Balance: {summary['balance']}
-- Spending Style: {personality}
 - Financial Score: {score}/100
+- Spending Personality: {personality}
 
-Habits & Patterns:
-- Spending by day: {weekday_text}
-- Recurring expenses: {recurring_text}
-- Trends: {trending_text}
-- Key patterns: {patterns_text if patterns_text else "None detected"}
+### Behavior & Patterns
+- Spending patterns: {patterns_text}
+- Weekly behavior: {weekday}
+- Recurring expenses: {recurring}
+- Trends: {trends}
 
-Budget Status:
+### Budget Insights
 {budget_text}
 
-Warnings:
-{warnings_text}
+### Warnings
+{warnings}
 
-Key Insights:
+### Key Insights
 {chr(10).join(insights)}
 
-User Question:
+### User Question
 {user_input}
 
-Response Style:
-{personality_tone}
+---
 
-Guidelines:
-- Base answers strictly on provided data and patterns
-- Keep response clear and direct
-- For simple questions, give short answers
-- For complex questions, explain what's happening, main issues, and suggested actions
-- Reference their specific behavior patterns
-- Do NOT introduce external rules or assumptions
+### Instructions (VERY IMPORTANT)
+- Base your response ONLY on the data provided
+- Identify the main financial issue clearly
+- Explain WHY it is happening
+- Suggest 2–3 specific actions the user can take
+- If patterns exist, reference them
+- Keep response clear and structured
 
-Format your response based on question complexity - brief for simple, detailed for broad questions.
+### Response Style
+- If question is simple → short answer
+- If complex → structured explanation:
+  1. Situation
+  2. Problem
+  3. Recommendation
 """
 
     response = client.models.generate_content(
-        model="models/gemini-2.5-flash",
+        model="gemini-2.5-flash",
         contents=prompt
     )
 
