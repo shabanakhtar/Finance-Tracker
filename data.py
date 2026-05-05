@@ -1,6 +1,8 @@
 import csv
 
 def load_data():
+    import csv
+
     data = []
 
     try:
@@ -23,8 +25,12 @@ def load_data():
                 except:
                     continue
 
-    except:
-        pass
+    except FileNotFoundError:
+        return []
+
+    except Exception as e:
+        print("Error loading data:", e)
+        return []
 
     return data
 
@@ -40,3 +46,21 @@ def add_transaction():
         writer.writerow([amount, category, type_, date])
 
     print("Transaction added.\n")
+
+
+
+def add_transaction_api(amount, category, type_, date):
+    import csv
+
+    # Validate input
+    if not category or not type_ or not date:
+        return {"message": "Invalid transaction data"}
+    try:
+        with open("data.csv", mode="a", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow([amount, category.lower(), type_.lower(), date])
+
+        return {"message": "Transaction added successfully"}
+
+    except Exception as e:
+        return {"message": f"Error saving transaction: {str(e)}"}
