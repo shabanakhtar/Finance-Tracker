@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, field_validator
 from data import load_data, add_transaction_api
 from analytics import (
@@ -18,6 +18,8 @@ from analytics import (
 from ai import ask_ai
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
+from settings import use_supabase
+from supabase_data import resolve_user_id
 
 app = FastAPI()
 app.add_middleware(
@@ -77,9 +79,33 @@ def home():
     return {"message": "Finance API is running"}
 
 
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "data_source": "supabase" if use_supabase() else "csv"
+    }
+
+
+def current_user_id(request: Request):
+    if not use_supabase():
+        return None
+
+    user_id = resolve_user_id(request.headers.get("authorization"))
+    if not user_id:
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "status": "error",
+                "message": "Supabase mode requires a valid user session"
+            }
+        )
+    return user_id
+
+
 @app.get("/summary")
-def get_summary():
-    data = load_data()
+def get_summary(request: Request):
+    data = load_data(current_user_id(request))
     return {
         "status": "success",
         "data": calculate_balance(data)
@@ -87,8 +113,8 @@ def get_summary():
 
 
 @app.get("/transactions")
-def get_transactions(limit: int = 20):
-    data = sorted(load_data(), key=lambda row: row["date"], reverse=True)
+def get_transactions(request: Request, limit: int = 20):
+    data = sorted(load_data(current_user_id(request)), key=lambda row: row["date"], reverse=True)
     return {
         "status": "success",
         "data": data[:limit]
@@ -96,8 +122,8 @@ def get_transactions(limit: int = 20):
 
 
 @app.get("/dashboard")
-def get_dashboard():
-    data = load_data()
+def get_dashboard(request: Request):
+    data = load_data(current_user_id(request))
     summary = calculate_balance(data)
 
     return {
@@ -127,8 +153,8 @@ def get_dashboard():
     }
 
 @app.get("/categories")
-def get_categories():
-    data = load_data()
+def get_categories(request: Request):
+    data = load_data(current_user_id(request))
     return {
         "status": "success",
         "data": category_summary(data)
@@ -136,8 +162,8 @@ def get_categories():
 
 
 @app.get("/monthly")
-def get_monthly():
-    data = load_data()
+def get_monthly(request: Request):
+    data = load_data(current_user_id(request))
     return {
         "status": "success",
         "data": monthly_summary(data)
@@ -145,16 +171,16 @@ def get_monthly():
 
 
 @app.get("/top")
-def get_top_spending():
-    data = load_data()
+def get_top_spending(request: Request):
+    data = load_data(current_user_id(request))
     return {
         "status": "success",
         "data": top_categories(data)
     }
 
 @app.get("/breakdown")
-def get_breakdown():
-    data = load_data()
+def get_breakdown(request: Request):
+    data = load_data(current_user_id(request))
     return {
         "status": "success",
         "data": expense_breakdown(data)
@@ -167,9 +193,9 @@ class AIRequest(BaseModel):
 
 
 @app.post("/ask-ai")
-def ask_ai_endpoint(request: AIRequest):
+def ask_ai_endpoint(request: AIRequest, http_request: Request):
     try:
-        data = load_data()
+        data = load_data(current_user_id(http_request))
         response = ask_ai(request.question, data)
 
         return {
@@ -189,13 +215,14 @@ def ask_ai_endpoint(request: AIRequest):
         )
 
 @app.post("/add-transaction")
-def add_transaction(request: TransactionRequest):
+def add_transaction(request: TransactionRequest, http_request: Request):
     try:
         result = add_transaction_api(
             request.amount,
             request.category,
             request.type,
-            request.date
+            request.date,
+            current_user_id(http_request)
         )
 
         return {

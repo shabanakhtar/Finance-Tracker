@@ -1,7 +1,15 @@
 import csv
 from datetime import datetime
 
-def load_data():
+from settings import use_supabase
+from supabase_data import add_transaction as add_supabase_transaction
+from supabase_data import load_transactions
+
+
+def load_data(user_id=None):
+    if use_supabase():
+        return load_transactions(user_id)
+
     data = []
 
     try:
@@ -55,8 +63,9 @@ def add_transaction():
 
 
 
-def add_transaction_api(amount, category, type_, date):
-    import csv
+def add_transaction_api(amount, category, type_, date, user_id=None):
+    if use_supabase():
+        return add_supabase_transaction(amount, category, type_, date, user_id)
 
     # Validate input
     if not category or not type_ or not date:
