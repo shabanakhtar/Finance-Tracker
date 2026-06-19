@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+data.csv
+venv/
+finance-app/node_modules/
+finance-app/.expo/

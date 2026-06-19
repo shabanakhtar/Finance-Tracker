@@ -1,8 +1,7 @@
 import csv
+from datetime import datetime
 
 def load_data():
-    import csv
-
     data = []
 
     try:
@@ -16,11 +15,18 @@ def load_data():
                     continue
 
                 try:
+                    transaction_type = row[2].strip().lower()
+                    if transaction_type not in {"income", "expense"}:
+                        continue
+
+                    transaction_date = row[3].strip()
+                    datetime.strptime(transaction_date, "%Y-%m-%d")
+
                     data.append({
                         "amount": float(row[0]),
-                        "category": row[1].lower(),
-                        "type": row[2].lower(),
-                        "date": row[3]
+                        "category": row[1].strip().lower(),
+                        "type": transaction_type,
+                        "date": transaction_date
                     })
                 except:
                     continue
