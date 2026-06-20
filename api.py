@@ -1,6 +1,14 @@
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, field_validator
-from data import load_data, add_transaction_api
+from data import (
+    add_transaction_api,
+    delete_budget_api,
+    delete_transaction_api,
+    load_budget_settings,
+    load_data,
+    save_budget_api,
+    update_transaction_api,
+)
 from analytics import (
     calculate_balance,
     calculate_financial_score,
@@ -74,6 +82,23 @@ class TransactionRequest(BaseModel):
             raise ValueError("Date must be in YYYY-MM-DD format")
         return value
 
+
+class BudgetRequest(BaseModel):
+    category: str
+    limit_amount: float
+
+    @field_validator("category")
+    def validate_category(cls, value):
+        if not value.strip():
+            raise ValueError("Category is required")
+        return value.strip().lower()
+
+    @field_validator("limit_amount")
+    def validate_limit_amount(cls, value):
+        if value <= 0:
+            raise ValueError("Budget limit must be greater than 0")
+        return value
+
 @app.get("/")
 def home():
     return {"message": "Finance API is running"}
@@ -103,6 +128,28 @@ def current_user_id(request: Request):
     return user_id
 
 
+def budget_status(data, budgets):
+    spent_by_category = {}
+    for row in data:
+        if row["type"] != "expense":
+            continue
+        spent_by_category[row["category"]] = spent_by_category.get(row["category"], 0) + row["amount"]
+
+    status = []
+    for budget in budgets:
+        spent = spent_by_category.get(budget["category"], 0)
+        limit_amount = budget["limit_amount"]
+        status.append({
+            **budget,
+            "spent": spent,
+            "remaining": limit_amount - spent,
+            "progress": min(spent / limit_amount, 1) if limit_amount else 0,
+            "is_over": spent > limit_amount,
+        })
+
+    return status
+
+
 @app.get("/summary")
 def get_summary(request: Request):
     data = load_data(current_user_id(request))
@@ -121,9 +168,60 @@ def get_transactions(request: Request, limit: int = 20):
     }
 
 
+@app.put("/transactions/{transaction_id}")
+def update_transaction(transaction_id: str, request: TransactionRequest, http_request: Request):
+    try:
+        result = update_transaction_api(
+            transaction_id,
+            request.amount,
+            request.category,
+            request.type,
+            request.date,
+            current_user_id(http_request)
+        )
+
+        return {
+            "status": "success",
+            "data": result
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "message": str(e)
+            }
+        )
+
+
+@app.delete("/transactions/{transaction_id}")
+def delete_transaction(transaction_id: str, request: Request):
+    try:
+        result = delete_transaction_api(transaction_id, current_user_id(request))
+
+        return {
+            "status": "success",
+            "data": result
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "message": str(e)
+            }
+        )
+
+
 @app.get("/dashboard")
 def get_dashboard(request: Request):
-    data = load_data(current_user_id(request))
+    user_id = current_user_id(request)
+    data = load_data(user_id)
+    budgets = load_budget_settings(user_id)
+    budget_limits = {item["category"]: item["limit_amount"] for item in budgets}
+    active_budgets = budget_limits or DEFAULT_BUDGETS
     summary = calculate_balance(data)
 
     return {
@@ -146,11 +244,63 @@ def get_dashboard(request: Request):
                 + calculate_savings_rate(data)
             )[:6],
             "recurring": detect_recurring_expenses(data),
-            "warnings": generate_smart_warnings(data, DEFAULT_BUDGETS),
+            "budgets": budgets,
+            "budget_status": budget_status(data, budgets),
+            "warnings": generate_smart_warnings(data, active_budgets),
             "financial_score": calculate_financial_score(data),
             "transaction_count": len(data),
         }
     }
+
+
+@app.get("/budgets")
+def get_budgets(request: Request):
+    user_id = current_user_id(request)
+    data = load_data(user_id)
+    budgets = load_budget_settings(user_id)
+    return {
+        "status": "success",
+        "data": {
+            "budgets": budgets,
+            "budget_status": budget_status(data, budgets),
+        }
+    }
+
+
+@app.post("/budgets")
+def save_budget(request: BudgetRequest, http_request: Request):
+    try:
+        result = save_budget_api(request.category, request.limit_amount, current_user_id(http_request))
+        return {
+            "status": "success",
+            "data": result
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "message": str(e)
+            }
+        )
+
+
+@app.delete("/budgets/{category}")
+def delete_budget(category: str, request: Request):
+    try:
+        result = delete_budget_api(category, current_user_id(request))
+        return {
+            "status": "success",
+            "data": result
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "message": str(e)
+            }
+        )
 
 @app.get("/categories")
 def get_categories(request: Request):

@@ -42,10 +42,20 @@ def _request(method, path, payload=None, use_user_token=None, prefer=None):
 
 def _normalize_transaction(row):
     return {
+        "id": row.get("id"),
         "amount": float(row["amount"]),
         "category": row["category"].strip().lower(),
         "type": row["type"].strip().lower(),
         "date": row["date"],
+        "notes": row.get("notes") or "",
+    }
+
+
+def _normalize_budget(row):
+    return {
+        "id": row.get("id"),
+        "category": row["category"].strip().lower(),
+        "limit_amount": float(row["limit_amount"]),
     }
 
 
@@ -116,3 +126,86 @@ def add_transaction(amount, category, type_, date, user_id):
     }
     _request("POST", "/rest/v1/transactions", payload, prefer="return=minimal")
     return {"message": "Transaction added successfully"}
+
+
+def update_transaction(transaction_id, amount, category, type_, date, user_id):
+    user_id = require_user_id(user_id)
+    amount = _validate_transaction(amount, category, type_, date)
+    payload = {
+        "amount": amount,
+        "category": category.strip().lower(),
+        "type": type_.strip().lower(),
+        "date": date,
+    }
+    query = (
+        "/rest/v1/transactions"
+        f"?id=eq.{quote(transaction_id)}"
+        f"&user_id=eq.{quote(user_id)}"
+    )
+    _request("PATCH", query, payload, prefer="return=minimal")
+    return {"message": "Transaction updated successfully"}
+
+
+def delete_transaction(transaction_id, user_id):
+    user_id = require_user_id(user_id)
+    query = (
+        "/rest/v1/transactions"
+        f"?id=eq.{quote(transaction_id)}"
+        f"&user_id=eq.{quote(user_id)}"
+    )
+    _request("DELETE", query, prefer="return=minimal")
+    return {"message": "Transaction deleted successfully"}
+
+
+def load_budgets(user_id):
+    user_id = require_user_id(user_id)
+    query = (
+        "/rest/v1/budgets"
+        "?select=id,category,limit_amount"
+        f"&user_id=eq.{quote(user_id)}"
+        "&order=category.asc"
+    )
+    try:
+        rows = _request("GET", query)
+    except RuntimeError as exc:
+        if "budgets" in str(exc) and ("PGRST" in str(exc) or "schema cache" in str(exc)):
+            return []
+        raise
+    return [_normalize_budget(row) for row in rows]
+
+
+def upsert_budget(category, limit_amount, user_id):
+    user_id = require_user_id(user_id)
+    category = category.strip().lower()
+    amount = float(limit_amount)
+    if not category or amount <= 0:
+        raise ValueError("Invalid budget data")
+
+    payload = {
+        "user_id": user_id,
+        "category": category,
+        "limit_amount": amount,
+    }
+    try:
+        _request(
+            "POST",
+            "/rest/v1/budgets?on_conflict=user_id,category",
+            payload,
+            prefer="resolution=merge-duplicates,return=minimal",
+        )
+    except RuntimeError as exc:
+        if "budgets" in str(exc) and ("PGRST" in str(exc) or "schema cache" in str(exc)):
+            raise RuntimeError("Budgets table is not set up yet. Run the add_budgets migration in Supabase.") from exc
+        raise
+    return {"message": "Budget saved successfully"}
+
+
+def delete_budget(category, user_id):
+    user_id = require_user_id(user_id)
+    query = (
+        "/rest/v1/budgets"
+        f"?user_id=eq.{quote(user_id)}"
+        f"&category=eq.{quote(category.strip().lower())}"
+    )
+    _request("DELETE", query, prefer="return=minimal")
+    return {"message": "Budget deleted successfully"}

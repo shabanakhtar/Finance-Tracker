@@ -3,7 +3,12 @@ from datetime import datetime
 
 from settings import use_supabase
 from supabase_data import add_transaction as add_supabase_transaction
+from supabase_data import delete_budget as delete_supabase_budget
+from supabase_data import delete_transaction as delete_supabase_transaction
+from supabase_data import load_budgets as load_supabase_budgets
 from supabase_data import load_transactions
+from supabase_data import update_transaction as update_supabase_transaction
+from supabase_data import upsert_budget as upsert_supabase_budget
 
 
 def load_data(user_id=None):
@@ -79,3 +84,38 @@ def add_transaction_api(amount, category, type_, date, user_id=None):
 
     except Exception as e:
         return {"message": f"Error saving transaction: {str(e)}"}
+
+
+def update_transaction_api(transaction_id, amount, category, type_, date, user_id=None):
+    if use_supabase():
+        return update_supabase_transaction(transaction_id, amount, category, type_, date, user_id)
+
+    return {"message": "Editing transactions requires Supabase mode"}
+
+
+def delete_transaction_api(transaction_id, user_id=None):
+    if use_supabase():
+        return delete_supabase_transaction(transaction_id, user_id)
+
+    return {"message": "Deleting transactions requires Supabase mode"}
+
+
+def load_budget_settings(user_id=None):
+    if use_supabase():
+        return load_supabase_budgets(user_id)
+
+    return []
+
+
+def save_budget_api(category, limit_amount, user_id=None):
+    if use_supabase():
+        return upsert_supabase_budget(category, limit_amount, user_id)
+
+    return {"message": "Budget settings require Supabase mode"}
+
+
+def delete_budget_api(category, user_id=None):
+    if use_supabase():
+        return delete_supabase_budget(category, user_id)
+
+    return {"message": "Budget settings require Supabase mode"}
