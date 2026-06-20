@@ -20,9 +20,12 @@ SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 FINANCE_DEMO_USER_ID=your_supabase_auth_user_id
+ALLOW_DEMO_USER=true
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` must only live on the backend. Never put it in Expo or any public client.
+
+Set `ALLOW_DEMO_USER=true` only for temporary local CSV import or backend-only tests. Keep it `false` for normal app usage so requests require a real Supabase Auth token.
 
 ## 3. Create a temporary demo user
 

@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { supabase } from '@/lib/supabase';
+
 const fallbackBaseUrl = Platform.select({
   android: 'http://10.0.2.2:8000',
   default: 'http://127.0.0.1:8000',
@@ -40,9 +42,13 @@ type ApiResponse<T> = {
 };
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
     ...options,

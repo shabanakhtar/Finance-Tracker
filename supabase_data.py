@@ -80,7 +80,10 @@ def resolve_user_id(auth_header=None):
             except HTTPError:
                 return None
 
-    return env("FINANCE_DEMO_USER_ID")
+    if env("ALLOW_DEMO_USER", "false").lower() == "true":
+        return env("FINANCE_DEMO_USER_ID")
+
+    return None
 
 
 def require_user_id(user_id):

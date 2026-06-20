@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, Chip, ProgressBar } from 'react-native-paper';
 
+import { useAuth } from '@/contexts/auth';
 import { API_BASE_URL, Dashboard, getDashboard } from '@/services/api';
 
 const money = new Intl.NumberFormat('en-PK', {
@@ -11,6 +12,7 @@ const money = new Intl.NumberFormat('en-PK', {
 });
 
 export default function DashboardScreen() {
+  const { session, signOut } = useAuth();
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -58,7 +60,10 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <Text style={styles.eyebrow}>AI Finance Tracker</Text>
         <Text style={styles.title}>Dashboard</Text>
-        <Text style={styles.subtitle}>Connected to {API_BASE_URL}</Text>
+        <Text style={styles.subtitle}>{session?.user.email ?? 'Signed in'} · {API_BASE_URL}</Text>
+        <Button compact mode="outlined" onPress={signOut} style={styles.signOutButton}>
+          Sign Out
+        </Button>
       </View>
 
       {error ? (
@@ -190,6 +195,12 @@ const styles = StyleSheet.create({
   subtitle: {
     color: '#667085',
     fontSize: 13,
+  },
+  signOutButton: {
+    alignSelf: 'flex-start',
+    borderColor: '#b7cdc7',
+    borderRadius: 8,
+    marginTop: 8,
   },
   statGrid: {
     gap: 12,
