@@ -23,5 +23,13 @@ def env(name, default=None):
     return os.getenv(name, default)
 
 
+def env_list(name, default=None):
+    value = env(name)
+    if not value:
+        return default or []
+
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 def use_supabase():
     return env("DATA_SOURCE", "csv").lower() == "supabase"

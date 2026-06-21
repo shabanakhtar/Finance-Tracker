@@ -26,13 +26,20 @@ from analytics import (
 from ai import ask_ai
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
-from settings import use_supabase
+from settings import env_list, use_supabase
 from supabase_data import resolve_user_id
 
-app = FastAPI()
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:8081",
+    "http://127.0.0.1:8081",
+    "http://localhost:19006",
+    "http://127.0.0.1:19006",
+]
+
+app = FastAPI(title="AI Finance Tracker API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=env_list("CORS_ORIGINS", DEFAULT_CORS_ORIGINS),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
