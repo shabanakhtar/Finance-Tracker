@@ -59,6 +59,6 @@ http://127.0.0.1:8000/dashboard
 - Keep `DATA_SOURCE=supabase` in production.
 - Use Supabase Auth in the mobile app and send the user's access token to FastAPI as `Authorization: Bearer <token>`.
 - Keep RLS enabled. The service role key is for the backend only.
-- Deploy FastAPI to Render, then set `EXPO_PUBLIC_API_URL` to that production URL before building the app.
+- Deploy FastAPI to Vercel, then set `EXPO_PUBLIC_API_URL` to that production URL before building the app.
 - Set `CORS_ORIGINS` to your deployed web domains. Expo Go/native mobile requests do not rely on browser CORS, but the web build does.
-- See `docs/backend-deployment.md` for Render settings.
+- See `docs/backend-deployment.md` for Vercel settings.

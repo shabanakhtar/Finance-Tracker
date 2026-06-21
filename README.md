@@ -12,7 +12,7 @@ A mobile-first finance tracker built with Expo, FastAPI, and Supabase. The app s
 - Monthly cash-flow and expense breakdown charts
 - AI finance assistant powered by Gemini
 - Supabase Postgres database with Row Level Security
-- Render-ready FastAPI backend
+- Vercel-ready FastAPI backend
 
 ## Tech Stack
 
@@ -20,17 +20,18 @@ A mobile-first finance tracker built with Expo, FastAPI, and Supabase. The app s
 - FastAPI
 - Supabase Auth and Postgres
 - Gemini API
-- Render for backend deployment
+- Vercel for backend deployment
 
 ## Project Structure
 
 ```text
 .
+├── app.py                         # Vercel FastAPI entrypoint
 ├── api.py                         # FastAPI app
 ├── analytics.py                   # Finance analytics and insights
 ├── data.py                        # Data access bridge
 ├── supabase_data.py               # Supabase REST data layer
-├── render.yaml                    # Render backend blueprint
+├── vercel.json                    # Vercel backend config
 ├── requirements.txt               # Backend dependencies
 ├── docs/
 │   ├── backend-deployment.md
@@ -78,7 +79,7 @@ npx expo start
 
 ## Deployment
 
-Use Render for the FastAPI backend. Render settings and environment variables are documented in:
+Use Vercel for the FastAPI backend. Vercel settings and environment variables are documented in:
 
 ```text
 docs/backend-deployment.md

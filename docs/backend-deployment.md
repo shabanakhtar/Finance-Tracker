@@ -1,30 +1,34 @@
 # Backend Deployment
 
-This backend is a FastAPI service designed to run on Render and connect to Supabase.
+This backend is a FastAPI service designed to run on Vercel and connect to Supabase.
 
-## Render setup
+## Vercel setup
 
-Create a new Render Web Service from the GitHub repo.
+Create a new Vercel project from the GitHub repo.
 
-Use these settings if you set it up manually:
+Use these settings:
 
 ```text
-Language: Python
-Build command: pip install -r requirements.txt
-Start command: uvicorn api:app --host 0.0.0.0 --port $PORT
-Health check path: /health
+Git Repository: shabanakhtar/Finance-Tracker
+Project Name: finance-tracker-api
+Framework Preset: Other
+Root Directory: ./
+Build Command: leave empty
+Output Directory: leave empty
+Install Command: leave empty
+Development Command: leave empty
 ```
 
-The repo also includes `render.yaml`, so Render can create the service as a blueprint.
+The repo includes `app.py` and `vercel.json` so Vercel routes all API paths to the FastAPI app.
 
 ## Environment variables
 
-Set these in Render:
+Set these in Vercel:
 
 ```text
 DATA_SOURCE=supabase
 ALLOW_DEMO_USER=false
-CORS_ORIGINS=https://your-frontend-domain.com,http://localhost:8081
+CORS_ORIGINS=*
 GEMINI_API_KEY=your_gemini_api_key
 SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_ANON_KEY=your_supabase_anon_or_publishable_key
@@ -39,10 +43,10 @@ For Expo Go local testing, keep your local `finance-app/.env.local` pointed at y
 EXPO_PUBLIC_API_URL=http://YOUR_COMPUTER_IP:8000
 ```
 
-For production builds, set it to your Render URL:
+For production builds, set it to your Vercel URL:
 
 ```text
-EXPO_PUBLIC_API_URL=https://your-render-service.onrender.com
+EXPO_PUBLIC_API_URL=https://your-vercel-project.vercel.app
 ```
 
 ## Supabase prerequisites
@@ -65,10 +69,10 @@ Both tables must have Row Level Security enabled.
 
 ## Smoke test
 
-After Render deploys:
+After Vercel deploys:
 
 ```text
-https://your-render-service.onrender.com/health
+https://your-vercel-project.vercel.app/health
 ```
 
 Expected:
