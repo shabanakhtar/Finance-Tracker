@@ -26,8 +26,8 @@ A mobile-first finance tracker built with Expo, FastAPI, and Supabase. The app s
 
 ```text
 .
-├── app.py                         # Vercel FastAPI entrypoint
-├── api.py                         # FastAPI app
+├── api/index.py                   # Vercel FastAPI entrypoint
+├── backend.py                     # FastAPI app
 ├── analytics.py                   # Finance analytics and insights
 ├── data.py                        # Data access bridge
 ├── supabase_data.py               # Supabase REST data layer
@@ -45,7 +45,7 @@ A mobile-first finance tracker built with Expo, FastAPI, and Supabase. The app s
 Create `.env` from `.env.example`, then set your backend secrets.
 
 ```powershell
-python -m uvicorn api:app --host 127.0.0.1 --port 8000
+python -m uvicorn backend:app --host 127.0.0.1 --port 8000
 ```
 
 Check:

@@ -44,7 +44,7 @@ After setting the env values:
 ## 5. Run the backend
 
 ```powershell
-.\venv\Scripts\python.exe -m uvicorn api:app --host 127.0.0.1 --port 8000
+.\venv\Scripts\python.exe -m uvicorn backend:app --host 127.0.0.1 --port 8000
 ```
 
 Check:

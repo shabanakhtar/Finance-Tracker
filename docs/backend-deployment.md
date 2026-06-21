@@ -19,7 +19,7 @@ Install Command: leave empty
 Development Command: leave empty
 ```
 
-The repo includes `app.py` and `vercel.json` so Vercel routes all API paths to the FastAPI app.
+The repo includes `api/index.py` and `vercel.json` so Vercel routes all API paths to the FastAPI app.
 
 ## Environment variables
 
