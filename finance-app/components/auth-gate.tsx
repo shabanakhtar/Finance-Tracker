@@ -1,16 +1,19 @@
 import { ReactNode, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Button, Card, TextInput } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Button, Card, Divider, TextInput } from 'react-native-paper';
 
+import { palette } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth';
 
 export function AuthGate({ children }: { children: ReactNode }) {
-  const { initialized, loading, session, signIn, signUp } = useAuth();
+  const { initialized, loading, resetPassword, session, signIn, signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [password, setPassword] = useState('');
+  const [secureEntry, setSecureEntry] = useState(true);
 
   const submit = async () => {
     try {
@@ -37,6 +40,23 @@ export function AuthGate({ children }: { children: ReactNode }) {
     }
   };
 
+  const sendPasswordReset = async () => {
+    const cleanedEmail = email.trim().toLowerCase();
+    if (!cleanedEmail) {
+      setError('Enter your email first, then request a reset link.');
+      return;
+    }
+
+    try {
+      setError(null);
+      setMessage(null);
+      await resetPassword(cleanedEmail);
+      setMessage('Password reset email sent. Check your inbox.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send reset email.');
+    }
+  };
+
   if (!initialized) {
     return (
       <View style={styles.centered}>
@@ -54,13 +74,34 @@ export function AuthGate({ children }: { children: ReactNode }) {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>AI Finance Tracker</Text>
-          <Text style={styles.title}>{mode === 'login' ? 'Welcome back' : 'Create account'}</Text>
-          <Text style={styles.subtitle}>Sign in to keep your income, expenses, and AI insights private.</Text>
+          <View style={styles.brandMark}>
+            <MaterialCommunityIcons color={palette.emerald} name="wallet-outline" size={24} />
+          </View>
+          <Text style={styles.brand}>Finance Tracker</Text>
+          <Text style={styles.title}>{mode === 'login' ? 'Welcome back' : 'Build your money picture'}</Text>
+          <Text style={styles.subtitle}>Track income, spending, budgets, and AI insights in one private workspace.</Text>
         </View>
 
         <Card style={styles.card}>
           <Card.Content style={styles.cardContent}>
+            <View style={styles.modeSwitch}>
+              <Button
+                compact
+                labelStyle={mode === 'login' ? styles.activeLabel : undefined}
+                mode={mode === 'login' ? 'contained' : 'text'}
+                onPress={() => setMode('login')}
+                style={mode === 'login' ? styles.modeActive : styles.modeButton}>
+                Sign in
+              </Button>
+              <Button
+                compact
+                labelStyle={mode === 'signup' ? styles.activeLabel : undefined}
+                mode={mode === 'signup' ? 'contained' : 'text'}
+                onPress={() => setMode('signup')}
+                style={mode === 'signup' ? styles.modeActive : styles.modeButton}>
+                Create
+              </Button>
+            </View>
             <TextInput
               autoCapitalize="none"
               keyboardType="email-address"
@@ -74,25 +115,30 @@ export function AuthGate({ children }: { children: ReactNode }) {
               label="Password"
               mode="outlined"
               onChangeText={setPassword}
-              secureTextEntry
+              right={
+                <TextInput.Icon
+                  icon={secureEntry ? 'eye-outline' : 'eye-off-outline'}
+                  onPress={() => setSecureEntry((value) => !value)}
+                />
+              }
+              secureTextEntry={secureEntry}
               value={password}
             />
             {message ? <Text style={styles.message}>{message}</Text> : null}
             {error ? <Text style={styles.error}>{error}</Text> : null}
-            <Button disabled={loading} loading={loading} mode="contained" onPress={submit} style={styles.primary}>
+            <Button disabled={loading} labelStyle={styles.primaryLabel} loading={loading} mode="contained" onPress={submit} style={styles.primary}>
               {mode === 'login' ? 'Sign In' : 'Sign Up'}
             </Button>
-            <Button
-              disabled={loading}
-              mode="text"
-              onPress={() => {
-                setError(null);
-                setMessage(null);
-                setMode(mode === 'login' ? 'signup' : 'login');
-              }}
-            >
-              {mode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
-            </Button>
+            {mode === 'login' ? (
+              <Button disabled={loading} mode="text" onPress={sendPasswordReset} textColor={palette.sky}>
+                Forgot password?
+              </Button>
+            ) : null}
+            <Divider />
+            <View style={styles.trustRow}>
+              <MaterialCommunityIcons color={palette.emerald} name="shield-check-outline" size={18} />
+              <Text style={styles.trustText}>Protected by Supabase Auth and per-user data rules.</Text>
+            </View>
           </Card.Content>
         </Card>
       </ScrollView>
@@ -101,16 +147,19 @@ export function AuthGate({ children }: { children: ReactNode }) {
 }
 
 const styles = StyleSheet.create({
+  activeLabel: {
+    color: '#ffffff',
+  },
   centered: {
     alignItems: 'center',
-    backgroundColor: '#f5faf7',
+    backgroundColor: palette.background,
     flex: 1,
     gap: 16,
     justifyContent: 'center',
     padding: 24,
   },
   screen: {
-    backgroundColor: '#f5faf7',
+    backgroundColor: palette.background,
     flex: 1,
   },
   container: {
@@ -118,45 +167,85 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
+  brand: {
+    color: palette.emerald,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  brandMark: {
+    alignItems: 'center',
+    backgroundColor: palette.emeraldSoft,
+    borderRadius: 8,
+    height: 46,
+    justifyContent: 'center',
+    width: 46,
+  },
   header: {
-    gap: 6,
+    gap: 8,
     marginBottom: 20,
   },
-  eyebrow: {
-    color: '#0f766e',
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
   title: {
-    color: '#101827',
-    fontSize: 34,
+    color: palette.ink,
+    fontSize: 32,
     fontWeight: '800',
   },
   subtitle: {
-    color: '#667085',
+    color: palette.muted,
     fontSize: 15,
+    lineHeight: 22,
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: palette.surface,
     borderRadius: 8,
   },
   cardContent: {
     gap: 14,
   },
   error: {
-    color: '#b42318',
+    color: palette.coral,
     fontSize: 13,
   },
   message: {
-    color: '#047857',
+    color: palette.emerald,
     fontSize: 13,
   },
+  modeActive: {
+    backgroundColor: palette.emerald,
+    borderRadius: 8,
+    flex: 1,
+  },
+  modeButton: {
+    borderRadius: 8,
+    flex: 1,
+  },
+  modeSwitch: {
+    backgroundColor: palette.background,
+    borderColor: palette.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    padding: 4,
+  },
   muted: {
-    color: '#667085',
+    color: palette.muted,
   },
   primary: {
-    backgroundColor: '#0f766e',
+    backgroundColor: palette.emerald,
     borderRadius: 8,
+  },
+  primaryLabel: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
+  trustRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  trustText: {
+    color: palette.muted,
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
   },
 });

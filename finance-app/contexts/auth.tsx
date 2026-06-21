@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 type AuthContextValue = {
   initialized: boolean;
   loading: boolean;
+  resetPassword: (email: string) => Promise<void>;
   session: Session | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -37,6 +38,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     () => ({
       initialized,
       loading,
+      resetPassword: async (email) => {
+        setLoading(true);
+        try {
+          const { error } = await supabase.auth.resetPasswordForEmail(email);
+          if (error) throw error;
+        } finally {
+          setLoading(false);
+        }
+      },
       session,
       signIn: async (email, password) => {
         setLoading(true);
