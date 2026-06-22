@@ -65,6 +65,16 @@ export type AiAnswer = {
   response: string;
 };
 
+export type MarketSource = {
+  title: string;
+  url: string;
+};
+
+export type MarketSearchAnswer = {
+  response: string;
+  sources: MarketSource[];
+};
+
 type ApiResponse<T> = {
   status: string;
   data: T;
@@ -138,5 +148,12 @@ export function askAi(question: string) {
   return request<AiAnswer>('/ask-ai', {
     method: 'POST',
     body: JSON.stringify({ question }),
+  });
+}
+
+export function searchMarket(payload: { product_name: string; current_price?: number; category?: string; location?: string }) {
+  return request<MarketSearchAnswer>('/market-search', {
+    method: 'POST',
+    body: JSON.stringify(payload),
   });
 }

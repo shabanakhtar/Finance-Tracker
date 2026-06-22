@@ -5,7 +5,7 @@ import { Button, Chip, Text, TextInput } from 'react-native-paper';
 
 import { AppPalette, radii, spacing } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
-import { askAi } from '@/services/api';
+import { askAi, searchMarket } from '@/services/api';
 
 type ChatMessage = {
   id: string;
@@ -30,8 +30,12 @@ export default function AiScreen() {
       text: 'Ask me about your spending, budgets, savings rate, or the warnings on your dashboard.',
     },
   ]);
+  const [marketCategory, setMarketCategory] = useState('');
+  const [marketPrice, setMarketPrice] = useState('');
+  const [marketProduct, setMarketProduct] = useState('');
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
+  const [marketLoading, setMarketLoading] = useState(false);
 
   async function submit(nextQuestion = question) {
     const cleaned = nextQuestion.trim();
@@ -74,6 +78,62 @@ export default function AiScreen() {
     }
   }
 
+  async function submitMarketSearch() {
+    const product = marketProduct.trim();
+    const parsedPrice = marketPrice.trim() ? Number(marketPrice) : undefined;
+
+    if (!product) {
+      Alert.alert('Product needed', 'Enter a product name first.');
+      return;
+    }
+
+    if (parsedPrice !== undefined && (!parsedPrice || parsedPrice <= 0)) {
+      Alert.alert('Check price', 'Enter a price greater than zero, or leave it blank.');
+      return;
+    }
+
+    const userMessage: ChatMessage = {
+      id: `${Date.now()}-market-user`,
+      role: 'user',
+      text: `Find cheaper local alternatives for ${product}${parsedPrice ? ` around PKR ${parsedPrice}` : ''}.`,
+    };
+
+    setMessages((current) => [...current, userMessage]);
+    setMarketLoading(true);
+
+    try {
+      const result = await searchMarket({
+        product_name: product,
+        current_price: parsedPrice,
+        category: marketCategory.trim() || undefined,
+        location: 'Pakistan',
+      });
+      const sources = result.sources.length
+        ? `\n\nSources:\n${result.sources.map((source) => `- ${source.title}: ${source.url}`).join('\n')}`
+        : '';
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: `${Date.now()}-market-assistant`,
+          role: 'assistant',
+          text: `${result.response}${sources}`,
+        },
+      ]);
+    } catch (err) {
+      setMessages((current) => [
+        ...current,
+        {
+          id: `${Date.now()}-market-error`,
+          role: 'assistant',
+          text: err instanceof Error ? err.message : 'Market search is temporarily unavailable. Please try again soon.',
+        },
+      ]);
+    } finally {
+      setMarketLoading(false);
+    }
+  }
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -105,6 +165,64 @@ export default function AiScreen() {
               <Text style={styles.assistantText}>Thinking through your latest numbers...</Text>
             </View>
           ) : null}
+        </View>
+
+        <View style={styles.panel}>
+          <View style={styles.marketHeader}>
+            <View style={styles.marketIcon}>
+              <MaterialCommunityIcons color={colors.sky} name="tag-search-outline" size={20} />
+            </View>
+            <View style={styles.marketHeaderText}>
+              <Text style={styles.sectionTitle}>Local market check</Text>
+              <Text style={styles.panelHint}>Search Pakistan sources for cheaper options before buying again.</Text>
+            </View>
+          </View>
+
+          <TextInput
+            activeOutlineColor={colors.sky}
+            label="Product"
+            mode="outlined"
+            onChangeText={setMarketProduct}
+            outlineColor={colors.border}
+            placeholder="Sea salt hair spray"
+            style={styles.input}
+            value={marketProduct}
+          />
+
+          <View style={styles.marketRow}>
+            <TextInput
+              activeOutlineColor={colors.sky}
+              keyboardType="decimal-pad"
+              label="Paid price"
+              mode="outlined"
+              onChangeText={setMarketPrice}
+              outlineColor={colors.border}
+              placeholder="5000"
+              style={[styles.input, styles.marketInput]}
+              value={marketPrice}
+            />
+            <TextInput
+              activeOutlineColor={colors.sky}
+              autoCapitalize="none"
+              label="Category"
+              mode="outlined"
+              onChangeText={setMarketCategory}
+              outlineColor={colors.border}
+              placeholder="grooming"
+              style={[styles.input, styles.marketInput]}
+              value={marketCategory}
+            />
+          </View>
+
+          <Button
+            disabled={marketLoading || loading}
+            icon="magnify"
+            loading={marketLoading}
+            mode="contained"
+            onPress={submitMarketSearch}
+            style={styles.button}>
+            Check Alternatives
+          </Button>
         </View>
 
         <View style={styles.panel}>
@@ -235,12 +353,43 @@ function createStyles(colors: AppPalette) {
     keyboard: {
       flex: 1,
     },
+    marketHeader: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: spacing.md,
+      marginBottom: spacing.md,
+    },
+    marketHeaderText: {
+      flex: 1,
+    },
+    marketIcon: {
+      alignItems: 'center',
+      backgroundColor: colors.skySoft,
+      borderRadius: radii.card,
+      height: 42,
+      justifyContent: 'center',
+      width: 42,
+    },
+    marketInput: {
+      flex: 1,
+    },
+    marketRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginTop: spacing.sm,
+    },
     panel: {
       backgroundColor: colors.surface,
       borderColor: colors.border,
       borderRadius: radii.card,
       borderWidth: 1,
       padding: spacing.lg,
+    },
+    panelHint: {
+      color: colors.muted,
+      fontSize: 13,
+      lineHeight: 18,
+      marginTop: 2,
     },
     promptHeader: {
       alignItems: 'center',

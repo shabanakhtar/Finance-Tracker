@@ -24,7 +24,7 @@ from analytics import (
     phase_two_opportunities,
     top_categories,
 )
-from ai import ask_ai
+from ai import ask_ai, search_local_market
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from settings import env_list, use_supabase
@@ -359,6 +359,39 @@ class AIRequest(BaseModel):
         return cleaned
 
 
+class MarketSearchRequest(BaseModel):
+    product_name: str
+    current_price: float | None = None
+    category: str | None = None
+    location: str = "Pakistan"
+
+    @field_validator("product_name")
+    def validate_product_name(cls, value):
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Product name is required")
+        if len(cleaned) > 160:
+            raise ValueError("Product name must be 160 characters or fewer")
+        return cleaned
+
+    @field_validator("current_price")
+    def validate_current_price(cls, value):
+        if value is not None and value <= 0:
+            raise ValueError("Current price must be greater than 0")
+        return value
+
+    @field_validator("category")
+    def validate_market_category(cls, value):
+        return value.strip().lower() if value else None
+
+    @field_validator("location")
+    def validate_location(cls, value):
+        cleaned = value.strip() or "Pakistan"
+        if len(cleaned) > 80:
+            raise ValueError("Location must be 80 characters or fewer")
+        return cleaned
+
+
 
 @app.post("/ask-ai")
 def ask_ai_endpoint(request: AIRequest, http_request: Request):
@@ -389,6 +422,40 @@ def ask_ai_endpoint(request: AIRequest, http_request: Request):
             detail={
                 "status": "error",
                 "message": "AI is temporarily unavailable. Please try again soon."
+            }
+        )
+
+
+@app.post("/market-search")
+def market_search_endpoint(request: MarketSearchRequest, http_request: Request):
+    try:
+        current_user_id(http_request)
+        result = search_local_market(
+            request.product_name,
+            request.current_price,
+            request.category,
+            request.location,
+        )
+
+        return {
+            "status": "success",
+            "data": result
+        }
+
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "error",
+                "message": str(e)
+            }
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "message": "Market search is temporarily unavailable. Please try again soon."
             }
         )
 

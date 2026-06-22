@@ -2,6 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from google import genai
+from google.genai import types
 
 from analytics import (
     analyze_budget,
@@ -18,6 +19,7 @@ from analytics import (
 load_dotenv()
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_SEARCH_MODEL = os.getenv("GEMINI_SEARCH_MODEL", GEMINI_MODEL)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
@@ -82,6 +84,76 @@ def normalize_budget_limits(budgets):
             limits[category] = float(limit_amount)
 
     return limits
+
+
+def _grounding_sources(response):
+    sources = []
+    seen_urls = set()
+
+    for candidate in getattr(response, "candidates", []) or []:
+        metadata = getattr(candidate, "grounding_metadata", None) or getattr(candidate, "groundingMetadata", None)
+        chunks = getattr(metadata, "grounding_chunks", None) or getattr(metadata, "groundingChunks", None) or []
+
+        for chunk in chunks:
+            web = getattr(chunk, "web", None)
+            if not web:
+                continue
+
+            url = getattr(web, "uri", None)
+            if not url or url in seen_urls:
+                continue
+
+            sources.append({
+                "title": getattr(web, "title", None) or url,
+                "url": url,
+            })
+            seen_urls.add(url)
+
+    return sources[:6]
+
+
+def search_local_market(product_name, current_price=None, category=None, location="Pakistan"):
+    if not client:
+        raise RuntimeError("AI is not configured. Add GEMINI_API_KEY to the backend environment.")
+
+    price_context = f"The user paid PKR {current_price}." if current_price else "The user has not provided the current price."
+    category_context = f"Category: {category}." if category else "Category is unknown."
+
+    prompt = f"""
+You are helping a finance tracker user compare local market prices.
+
+Product to check: {product_name}
+{price_context}
+{category_context}
+Market: {location}
+
+Use web search to find cheaper or better-value alternatives available to users in {location}.
+Prefer sources that are likely relevant for Pakistan, such as local ecommerce stores, marketplaces, or retailer sites.
+
+Return:
+1. A short verdict on whether the current purchase looks expensive.
+2. Up to 3 alternatives with product/store, approximate price, and source.
+3. Estimated savings compared with the user's current price, if a price was provided.
+4. A reminder that prices and stock should be verified before buying.
+
+Rules:
+- Do not invent prices, stores, or links.
+- If search results are weak, say that clearly.
+- Keep the answer concise and practical.
+"""
+
+    response = client.models.generate_content(
+        model=GEMINI_SEARCH_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            tools=[types.Tool(googleSearch=types.GoogleSearch())],
+        ),
+    )
+
+    return {
+        "response": response.text,
+        "sources": _grounding_sources(response),
+    }
 
 
 def ask_ai(user_input, data, budgets=None):
