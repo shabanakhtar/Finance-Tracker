@@ -106,7 +106,7 @@ def load_transactions(user_id):
     user_id = require_user_id(user_id)
     query = (
         "/rest/v1/transactions"
-        "?select=id,amount,category,type,date,created_at"
+        "?select=id,amount,category,type,date,notes,created_at"
         f"&user_id=eq.{quote(user_id)}"
         "&order=date.desc,created_at.desc"
     )
@@ -114,7 +114,7 @@ def load_transactions(user_id):
     return [_normalize_transaction(row) for row in rows]
 
 
-def add_transaction(amount, category, type_, date, user_id):
+def add_transaction(amount, category, type_, date, user_id, notes=None):
     user_id = require_user_id(user_id)
     amount = _validate_transaction(amount, category, type_, date)
     payload = {
@@ -123,12 +123,13 @@ def add_transaction(amount, category, type_, date, user_id):
         "category": category.strip().lower(),
         "type": type_.strip().lower(),
         "date": date,
+        "notes": (notes or "").strip(),
     }
     _request("POST", "/rest/v1/transactions", payload, prefer="return=minimal")
     return {"message": "Transaction added successfully"}
 
 
-def update_transaction(transaction_id, amount, category, type_, date, user_id):
+def update_transaction(transaction_id, amount, category, type_, date, user_id, notes=None):
     user_id = require_user_id(user_id)
     amount = _validate_transaction(amount, category, type_, date)
     payload = {
@@ -136,6 +137,7 @@ def update_transaction(transaction_id, amount, category, type_, date, user_id):
         "category": category.strip().lower(),
         "type": type_.strip().lower(),
         "date": date,
+        "notes": (notes or "").strip(),
     }
     query = (
         "/rest/v1/transactions"

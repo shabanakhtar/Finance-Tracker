@@ -1,3 +1,6 @@
+import csv
+import io
+
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, field_validator
 from data import (
@@ -54,11 +57,14 @@ DEFAULT_BUDGETS = {
     "utilities": 12000,
 }
 
+CSV_HEADERS = ["date", "type", "category", "amount", "notes"]
+
 class TransactionRequest(BaseModel):
     amount: float
     category: str
     type: str
     date: str
+    notes: str | None = None
 
     class Config:
         json_schema_extra = {
@@ -90,6 +96,10 @@ class TransactionRequest(BaseModel):
             raise ValueError("Date must be in YYYY-MM-DD format")
         return value
 
+    @field_validator("notes")
+    def validate_notes(cls, value):
+        return value.strip()[:500] if value else None
+
 
 class BudgetRequest(BaseModel):
     category: str
@@ -106,6 +116,21 @@ class BudgetRequest(BaseModel):
         if value <= 0:
             raise ValueError("Budget limit must be greater than 0")
         return value
+
+
+class CsvImportRequest(BaseModel):
+    csv_text: str
+    commit: bool = False
+
+    @field_validator("csv_text")
+    def validate_csv_text(cls, value):
+        cleaned = value.strip("\ufeff\r\n ")
+        if not cleaned:
+            raise ValueError("CSV file is empty")
+        if len(cleaned) > 1_000_000:
+            raise ValueError("CSV file is too large")
+        return cleaned
+
 
 @app.get("/")
 def home():
@@ -158,6 +183,87 @@ def budget_status(data, budgets):
     return status
 
 
+def csv_export_text(data):
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=CSV_HEADERS, extrasaction="ignore", lineterminator="\n")
+    writer.writeheader()
+
+    for row in sorted(data, key=lambda item: item["date"], reverse=True):
+        writer.writerow({
+            "date": row.get("date", ""),
+            "type": row.get("type", ""),
+            "category": row.get("category", ""),
+            "amount": row.get("amount", ""),
+            "notes": row.get("notes", ""),
+        })
+
+    return output.getvalue()
+
+
+def parse_csv_import(csv_text):
+    reader = csv.DictReader(io.StringIO(csv_text))
+    if not reader.fieldnames:
+        raise ValueError("CSV must include a header row")
+
+    normalized_headers = {header.strip().lower(): header for header in reader.fieldnames if header}
+    required = ["date", "type", "category", "amount"]
+    missing = [header for header in required if header not in normalized_headers]
+    if missing:
+        raise ValueError(f"CSV is missing required columns: {', '.join(missing)}")
+
+    valid_rows = []
+    errors = []
+
+    for index, raw_row in enumerate(reader, start=2):
+        date_value = (raw_row.get(normalized_headers["date"]) or "").strip()
+        type_value = (raw_row.get(normalized_headers["type"]) or "").strip().lower()
+        category_value = (raw_row.get(normalized_headers["category"]) or "").strip().lower()
+        amount_text = (raw_row.get(normalized_headers["amount"]) or "").replace(",", "").strip()
+        notes_value = (raw_row.get(normalized_headers.get("notes", "")) or "").strip() if "notes" in normalized_headers else ""
+        row_errors = []
+
+        try:
+            datetime.strptime(date_value, "%Y-%m-%d")
+        except ValueError:
+            row_errors.append("date must be YYYY-MM-DD")
+
+        if type_value not in {"income", "expense"}:
+            row_errors.append("type must be income or expense")
+
+        if not category_value:
+            row_errors.append("category is required")
+
+        try:
+            amount_value = float(amount_text)
+            if amount_value <= 0:
+                row_errors.append("amount must be greater than 0")
+        except ValueError:
+            amount_value = 0
+            row_errors.append("amount must be numeric")
+
+        row = {
+            "row": index,
+            "date": date_value,
+            "type": type_value,
+            "category": category_value,
+            "amount": amount_value,
+            "notes": notes_value,
+        }
+
+        if row_errors:
+            errors.append({**row, "errors": row_errors})
+        else:
+            valid_rows.append(row)
+
+    return {
+        "valid_rows": valid_rows,
+        "errors": errors,
+        "valid_count": len(valid_rows),
+        "error_count": len(errors),
+        "preview": valid_rows[:10],
+    }
+
+
 @app.get("/summary")
 def get_summary(request: Request):
     data = load_data(current_user_id(request))
@@ -176,6 +282,68 @@ def get_transactions(request: Request, limit: int = 20):
     }
 
 
+@app.get("/transactions/export")
+def export_transactions(request: Request):
+    data = load_data(current_user_id(request))
+    return {
+        "status": "success",
+        "data": {
+            "filename": f"finance-transactions-{datetime.now().strftime('%Y-%m-%d')}.csv",
+            "csv": csv_export_text(data),
+            "count": len(data),
+        }
+    }
+
+
+@app.post("/transactions/import/preview")
+def preview_transactions_import(request: CsvImportRequest, http_request: Request):
+    current_user_id(http_request)
+    try:
+        parsed = parse_csv_import(request.csv_text)
+        return {
+            "status": "success",
+            "data": parsed,
+        }
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "status": "error",
+                "message": str(e)
+            }
+        )
+
+
+@app.post("/transactions/import")
+def import_transactions(request: CsvImportRequest, http_request: Request):
+    user_id = current_user_id(http_request)
+    try:
+        parsed = parse_csv_import(request.csv_text)
+        if parsed["error_count"]:
+            raise ValueError("Fix invalid rows before importing")
+
+        imported = 0
+        for row in parsed["valid_rows"]:
+            add_transaction_api(row["amount"], row["category"], row["type"], row["date"], user_id, row["notes"])
+            imported += 1
+
+        return {
+            "status": "success",
+            "data": {
+                **parsed,
+                "imported": imported,
+            }
+        }
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "status": "error",
+                "message": str(e)
+            }
+        )
+
+
 @app.put("/transactions/{transaction_id}")
 def update_transaction(transaction_id: str, request: TransactionRequest, http_request: Request):
     try:
@@ -185,7 +353,8 @@ def update_transaction(transaction_id: str, request: TransactionRequest, http_re
             request.category,
             request.type,
             request.date,
-            current_user_id(http_request)
+            current_user_id(http_request),
+            request.notes,
         )
 
         return {
@@ -413,7 +582,6 @@ class ReceiptScanRequest(BaseModel):
         return "image/jpeg" if cleaned == "image/jpg" else cleaned
 
 
-
 @app.post("/ask-ai")
 def ask_ai_endpoint(request: AIRequest, http_request: Request):
     try:
@@ -525,7 +693,8 @@ def add_transaction(request: TransactionRequest, http_request: Request):
             request.category,
             request.type,
             request.date,
-            current_user_id(http_request)
+            current_user_id(http_request),
+            request.notes,
         )
 
         return {

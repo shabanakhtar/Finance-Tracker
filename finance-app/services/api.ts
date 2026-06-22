@@ -104,6 +104,34 @@ export type ReceiptScanResult = {
   notes: string;
 };
 
+export type CsvExportResult = {
+  filename: string;
+  csv: string;
+  count: number;
+};
+
+export type CsvImportRow = {
+  row: number;
+  date: string;
+  type: 'income' | 'expense';
+  category: string;
+  amount: number;
+  notes?: string;
+};
+
+export type CsvImportError = CsvImportRow & {
+  errors: string[];
+};
+
+export type CsvImportPreview = {
+  valid_rows: CsvImportRow[];
+  errors: CsvImportError[];
+  valid_count: number;
+  error_count: number;
+  preview: CsvImportRow[];
+  imported?: number;
+};
+
 type ApiResponse<T> = {
   status: string;
   data: T;
@@ -191,5 +219,23 @@ export function scanReceipt(payload: { image_base64: string; mime_type: string }
   return request<ReceiptScanResult>('/scan-receipt', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export function exportTransactionsCsv() {
+  return request<CsvExportResult>('/transactions/export');
+}
+
+export function previewTransactionsCsv(csvText: string) {
+  return request<CsvImportPreview>('/transactions/import/preview', {
+    method: 'POST',
+    body: JSON.stringify({ csv_text: csvText }),
+  });
+}
+
+export function importTransactionsCsv(csvText: string) {
+  return request<CsvImportPreview>('/transactions/import', {
+    method: 'POST',
+    body: JSON.stringify({ csv_text: csvText, commit: true }),
   });
 }

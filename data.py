@@ -39,7 +39,8 @@ def load_data(user_id=None):
                         "amount": float(row[0]),
                         "category": row[1].strip().lower(),
                         "type": transaction_type,
-                        "date": transaction_date
+                        "date": transaction_date,
+                        "notes": row[4].strip() if len(row) > 4 else "",
                     })
                 except:
                     continue
@@ -68,9 +69,9 @@ def add_transaction():
 
 
 
-def add_transaction_api(amount, category, type_, date, user_id=None):
+def add_transaction_api(amount, category, type_, date, user_id=None, notes=None):
     if use_supabase():
-        return add_supabase_transaction(amount, category, type_, date, user_id)
+        return add_supabase_transaction(amount, category, type_, date, user_id, notes)
 
     # Validate input
     if not category or not type_ or not date:
@@ -78,7 +79,7 @@ def add_transaction_api(amount, category, type_, date, user_id=None):
     try:
         with open("data.csv", mode="a", newline="") as file:
             writer = csv.writer(file)
-            writer.writerow([amount, category.lower(), type_.lower(), date])
+            writer.writerow([amount, category.lower(), type_.lower(), date, notes or ""])
 
         return {"message": "Transaction added successfully"}
 
@@ -86,9 +87,9 @@ def add_transaction_api(amount, category, type_, date, user_id=None):
         return {"message": f"Error saving transaction: {str(e)}"}
 
 
-def update_transaction_api(transaction_id, amount, category, type_, date, user_id=None):
+def update_transaction_api(transaction_id, amount, category, type_, date, user_id=None, notes=None):
     if use_supabase():
-        return update_supabase_transaction(transaction_id, amount, category, type_, date, user_id)
+        return update_supabase_transaction(transaction_id, amount, category, type_, date, user_id, notes)
 
     return {"message": "Editing transactions requires Supabase mode"}
 
