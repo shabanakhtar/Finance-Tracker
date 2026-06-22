@@ -9,6 +9,11 @@ import { addTransaction } from '@/services/api';
 
 const today = new Date().toISOString().slice(0, 10);
 const categories = ['food', 'transport', 'rent', 'salary', 'shopping', 'utilities'];
+const money = new Intl.NumberFormat('en-PK', {
+  maximumFractionDigits: 0,
+  style: 'currency',
+  currency: 'PKR',
+});
 
 export default function AddTransactionScreen() {
   const { colors } = useAppTheme();
@@ -46,7 +51,7 @@ export default function AddTransactionScreen() {
         type,
         date,
       });
-      setLastSaved(`${type === 'income' ? 'Income' : 'Expense'} saved: ${category.trim()} · ${parsedAmount}`);
+      setLastSaved(`${type === 'income' ? 'Income' : 'Expense'} saved: ${category.trim()} - ${money.format(parsedAmount)}`);
       setAmount('');
       setCategory('');
       setDate(today);
@@ -70,6 +75,11 @@ export default function AddTransactionScreen() {
         </View>
 
         <View style={styles.card}>
+          <View style={styles.tipBox}>
+            <MaterialCommunityIcons color={colors.violet} name="lightning-bolt-outline" size={18} />
+            <Text style={styles.tipText}>Phase 1 goal: make entries fast. Later this screen becomes Quick Add.</Text>
+          </View>
+
           <Text style={styles.label}>Type</Text>
           <SegmentedButtons
             onValueChange={(value) => setType(value as 'income' | 'expense')}
@@ -209,6 +219,23 @@ function createStyles(colors: AppPalette) {
   },
   submitContent: {
     height: 52,
+  },
+  tipBox: {
+    alignItems: 'center',
+    backgroundColor: colors.violetSoft,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    padding: 12,
+  },
+  tipText: {
+    color: colors.muted,
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
   },
   subtitle: {
     color: colors.muted,

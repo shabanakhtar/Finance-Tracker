@@ -106,6 +106,7 @@ export default function DashboardScreen() {
     return Math.max(1, ...Object.values(dashboard.monthly).flatMap((item) => [item.income, item.expense]));
   }, [dashboard]);
 
+  const isEmptyAccount = (dashboard?.transaction_count ?? 0) === 0;
   const netCashFlow = (dashboard?.summary.income ?? 0) - (dashboard?.summary.expense ?? 0);
 
   const onRefresh = () => {
@@ -220,7 +221,7 @@ export default function DashboardScreen() {
     return (
       <View style={styles.centered}>
         <View style={styles.loadingMark}>
-          <ActivityIndicator color={colors.emerald} size="large" />
+          <ActivityIndicator color={colors.sky} size="large" />
         </View>
         <Text style={styles.loadingTitle}>Preparing your dashboard</Text>
         <Text style={styles.muted}>Syncing Vercel, Supabase, and your latest transactions.</Text>
@@ -267,6 +268,8 @@ export default function DashboardScreen() {
               </View>
             </Card.Content>
           </Card>
+
+          {isEmptyAccount ? <GettingStartedCard /> : null}
 
           <View style={styles.scoreCard}>
             <View style={styles.scoreCircle}>
@@ -432,6 +435,40 @@ export default function DashboardScreen() {
   );
 }
 
+function GettingStartedCard() {
+  const { colors, styles } = useDashboardTheme();
+
+  return (
+    <Card style={styles.startCard}>
+      <Card.Content>
+        <View style={styles.sectionHeader}>
+          <MaterialCommunityIcons color={colors.sky} name="map-marker-path" size={20} />
+          <Text style={styles.cardTitle}>Start with three entries</Text>
+        </View>
+        <Text style={styles.startText}>
+          Add one income entry, one normal expense, and one budget. The dashboard and AI assistant become much more useful after that.
+        </Text>
+        <View style={styles.startSteps}>
+          <StepBadge icon="cash-plus" text="Income" />
+          <StepBadge icon="receipt-text-plus-outline" text="Expense" />
+          <StepBadge icon="target" text="Budget" />
+        </View>
+      </Card.Content>
+    </Card>
+  );
+}
+
+function StepBadge({ icon, text }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; text: string }) {
+  const { colors, styles } = useDashboardTheme();
+
+  return (
+    <View style={styles.stepBadge}>
+      <MaterialCommunityIcons color={colors.sky} name={icon} size={16} />
+      <Text style={styles.stepText}>{text}</Text>
+    </View>
+  );
+}
+
 function Section({
   children,
   icon,
@@ -447,7 +484,7 @@ function Section({
     <Card style={styles.card}>
       <Card.Content>
         <View style={styles.sectionHeader}>
-          <MaterialCommunityIcons color={colors.emerald} name={icon} size={20} />
+          <MaterialCommunityIcons color={colors.sky} name={icon} size={20} />
           <Text style={styles.cardTitle}>{title}</Text>
         </View>
         {children}
@@ -588,7 +625,7 @@ function createStyles(colors: AppPalette) {
     justifyContent: 'center',
   },
   brand: {
-    color: colors.emerald,
+    color: colors.sky,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -604,6 +641,8 @@ function createStyles(colors: AppPalette) {
   },
   card: {
     backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
     borderRadius: 8,
   },
   cardTitle: {
@@ -627,11 +666,11 @@ function createStyles(colors: AppPalette) {
     paddingTop: 4,
   },
   chip: {
-    backgroundColor: colors.emeraldSoft,
+    backgroundColor: colors.violetSoft,
     borderRadius: 8,
   },
   chipText: {
-    color: colors.emeraldDark,
+    color: colors.ink,
   },
   chipWrap: {
     flexDirection: 'row',
@@ -805,7 +844,7 @@ function createStyles(colors: AppPalette) {
     lineHeight: 18,
   },
   primaryButton: {
-    backgroundColor: colors.emerald,
+    backgroundColor: colors.sky,
     borderRadius: 8,
   },
   progress: {
@@ -830,8 +869,8 @@ function createStyles(colors: AppPalette) {
   },
   scoreCircle: {
     alignItems: 'center',
-    backgroundColor: colors.emeraldSoft,
-    borderColor: '#c3ead9',
+    backgroundColor: colors.skySoft,
+    borderColor: colors.border,
     borderRadius: 999,
     borderWidth: 1,
     height: 72,
@@ -848,7 +887,7 @@ function createStyles(colors: AppPalette) {
     gap: 8,
   },
   scoreValue: {
-    color: colors.emerald,
+    color: colors.sky,
     fontSize: 24,
     fontWeight: '900',
   },
@@ -861,6 +900,39 @@ function createStyles(colors: AppPalette) {
     flexDirection: 'row',
     gap: 8,
     marginBottom: 14,
+  },
+  startCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.sky,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  startSteps: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  startText: {
+    color: colors.muted,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  stepBadge: {
+    alignItems: 'center',
+    backgroundColor: colors.skySoft,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  stepText: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: '800',
   },
   subtitle: {
     color: colors.muted,

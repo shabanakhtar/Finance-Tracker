@@ -108,7 +108,14 @@ export default function AiScreen() {
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.sectionTitle}>Quick questions</Text>
+          <View style={styles.promptHeader}>
+            <Text style={styles.sectionTitle}>Quick questions</Text>
+            {messages.length > 1 ? (
+              <Button compact mode="text" onPress={() => setMessages([messages[0]])} textColor={colors.muted}>
+                Clear
+              </Button>
+            ) : null}
+          </View>
           <View style={styles.chips}>
             {suggestions.map((item) => (
               <Chip
@@ -235,11 +242,16 @@ function createStyles(colors: AppPalette) {
       borderWidth: 1,
       padding: spacing.lg,
     },
+    promptHeader: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: spacing.md,
+    },
     sectionTitle: {
       color: colors.ink,
       fontSize: 17,
       fontWeight: '800',
-      marginBottom: spacing.md,
     },
     subtitle: {
       color: colors.muted,
