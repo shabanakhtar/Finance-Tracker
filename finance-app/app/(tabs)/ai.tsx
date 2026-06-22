@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Chip, Text, TextInput } from 'react-native-paper';
 
 import { AppPalette, radii, spacing } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
-import { askAi, searchMarket } from '@/services/api';
+import { MarketSearchAnswer, askAi, searchMarket } from '@/services/api';
 
 type ChatMessage = {
   id: string;
@@ -20,6 +20,12 @@ const suggestions = [
   'Explain my budget warnings.',
 ];
 
+const money = new Intl.NumberFormat('en-PK', {
+  maximumFractionDigits: 0,
+  style: 'currency',
+  currency: 'PKR',
+});
+
 export default function AiScreen() {
   const { colors } = useAppTheme();
   const styles = createStyles(colors);
@@ -31,6 +37,7 @@ export default function AiScreen() {
     },
   ]);
   const [marketCategory, setMarketCategory] = useState('');
+  const [marketResult, setMarketResult] = useState<MarketSearchAnswer | null>(null);
   const [marketPrice, setMarketPrice] = useState('');
   const [marketProduct, setMarketProduct] = useState('');
   const [question, setQuestion] = useState('');
@@ -108,16 +115,14 @@ export default function AiScreen() {
         category: marketCategory.trim() || undefined,
         location: 'Pakistan',
       });
-      const sources = result.sources.length
-        ? `\n\nSources:\n${result.sources.map((source) => `- ${source.title}: ${source.url}`).join('\n')}`
-        : '';
+      setMarketResult(result);
 
       setMessages((current) => [
         ...current,
         {
           id: `${Date.now()}-market-assistant`,
           role: 'assistant',
-          text: `${result.response}${sources}`,
+          text: result.response,
         },
       ]);
     } catch (err) {
@@ -223,6 +228,42 @@ export default function AiScreen() {
             style={styles.button}>
             Check Alternatives
           </Button>
+
+          {marketResult ? (
+            <View style={styles.marketResults}>
+              <Text style={styles.marketVerdict}>{marketResult.verdict}</Text>
+              {marketResult.alternatives.length ? (
+                marketResult.alternatives.map((item) => (
+                  <View key={`${item.name}-${item.url}`} style={styles.altCard}>
+                    <View style={styles.altHeader}>
+                      <View style={styles.altText}>
+                        <Text style={styles.altName}>{item.name}</Text>
+                        <Text style={styles.altStore}>{item.store}</Text>
+                      </View>
+                      <View style={styles.confidencePill}>
+                        <Text style={styles.confidenceText}>{item.confidence}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.altNumbers}>
+                      <Text style={styles.altPrice}>{money.format(item.price)}</Text>
+                      {item.savings ? <Text style={styles.altSavings}>Save {money.format(item.savings)}</Text> : null}
+                    </View>
+                    <Text style={styles.altReason}>{item.reason}</Text>
+                    <Button compact icon="open-in-new" mode="text" onPress={() => Linking.openURL(item.url)} textColor={colors.sky}>
+                      Open source
+                    </Button>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.panelHint}>No clearly cheaper verified alternatives were found yet.</Text>
+              )}
+              {marketResult.warnings.map((warning) => (
+                <Text key={warning} style={styles.warningText}>
+                  {warning}
+                </Text>
+              ))}
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.panel}>
@@ -285,6 +326,56 @@ function createStyles(colors: AppPalette) {
       borderColor: colors.border,
       borderWidth: 1,
     },
+    altCard: {
+      backgroundColor: colors.background,
+      borderColor: colors.border,
+      borderRadius: radii.card,
+      borderWidth: 1,
+      gap: spacing.sm,
+      padding: spacing.md,
+    },
+    altHeader: {
+      alignItems: 'flex-start',
+      flexDirection: 'row',
+      gap: spacing.sm,
+      justifyContent: 'space-between',
+    },
+    altName: {
+      color: colors.ink,
+      flexShrink: 1,
+      fontSize: 15,
+      fontWeight: '800',
+      lineHeight: 20,
+    },
+    altNumbers: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    altPrice: {
+      color: colors.ink,
+      fontSize: 17,
+      fontWeight: '900',
+    },
+    altReason: {
+      color: colors.muted,
+      fontSize: 13,
+      lineHeight: 18,
+    },
+    altSavings: {
+      color: colors.emerald,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    altStore: {
+      color: colors.muted,
+      fontSize: 13,
+      marginTop: 2,
+    },
+    altText: {
+      flex: 1,
+    },
     assistantText: {
       color: colors.ink,
     },
@@ -323,6 +414,18 @@ function createStyles(colors: AppPalette) {
       gap: spacing.lg,
       padding: spacing.lg,
       paddingBottom: 96,
+    },
+    confidencePill: {
+      backgroundColor: colors.violetSoft,
+      borderRadius: radii.card,
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+    },
+    confidenceText: {
+      color: colors.ink,
+      fontSize: 11,
+      fontWeight: '800',
+      textTransform: 'uppercase',
     },
     eyebrow: {
       color: colors.violet,
@@ -373,10 +476,20 @@ function createStyles(colors: AppPalette) {
     marketInput: {
       flex: 1,
     },
+    marketResults: {
+      gap: spacing.md,
+      marginTop: spacing.md,
+    },
     marketRow: {
       flexDirection: 'row',
       gap: spacing.sm,
       marginTop: spacing.sm,
+    },
+    marketVerdict: {
+      color: colors.ink,
+      fontSize: 14,
+      fontWeight: '800',
+      lineHeight: 20,
     },
     panel: {
       backgroundColor: colors.surface,
@@ -423,6 +536,11 @@ function createStyles(colors: AppPalette) {
     userText: {
       color: '#ffffff',
       fontWeight: '700',
+    },
+    warningText: {
+      color: colors.muted,
+      fontSize: 12,
+      lineHeight: 17,
     },
   });
 }

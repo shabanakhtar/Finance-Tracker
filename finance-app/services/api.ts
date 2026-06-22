@@ -72,7 +72,21 @@ export type MarketSource = {
 
 export type MarketSearchAnswer = {
   response: string;
+  verdict: string;
+  alternatives: MarketAlternative[];
+  warnings: string[];
   sources: MarketSource[];
+};
+
+export type MarketAlternative = {
+  name: string;
+  store: string;
+  price: number;
+  url: string;
+  savings?: number | null;
+  savings_percent?: number | null;
+  confidence: 'low' | 'medium' | 'high';
+  reason: string;
 };
 
 export type ReceiptItem = {

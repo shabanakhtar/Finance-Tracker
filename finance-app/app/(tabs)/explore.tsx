@@ -6,7 +6,7 @@ import { Button, Chip, SegmentedButtons, TextInput } from 'react-native-paper';
 
 import { AppPalette } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
-import { ReceiptScanResult, addTransaction, scanReceipt } from '@/services/api';
+import { MarketSearchAnswer, ReceiptScanResult, addTransaction, scanReceipt, searchMarket } from '@/services/api';
 
 const today = new Date().toISOString().slice(0, 10);
 const categories = ['food', 'transport', 'rent', 'salary', 'shopping', 'utilities'];
@@ -24,6 +24,8 @@ export default function AddTransactionScreen() {
   const [date, setDate] = useState(today);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<ReceiptScanResult | null>(null);
+  const [receiptAlternatives, setReceiptAlternatives] = useState<Record<string, MarketSearchAnswer>>({});
+  const [checkingItem, setCheckingItem] = useState<string | null>(null);
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -59,6 +61,7 @@ export default function AddTransactionScreen() {
       setCategory('');
       setDate(today);
       setReceipt(null);
+      setReceiptAlternatives({});
       setType('expense');
     } catch (err) {
       Alert.alert('Could not save', err instanceof Error ? err.message : 'Backend request failed.');
@@ -73,7 +76,33 @@ export default function AddTransactionScreen() {
     if (/^\d{4}-\d{2}-\d{2}$/.test(result.date)) setDate(result.date);
     setType('expense');
     setReceipt(result);
+    setReceiptAlternatives({});
     setLastSaved(null);
+  };
+
+  const checkAlternatives = async (itemName: string, itemPrice?: number) => {
+    if (!itemPrice || itemPrice <= 0) {
+      Alert.alert('Price needed', 'AI needs an item price to compare cheaper options.');
+      return;
+    }
+
+    try {
+      setCheckingItem(itemName);
+      const result = await searchMarket({
+        product_name: itemName,
+        current_price: itemPrice,
+        category: category.trim() || receipt?.category || undefined,
+        location: 'Pakistan',
+      });
+      setReceiptAlternatives((current) => ({
+        ...current,
+        [itemName]: result,
+      }));
+    } catch (err) {
+      Alert.alert('Could not check alternatives', err instanceof Error ? err.message : 'Market search failed.');
+    } finally {
+      setCheckingItem(null);
+    }
   };
 
   const scanFromAsset = async (asset: ImagePicker.ImagePickerAsset) => {
@@ -249,10 +278,39 @@ export default function AddTransactionScreen() {
               {receipt.items.length ? (
                 <View style={styles.itemList}>
                   {receipt.items.slice(0, 4).map((item, index) => (
-                    <Text key={`${item.name}-${index}`} style={styles.receiptMeta}>
-                      {item.name}
-                      {item.price ? ` - ${money.format(item.price)}` : ''}
-                    </Text>
+                    <View key={`${item.name}-${index}`} style={styles.receiptItem}>
+                      <View style={styles.receiptItemText}>
+                        <Text style={styles.receiptMeta}>
+                          {item.name}
+                          {item.price ? ` - ${money.format(item.price)}` : ''}
+                        </Text>
+                      </View>
+                      {item.price ? (
+                        <Button
+                          compact
+                          disabled={checkingItem === item.name}
+                          loading={checkingItem === item.name}
+                          mode="text"
+                          onPress={() => checkAlternatives(item.name, item.price)}
+                          textColor={colors.sky}>
+                          Check
+                        </Button>
+                      ) : null}
+                      {receiptAlternatives[item.name] ? (
+                        <View style={styles.altPreview}>
+                          <Text style={styles.altVerdict}>{receiptAlternatives[item.name].verdict}</Text>
+                          {receiptAlternatives[item.name].alternatives.slice(0, 2).map((alt) => (
+                            <Text key={alt.url} style={styles.receiptMeta}>
+                              {alt.name} - {money.format(alt.price)}
+                              {alt.savings ? `, save ${money.format(alt.savings)}` : ''}
+                            </Text>
+                          ))}
+                          {!receiptAlternatives[item.name].alternatives.length ? (
+                            <Text style={styles.receiptMeta}>No clearly cheaper verified option found.</Text>
+                          ) : null}
+                        </View>
+                      ) : null}
+                    </View>
                   ))}
                 </View>
               ) : (
@@ -286,6 +344,21 @@ function createStyles(colors: AppPalette) {
     borderWidth: 1,
     gap: 14,
     padding: 16,
+  },
+  altPreview: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 4,
+    padding: 10,
+    width: '100%',
+  },
+  altVerdict: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 18,
   },
   categoryWrap: {
     flexDirection: 'row',
@@ -338,6 +411,20 @@ function createStyles(colors: AppPalette) {
     color: colors.muted,
     fontSize: 13,
     lineHeight: 18,
+  },
+  receiptItem: {
+    alignItems: 'center',
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'space-between',
+    paddingTop: 8,
+  },
+  receiptItemText: {
+    flex: 1,
+    minWidth: 160,
   },
   receiptPreview: {
     backgroundColor: colors.skySoft,

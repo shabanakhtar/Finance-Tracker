@@ -115,6 +115,79 @@ def _grounding_sources(response):
     return sources[:6]
 
 
+def _extract_json_object(text):
+    cleaned = (text or "").strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.strip("`")
+        if cleaned.lower().startswith("json"):
+            cleaned = cleaned[4:].strip()
+
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        raise ValueError("No JSON object found.")
+
+    return json.loads(cleaned[start:end + 1])
+
+
+def _number_or_none(value):
+    if value in [None, ""]:
+        return None
+
+    try:
+        return float(str(value).replace(",", "").replace("PKR", "").replace("Rs.", "").replace("Rs", "").strip())
+    except ValueError:
+        return None
+
+
+def _normalize_alternatives(items, current_price=None):
+    normalized = []
+    seen = set()
+
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+
+        name = str(item.get("name") or item.get("product") or "").strip()
+        store = str(item.get("store") or item.get("seller") or "Unknown store").strip()
+        url = str(item.get("url") or item.get("source_url") or "").strip()
+        price = _number_or_none(item.get("price"))
+        confidence = str(item.get("confidence") or "low").strip().lower()
+
+        if not name or not url or price is None or price <= 0:
+            continue
+
+        if confidence not in ["low", "medium", "high"]:
+            confidence = "low"
+
+        key = (name.lower(), store.lower(), url.lower())
+        if key in seen:
+            continue
+
+        savings = None
+        savings_percent = None
+        if current_price and price < current_price:
+            savings = round(current_price - price, 2)
+            savings_percent = round((savings / current_price) * 100, 1)
+        elif current_price:
+            continue
+
+        normalized.append({
+            "name": name[:140],
+            "store": store[:80],
+            "price": round(price, 2),
+            "url": url,
+            "savings": savings,
+            "savings_percent": savings_percent,
+            "confidence": confidence,
+            "reason": str(item.get("reason") or "Possible lower-cost option.").strip()[:220],
+        })
+        seen.add(key)
+
+    normalized.sort(key=lambda item: (item["savings"] is None, -(item["savings"] or 0), item["price"]))
+    return normalized[:3]
+
+
 def search_local_market(product_name, current_price=None, category=None, location="Pakistan"):
     if not client:
         raise RuntimeError("AI is not configured. Add GEMINI_API_KEY to the backend environment.")
@@ -133,16 +206,29 @@ Market: {location}
 Use web search to find cheaper or better-value alternatives available to users in {location}.
 Prefer sources that are likely relevant for Pakistan, such as local ecommerce stores, marketplaces, or retailer sites.
 
-Return:
-1. A short verdict on whether the current purchase looks expensive.
-2. Up to 3 alternatives with product/store, approximate price, and source.
-3. Estimated savings compared with the user's current price, if a price was provided.
-4. A reminder that prices and stock should be verified before buying.
+Return JSON only with this exact shape:
+{{
+  "verdict": "short practical verdict",
+  "alternatives": [
+    {{
+      "name": "product name",
+      "store": "seller or store",
+      "price": number,
+      "url": "source URL",
+      "confidence": "low" | "medium" | "high",
+      "reason": "why this is relevant"
+    }}
+  ],
+  "warnings": ["short warning"]
+}}
 
 Rules:
 - Do not invent prices, stores, or links.
+- Every alternative must include a URL and numeric price found from search.
+- If the user provided a price, only include alternatives that appear cheaper.
 - If search results are weak, say that clearly.
 - Keep the answer concise and practical.
+- Always include a warning to verify price, stock, and seller before buying.
 """
 
     response = client.models.generate_content(
@@ -153,9 +239,44 @@ Rules:
         ),
     )
 
+    sources = _grounding_sources(response)
+
+    try:
+        parsed = _extract_json_object(response.text)
+    except (json.JSONDecodeError, ValueError):
+        return {
+            "response": response.text,
+            "verdict": "I found market information, but could not safely structure the results.",
+            "alternatives": [],
+            "warnings": ["Verify price, stock, and seller before buying."],
+            "sources": sources,
+        }
+
+    current_price_number = _number_or_none(current_price)
+    alternatives = _normalize_alternatives(parsed.get("alternatives"), current_price_number)
+    warnings = parsed.get("warnings") if isinstance(parsed.get("warnings"), list) else []
+    clean_warnings = [str(item).strip() for item in warnings if str(item).strip()][:3]
+    if not clean_warnings:
+        clean_warnings = ["Verify price, stock, and seller before buying."]
+
+    verdict = str(parsed.get("verdict") or "").strip()
+    if not verdict:
+        verdict = "No clearly cheaper verified alternatives were found." if not alternatives else "Cheaper alternatives may be available."
+
+    response_text = verdict
+    if alternatives:
+        response_text += "\n\n" + "\n".join(
+            f"- {item['name']} at {item['store']} for PKR {item['price']:.0f}"
+            + (f" - save about PKR {item['savings']:.0f}" if item["savings"] else "")
+            for item in alternatives
+        )
+
     return {
-        "response": response.text,
-        "sources": _grounding_sources(response),
+        "response": response_text,
+        "verdict": verdict,
+        "alternatives": alternatives,
+        "warnings": clean_warnings,
+        "sources": sources,
     }
 
 
