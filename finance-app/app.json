@@ -12,6 +12,11 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.shabanakhtar.financetracker",
+      "versionCode": 1,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#0f766e",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -27,6 +32,13 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Finance Tracker to choose receipt photos for AI expense scanning.",
+          "cameraPermission": "Allow Finance Tracker to take receipt photos for AI expense scanning."
+        }
+      ],
       [
         "expo-splash-screen",
         {

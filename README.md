@@ -1,16 +1,19 @@
 # AI Finance Tracker
 
-A mobile-first finance tracker built with Expo, FastAPI, and Supabase. The app supports authenticated user accounts, per-user transactions, budgets, dashboard analytics, and AI-assisted finance insights.
+A mobile-first finance tracker built with Expo, FastAPI, and Supabase. The app supports authenticated user accounts, per-user transactions, budgets, dashboard analytics, CSV import/export, receipt scanning, local product comparisons, and AI-assisted finance insights.
 
 ## Features
 
 - Email/password auth with Supabase
 - Per-user transaction tracking
 - Add, edit, and delete transactions
+- CSV transaction import/export
 - Budget settings with progress tracking
 - Income, expense, balance, and financial score summaries
 - Monthly cash-flow and expense breakdown charts
 - AI finance assistant powered by Gemini
+- Receipt scanning with AI extraction
+- Local market checks for cheaper product alternatives
 - Supabase Postgres database with Row Level Security
 - Vercel-ready FastAPI backend
 
@@ -21,23 +24,25 @@ A mobile-first finance tracker built with Expo, FastAPI, and Supabase. The app s
 - Supabase Auth and Postgres
 - Gemini API
 - Vercel for backend deployment
+- UptimeRobot for monitoring
 
 ## Project Structure
 
 ```text
 .
-├── api/index.py                   # Vercel FastAPI entrypoint
-├── backend.py                     # FastAPI app
-├── analytics.py                   # Finance analytics and insights
-├── data.py                        # Data access bridge
-├── supabase_data.py               # Supabase REST data layer
-├── vercel.json                    # Vercel backend config
-├── requirements.txt               # Backend dependencies
-├── docs/
-│   ├── backend-deployment.md
-│   └── supabase-setup.md
-├── supabase/migrations/           # Database schema and RLS policies
-└── finance-app/                   # Expo mobile app
+|-- api/index.py                   # Vercel FastAPI entrypoint
+|-- backend.py                     # FastAPI app
+|-- analytics.py                   # Finance analytics and insights
+|-- data.py                        # Data access bridge
+|-- supabase_data.py               # Supabase REST data layer
+|-- vercel.json                    # Vercel backend config
+|-- requirements.txt               # Backend dependencies
+|-- docs/
+|   |-- backend-deployment.md
+|   |-- privacy-policy.md
+|   `-- supabase-setup.md
+|-- supabase/migrations/           # Database schema and RLS policies
+`-- finance-app/                   # Expo mobile app
 ```
 
 ## Local Backend
@@ -92,9 +97,20 @@ supabase/migrations/20260619180000_initial_finance_schema.sql
 supabase/migrations/20260621090000_add_budgets.sql
 ```
 
+## Android Builds
+
+The Expo app includes EAS build profiles for internal APK testing and Play Store app bundle builds:
+
+```powershell
+cd finance-app
+npx eas build --platform android --profile preview
+npx eas build --platform android --profile production
+```
+
 ## Security Notes
 
 - Never commit `.env` or `finance-app/.env.local`.
 - Keep `SUPABASE_SERVICE_ROLE_KEY` on the backend only.
 - Keep `ALLOW_DEMO_USER=false` in production.
 - Set `CORS_ORIGINS` to trusted deployed web origins.
+- Replace the placeholder support email in `docs/privacy-policy.md` before publishing.
