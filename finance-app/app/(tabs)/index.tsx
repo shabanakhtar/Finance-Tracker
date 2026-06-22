@@ -559,21 +559,23 @@ function createStyles(colors: AppPalette) {
     textAlign: 'center',
   },
   balanceCard: {
-    backgroundColor: colors.ink,
+    backgroundColor: colors.balanceSurface,
+    borderColor: colors.border,
+    borderWidth: 1,
     borderRadius: 8,
   },
   balanceHint: {
-    color: '#b8c7c2',
+    color: colors.balanceMuted,
     fontSize: 13,
     fontWeight: '700',
   },
   balanceLabel: {
-    color: '#d9e7e2',
+    color: colors.balanceMuted,
     fontSize: 13,
     fontWeight: '700',
   },
   balanceValue: {
-    color: '#ffffff',
+    color: colors.balanceText,
     fontSize: 38,
     fontWeight: '900',
     marginTop: 8,
@@ -728,14 +730,14 @@ function createStyles(colors: AppPalette) {
     fontWeight: '800',
   },
   liveDot: {
-    backgroundColor: '#66d9ad',
+    backgroundColor: colors.emerald,
     borderRadius: 999,
     height: 7,
     width: 7,
   },
   livePill: {
     alignItems: 'center',
-    backgroundColor: '#143731',
+    backgroundColor: colors.balancePill,
     borderRadius: 999,
     flexDirection: 'row',
     gap: 6,
@@ -743,7 +745,7 @@ function createStyles(colors: AppPalette) {
     paddingVertical: 5,
   },
   liveText: {
-    color: '#dff7eb',
+    color: colors.balancePillText,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -773,7 +775,7 @@ function createStyles(colors: AppPalette) {
     backgroundColor: '#17372d',
   },
   metricLabel: {
-    color: '#c3d1cd',
+    color: colors.balanceMuted,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -783,7 +785,7 @@ function createStyles(colors: AppPalette) {
     marginTop: 18,
   },
   metricValue: {
-    color: '#ffffff',
+    color: colors.balanceText,
     fontSize: 17,
     fontWeight: '900',
   },

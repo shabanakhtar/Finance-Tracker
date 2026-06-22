@@ -6,6 +6,11 @@ export type AppThemeName = 'light' | 'dark';
 export type AppPalette = {
   amber: string;
   background: string;
+  balanceMuted: string;
+  balancePill: string;
+  balancePillText: string;
+  balanceSurface: string;
+  balanceText: string;
   border: string;
   coral: string;
   coralSoft: string;
@@ -27,6 +32,11 @@ export type AppPalette = {
 export const lightPalette: AppPalette = {
   amber: '#ea7a1f',
   background: '#fbf6ee',
+  balanceMuted: '#eadfd0',
+  balancePill: '#3a2817',
+  balancePillText: '#fff4de',
+  balanceSurface: '#20150c',
+  balanceText: '#ffffff',
   border: '#eadfce',
   coral: '#dc3f49',
   coralSoft: '#fff0ec',
@@ -48,6 +58,11 @@ export const lightPalette: AppPalette = {
 export const darkPalette: AppPalette = {
   amber: '#f59e0b',
   background: '#050714',
+  balanceMuted: '#b8c7ff',
+  balancePill: '#102a5a',
+  balancePillText: '#dff4ff',
+  balanceSurface: '#071024',
+  balanceText: '#ffffff',
   border: '#1e2a48',
   coral: '#fb7185',
   coralSoft: '#351722',
