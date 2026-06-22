@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, SegmentedButtons, Text } from 'react-native-paper';
 
@@ -18,7 +18,7 @@ export default function SettingsScreen() {
   const styles = createStyles(colors);
 
   return (
-    <View style={styles.screen}>
+    <ScrollView contentContainerStyle={styles.screen}>
       <View style={styles.header}>
         <View style={styles.iconBox}>
           <MaterialCommunityIcons color={colors.sky} name="cog-outline" size={24} />
@@ -54,7 +54,7 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>Build</Text>
         <Text style={styles.muted}>Supabase auth, Vercel API, Gemini AI assistant, and UptimeRobot monitoring.</Text>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -93,7 +93,7 @@ function createStyles(colors: AppPalette) {
     },
     screen: {
       backgroundColor: colors.background,
-      flex: 1,
+      flexGrow: 1,
       gap: spacing.lg,
       padding: spacing.xl,
       paddingTop: 34,
