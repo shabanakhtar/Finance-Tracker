@@ -91,7 +91,7 @@ export type MarketAlternative = {
 
 export type ReceiptItem = {
   name: string;
-  price?: number;
+  price?: number | null;
 };
 
 export type ReceiptScanResult = {

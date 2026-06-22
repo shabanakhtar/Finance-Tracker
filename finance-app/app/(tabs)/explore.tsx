@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, SegmentedButtons, TextInput } from 'react-native-paper';
 
 import { AppPalette } from '@/constants/theme';
@@ -9,7 +9,7 @@ import { useAppTheme } from '@/contexts/theme';
 import { MarketSearchAnswer, ReceiptScanResult, addTransaction, scanReceipt, searchMarket } from '@/services/api';
 
 const today = new Date().toISOString().slice(0, 10);
-const categories = ['food', 'transport', 'rent', 'salary', 'shopping', 'utilities'];
+const categories = ['food', 'groceries', 'transport', 'rent', 'salary', 'shopping', 'utilities', 'grooming', 'health', 'education', 'other'];
 const money = new Intl.NumberFormat('en-PK', {
   maximumFractionDigits: 0,
   style: 'currency',
@@ -80,7 +80,7 @@ export default function AddTransactionScreen() {
     setLastSaved(null);
   };
 
-  const checkAlternatives = async (itemName: string, itemPrice?: number) => {
+  const checkAlternatives = async (itemName: string, itemPrice?: number | null) => {
     if (!itemPrice || itemPrice <= 0) {
       Alert.alert('Price needed', 'AI needs an item price to compare cheaper options.');
       return;
@@ -308,6 +308,17 @@ export default function AddTransactionScreen() {
                           {!receiptAlternatives[item.name].alternatives.length ? (
                             <Text style={styles.receiptMeta}>No clearly cheaper verified option found.</Text>
                           ) : null}
+                          {receiptAlternatives[item.name].alternatives.slice(0, 2).map((alt) => (
+                            <Button
+                              compact
+                              icon="open-in-new"
+                              key={`${alt.url}-source`}
+                              mode="text"
+                              onPress={() => Linking.openURL(alt.url)}
+                              textColor={colors.sky}>
+                              Open {alt.store}
+                            </Button>
+                          ))}
                         </View>
                       ) : null}
                     </View>

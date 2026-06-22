@@ -187,7 +187,10 @@ export default function AiScreen() {
             activeOutlineColor={colors.sky}
             label="Product"
             mode="outlined"
-            onChangeText={setMarketProduct}
+            onChangeText={(value) => {
+              setMarketProduct(value);
+              setMarketResult(null);
+            }}
             outlineColor={colors.border}
             placeholder="Sea salt hair spray"
             style={styles.input}
@@ -200,7 +203,10 @@ export default function AiScreen() {
               keyboardType="decimal-pad"
               label="Paid price"
               mode="outlined"
-              onChangeText={setMarketPrice}
+              onChangeText={(value) => {
+                setMarketPrice(value);
+                setMarketResult(null);
+              }}
               outlineColor={colors.border}
               placeholder="5000"
               style={[styles.input, styles.marketInput]}
@@ -211,7 +217,10 @@ export default function AiScreen() {
               autoCapitalize="none"
               label="Category"
               mode="outlined"
-              onChangeText={setMarketCategory}
+              onChangeText={(value) => {
+                setMarketCategory(value);
+                setMarketResult(null);
+              }}
               outlineColor={colors.border}
               placeholder="grooming"
               style={[styles.input, styles.marketInput]}
@@ -262,6 +271,22 @@ export default function AiScreen() {
                   {warning}
                 </Text>
               ))}
+              {marketResult.sources.length ? (
+                <View style={styles.sourceList}>
+                  <Text style={styles.sourceTitle}>Sources checked</Text>
+                  {marketResult.sources.slice(0, 4).map((source) => (
+                    <Button
+                      compact
+                      icon="link-variant"
+                      key={source.url}
+                      mode="text"
+                      onPress={() => Linking.openURL(source.url)}
+                      textColor={colors.sky}>
+                      {source.title}
+                    </Button>
+                  ))}
+                </View>
+              ) : null}
             </View>
           ) : null}
         </View>
@@ -299,7 +324,7 @@ export default function AiScreen() {
             onChangeText={setQuestion}
             outlineColor={colors.border}
             placeholder="Example: What category should I cut back on first?"
-            style={styles.input}
+            style={[styles.input, styles.questionInput]}
             value={question}
           />
 
@@ -451,7 +476,6 @@ function createStyles(colors: AppPalette) {
     },
     input: {
       backgroundColor: colors.surface,
-      minHeight: 100,
     },
     keyboard: {
       flex: 1,
@@ -482,6 +506,7 @@ function createStyles(colors: AppPalette) {
     },
     marketRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: spacing.sm,
       marginTop: spacing.sm,
     },
@@ -514,6 +539,21 @@ function createStyles(colors: AppPalette) {
       color: colors.ink,
       fontSize: 17,
       fontWeight: '800',
+    },
+    sourceList: {
+      borderTopColor: colors.border,
+      borderTopWidth: 1,
+      gap: spacing.xs,
+      paddingTop: spacing.sm,
+    },
+    sourceTitle: {
+      color: colors.muted,
+      fontSize: 12,
+      fontWeight: '800',
+      textTransform: 'uppercase',
+    },
+    questionInput: {
+      minHeight: 100,
     },
     subtitle: {
       color: colors.muted,

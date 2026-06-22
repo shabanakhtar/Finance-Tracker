@@ -2,6 +2,7 @@ import base64
 import binascii
 import json
 import os
+from datetime import date, datetime
 
 from dotenv import load_dotenv
 from google import genai
@@ -138,6 +139,43 @@ def _number_or_none(value):
         return float(str(value).replace(",", "").replace("PKR", "").replace("Rs.", "").replace("Rs", "").strip())
     except ValueError:
         return None
+
+
+def _valid_date_or_today(value):
+    cleaned = str(value or "").strip()
+    try:
+        datetime.strptime(cleaned, "%Y-%m-%d")
+        return cleaned
+    except ValueError:
+        return date.today().isoformat()
+
+
+def _clamp_confidence(value):
+    try:
+        return max(0, min(float(value), 1))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _normalize_receipt_items(items):
+    normalized = []
+
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+
+        name = str(item.get("name") or "").strip()
+        price = _number_or_none(item.get("price"))
+
+        if not name:
+            continue
+
+        normalized.append({
+            "name": name[:120],
+            "price": round(price, 2) if price and price > 0 else None,
+        })
+
+    return normalized[:12]
 
 
 def _normalize_alternatives(items, current_price=None):
@@ -289,23 +327,25 @@ def scan_receipt_image(image_base64, mime_type="image/jpeg"):
     except (binascii.Error, ValueError) as exc:
         raise ValueError("Receipt image is not valid base64.") from exc
 
-    prompt = """
+    today = date.today().isoformat()
+
+    prompt = f"""
 Extract one expense transaction from this receipt image.
 
 Return JSON only with this exact shape:
-{
+{{
   "amount": number,
   "category": "food" | "groceries" | "transport" | "shopping" | "utilities" | "rent" | "grooming" | "health" | "education" | "other",
   "date": "YYYY-MM-DD",
   "merchant": string,
-  "items": [{"name": string, "price": number}],
+  "items": [{{"name": string, "price": number}}],
   "confidence": number,
   "notes": string
-}
+}}
 
 Rules:
 - Use the receipt total as amount, not subtotal, unless total is unavailable.
-- If the date is missing or unreadable, use today's date.
+- If the date is missing or unreadable, use today's date: {today}.
 - If item prices are unclear, return an empty items array.
 - Use PKR-style numeric values without currency symbols.
 - Keep category lowercase.
@@ -327,13 +367,15 @@ Rules:
     except json.JSONDecodeError as exc:
         raise RuntimeError("AI could not read the receipt clearly. Try a sharper photo.") from exc
 
+    amount = _number_or_none(result.get("amount")) or 0
+
     return {
-        "amount": float(result.get("amount") or 0),
+        "amount": round(amount, 2),
         "category": str(result.get("category") or "other").strip().lower(),
-        "date": str(result.get("date") or ""),
+        "date": _valid_date_or_today(result.get("date")),
         "merchant": str(result.get("merchant") or "Unknown merchant").strip(),
-        "items": result.get("items") if isinstance(result.get("items"), list) else [],
-        "confidence": float(result.get("confidence") or 0),
+        "items": _normalize_receipt_items(result.get("items")),
+        "confidence": _clamp_confidence(result.get("confidence")),
         "notes": str(result.get("notes") or "").strip(),
     }
 
