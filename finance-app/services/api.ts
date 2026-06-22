@@ -75,6 +75,21 @@ export type MarketSearchAnswer = {
   sources: MarketSource[];
 };
 
+export type ReceiptItem = {
+  name: string;
+  price?: number;
+};
+
+export type ReceiptScanResult = {
+  amount: number;
+  category: string;
+  date: string;
+  merchant: string;
+  items: ReceiptItem[];
+  confidence: number;
+  notes: string;
+};
+
 type ApiResponse<T> = {
   status: string;
   data: T;
@@ -153,6 +168,13 @@ export function askAi(question: string) {
 
 export function searchMarket(payload: { product_name: string; current_price?: number; category?: string; location?: string }) {
   return request<MarketSearchAnswer>('/market-search', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function scanReceipt(payload: { image_base64: string; mime_type: string }) {
+  return request<ReceiptScanResult>('/scan-receipt', {
     method: 'POST',
     body: JSON.stringify(payload),
   });

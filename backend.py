@@ -24,7 +24,7 @@ from analytics import (
     phase_two_opportunities,
     top_categories,
 )
-from ai import ask_ai, search_local_market
+from ai import ask_ai, scan_receipt_image, search_local_market
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from settings import env_list, use_supabase
@@ -392,6 +392,27 @@ class MarketSearchRequest(BaseModel):
         return cleaned
 
 
+class ReceiptScanRequest(BaseModel):
+    image_base64: str
+    mime_type: str = "image/jpeg"
+
+    @field_validator("image_base64")
+    def validate_image_base64(cls, value):
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Receipt image is required")
+        if len(cleaned) > 12_000_000:
+            raise ValueError("Receipt image is too large")
+        return cleaned
+
+    @field_validator("mime_type")
+    def validate_mime_type(cls, value):
+        cleaned = value.strip().lower()
+        if cleaned not in ["image/jpeg", "image/jpg", "image/png", "image/webp"]:
+            raise ValueError("Receipt image must be JPEG, PNG, or WEBP")
+        return "image/jpeg" if cleaned == "image/jpg" else cleaned
+
+
 
 @app.post("/ask-ai")
 def ask_ai_endpoint(request: AIRequest, http_request: Request):
@@ -456,6 +477,43 @@ def market_search_endpoint(request: MarketSearchRequest, http_request: Request):
             detail={
                 "status": "error",
                 "message": "Market search is temporarily unavailable. Please try again soon."
+            }
+        )
+
+
+@app.post("/scan-receipt")
+def scan_receipt_endpoint(request: ReceiptScanRequest, http_request: Request):
+    try:
+        current_user_id(http_request)
+        result = scan_receipt_image(request.image_base64, request.mime_type)
+
+        return {
+            "status": "success",
+            "data": result
+        }
+
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "error",
+                "message": str(e)
+            }
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "status": "error",
+                "message": str(e)
+            }
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "message": "Receipt scan is temporarily unavailable. Please try again soon."
             }
         )
 

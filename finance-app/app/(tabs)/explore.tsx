@@ -1,11 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, SegmentedButtons, TextInput } from 'react-native-paper';
 
 import { AppPalette } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
-import { addTransaction } from '@/services/api';
+import { ReceiptScanResult, addTransaction, scanReceipt } from '@/services/api';
 
 const today = new Date().toISOString().slice(0, 10);
 const categories = ['food', 'transport', 'rent', 'salary', 'shopping', 'utilities'];
@@ -22,8 +23,10 @@ export default function AddTransactionScreen() {
   const [category, setCategory] = useState('');
   const [date, setDate] = useState(today);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<ReceiptScanResult | null>(null);
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [saving, setSaving] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   const submit = async () => {
     const parsedAmount = Number(amount);
@@ -55,11 +58,79 @@ export default function AddTransactionScreen() {
       setAmount('');
       setCategory('');
       setDate(today);
+      setReceipt(null);
       setType('expense');
     } catch (err) {
       Alert.alert('Could not save', err instanceof Error ? err.message : 'Backend request failed.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const applyReceipt = (result: ReceiptScanResult) => {
+    if (result.amount > 0) setAmount(String(Math.round(result.amount)));
+    if (result.category) setCategory(result.category);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(result.date)) setDate(result.date);
+    setType('expense');
+    setReceipt(result);
+    setLastSaved(null);
+  };
+
+  const scanFromAsset = async (asset: ImagePicker.ImagePickerAsset) => {
+    if (!asset.base64) {
+      Alert.alert('Could not read image', 'Try another photo or lower image quality.');
+      return;
+    }
+
+    try {
+      setScanning(true);
+      const result = await scanReceipt({
+        image_base64: asset.base64,
+        mime_type: asset.mimeType ?? 'image/jpeg',
+      });
+      applyReceipt(result);
+    } catch (err) {
+      Alert.alert('Receipt scan failed', err instanceof Error ? err.message : 'AI could not read this receipt.');
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const pickReceipt = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Allow photo access to pick a receipt.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: false,
+      base64: true,
+      mediaTypes: ['images'],
+      quality: 0.75,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await scanFromAsset(result.assets[0]);
+    }
+  };
+
+  const takeReceiptPhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Allow camera access to scan a receipt.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: false,
+      base64: true,
+      mediaTypes: ['images'],
+      quality: 0.75,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await scanFromAsset(result.assets[0]);
     }
   };
 
@@ -77,7 +148,27 @@ export default function AddTransactionScreen() {
         <View style={styles.card}>
           <View style={styles.tipBox}>
             <MaterialCommunityIcons color={colors.violet} name="lightning-bolt-outline" size={18} />
-            <Text style={styles.tipText}>Phase 1 goal: make entries fast. Later this screen becomes Quick Add.</Text>
+            <Text style={styles.tipText}>Scan a receipt, review what AI found, then save only when it looks right.</Text>
+          </View>
+
+          <View style={styles.scanActions}>
+            <Button
+              disabled={saving || scanning}
+              icon="camera-outline"
+              loading={scanning}
+              mode="contained-tonal"
+              onPress={takeReceiptPhoto}
+              style={styles.scanButton}>
+              Scan
+            </Button>
+            <Button
+              disabled={saving || scanning}
+              icon="image-outline"
+              mode="outlined"
+              onPress={pickReceipt}
+              style={styles.scanButton}>
+              Pick Photo
+            </Button>
           </View>
 
           <Text style={styles.label}>Type</Text>
@@ -144,8 +235,35 @@ export default function AddTransactionScreen() {
             </View>
           ) : null}
 
+          {receipt ? (
+            <View style={styles.receiptPreview}>
+              <View style={styles.receiptHeader}>
+                <MaterialCommunityIcons color={colors.sky} name="receipt-text-check-outline" size={20} />
+                <View style={styles.receiptHeaderText}>
+                  <Text style={styles.label}>Receipt preview</Text>
+                  <Text style={styles.receiptMeta}>
+                    {receipt.merchant} - {(receipt.confidence * 100).toFixed(0)}% confidence
+                  </Text>
+                </View>
+              </View>
+              {receipt.items.length ? (
+                <View style={styles.itemList}>
+                  {receipt.items.slice(0, 4).map((item, index) => (
+                    <Text key={`${item.name}-${index}`} style={styles.receiptMeta}>
+                      {item.name}
+                      {item.price ? ` - ${money.format(item.price)}` : ''}
+                    </Text>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.receiptMeta}>No clear line items found. Check the total before saving.</Text>
+              )}
+              {receipt.notes ? <Text style={styles.receiptMeta}>{receipt.notes}</Text> : null}
+            </View>
+          ) : null}
+
           <Button
-            disabled={saving}
+            disabled={saving || scanning}
             loading={saving}
             mode="contained"
             onPress={submit}
@@ -200,10 +318,42 @@ function createStyles(colors: AppPalette) {
   input: {
     backgroundColor: colors.surface,
   },
+  itemList: {
+    gap: 4,
+  },
   label: {
     color: colors.ink,
     fontSize: 14,
     fontWeight: '800',
+  },
+  receiptHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  receiptHeaderText: {
+    flex: 1,
+  },
+  receiptMeta: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  receiptPreview: {
+    backgroundColor: colors.skySoft,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 8,
+    padding: 12,
+  },
+  scanActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  scanButton: {
+    borderRadius: 8,
+    flex: 1,
   },
   screen: {
     backgroundColor: colors.background,

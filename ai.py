@@ -1,3 +1,6 @@
+import base64
+import binascii
+import json
 import os
 
 from dotenv import load_dotenv
@@ -153,6 +156,64 @@ Rules:
     return {
         "response": response.text,
         "sources": _grounding_sources(response),
+    }
+
+
+def scan_receipt_image(image_base64, mime_type="image/jpeg"):
+    if not client:
+        raise RuntimeError("AI is not configured. Add GEMINI_API_KEY to the backend environment.")
+
+    try:
+        image_bytes = base64.b64decode(image_base64, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise ValueError("Receipt image is not valid base64.") from exc
+
+    prompt = """
+Extract one expense transaction from this receipt image.
+
+Return JSON only with this exact shape:
+{
+  "amount": number,
+  "category": "food" | "groceries" | "transport" | "shopping" | "utilities" | "rent" | "grooming" | "health" | "education" | "other",
+  "date": "YYYY-MM-DD",
+  "merchant": string,
+  "items": [{"name": string, "price": number}],
+  "confidence": number,
+  "notes": string
+}
+
+Rules:
+- Use the receipt total as amount, not subtotal, unless total is unavailable.
+- If the date is missing or unreadable, use today's date.
+- If item prices are unclear, return an empty items array.
+- Use PKR-style numeric values without currency symbols.
+- Keep category lowercase.
+- Confidence must be between 0 and 1.
+- Do not include markdown.
+"""
+
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=[
+            types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+            prompt,
+        ],
+        config=types.GenerateContentConfig(responseMimeType="application/json"),
+    )
+
+    try:
+        result = json.loads(response.text)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("AI could not read the receipt clearly. Try a sharper photo.") from exc
+
+    return {
+        "amount": float(result.get("amount") or 0),
+        "category": str(result.get("category") or "other").strip().lower(),
+        "date": str(result.get("date") or ""),
+        "merchant": str(result.get("merchant") or "Unknown merchant").strip(),
+        "items": result.get("items") if isinstance(result.get("items"), list) else [],
+        "confidence": float(result.get("confidence") or 0),
+        "notes": str(result.get("notes") or "").strip(),
     }
 
 
