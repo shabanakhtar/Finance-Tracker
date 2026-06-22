@@ -3,11 +3,14 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleShe
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Card, Divider, TextInput } from 'react-native-paper';
 
-import { palette } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth';
+import { AppPalette } from '@/constants/theme';
+import { useAppTheme } from '@/contexts/theme';
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const { initialized, loading, resetPassword, session, signIn, signUp } = useAuth();
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -60,7 +63,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (!initialized) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator color="#0f766e" size="large" />
+        <ActivityIndicator color={colors.sky} size="large" />
         <Text style={styles.muted}>Checking your session...</Text>
       </View>
     );
@@ -75,7 +78,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <View style={styles.brandMark}>
-            <MaterialCommunityIcons color={palette.emerald} name="wallet-outline" size={24} />
+            <MaterialCommunityIcons color={colors.sky} name="wallet-outline" size={24} />
           </View>
           <Text style={styles.brand}>Finance Tracker</Text>
           <Text style={styles.title}>{mode === 'login' ? 'Welcome back' : 'Build your money picture'}</Text>
@@ -130,13 +133,13 @@ export function AuthGate({ children }: { children: ReactNode }) {
               {mode === 'login' ? 'Sign In' : 'Sign Up'}
             </Button>
             {mode === 'login' ? (
-              <Button disabled={loading} mode="text" onPress={sendPasswordReset} textColor={palette.sky}>
+              <Button disabled={loading} mode="text" onPress={sendPasswordReset} textColor={colors.sky}>
                 Forgot password?
               </Button>
             ) : null}
             <Divider />
             <View style={styles.trustRow}>
-              <MaterialCommunityIcons color={palette.emerald} name="shield-check-outline" size={18} />
+              <MaterialCommunityIcons color={colors.sky} name="shield-check-outline" size={18} />
               <Text style={styles.trustText}>Protected by Supabase Auth and per-user data rules.</Text>
             </View>
           </Card.Content>
@@ -146,20 +149,21 @@ export function AuthGate({ children }: { children: ReactNode }) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppPalette) {
+  return StyleSheet.create({
   activeLabel: {
     color: '#ffffff',
   },
   centered: {
     alignItems: 'center',
-    backgroundColor: palette.background,
+    backgroundColor: colors.background,
     flex: 1,
     gap: 16,
     justifyContent: 'center',
     padding: 24,
   },
   screen: {
-    backgroundColor: palette.background,
+    backgroundColor: colors.background,
     flex: 1,
   },
   container: {
@@ -168,13 +172,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   brand: {
-    color: palette.emerald,
+    color: colors.sky,
     fontSize: 15,
     fontWeight: '800',
   },
   brandMark: {
     alignItems: 'center',
-    backgroundColor: palette.emeraldSoft,
+    backgroundColor: colors.skySoft,
     borderRadius: 8,
     height: 46,
     justifyContent: 'center',
@@ -185,32 +189,32 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    color: palette.ink,
+    color: colors.ink,
     fontSize: 32,
     fontWeight: '800',
   },
   subtitle: {
-    color: palette.muted,
+    color: colors.muted,
     fontSize: 15,
     lineHeight: 22,
   },
   card: {
-    backgroundColor: palette.surface,
+    backgroundColor: colors.surface,
     borderRadius: 8,
   },
   cardContent: {
     gap: 14,
   },
   error: {
-    color: palette.coral,
+    color: colors.coral,
     fontSize: 13,
   },
   message: {
-    color: palette.emerald,
+    color: colors.emerald,
     fontSize: 13,
   },
   modeActive: {
-    backgroundColor: palette.emerald,
+    backgroundColor: colors.sky,
     borderRadius: 8,
     flex: 1,
   },
@@ -219,18 +223,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modeSwitch: {
-    backgroundColor: palette.background,
-    borderColor: palette.border,
+    backgroundColor: colors.background,
+    borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
     padding: 4,
   },
   muted: {
-    color: palette.muted,
+    color: colors.muted,
   },
   primary: {
-    backgroundColor: palette.emerald,
+    backgroundColor: colors.sky,
     borderRadius: 8,
   },
   primaryLabel: {
@@ -243,9 +247,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   trustText: {
-    color: palette.muted,
+    color: colors.muted,
     flex: 1,
     fontSize: 12,
     lineHeight: 17,
   },
-});
+  });
+}

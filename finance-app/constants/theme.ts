@@ -1,22 +1,77 @@
 import { Platform } from 'react-native';
 
-export const palette = {
-  amber: '#d97706',
-  background: '#f6faf8',
-  border: '#dce8e4',
-  coral: '#c2412d',
-  coralSoft: '#fff1ee',
-  emerald: '#0f766e',
-  emeraldDark: '#0b4f49',
-  emeraldSoft: '#e6f5ef',
-  ink: '#111827',
-  muted: '#667085',
-  muted2: '#98a2b3',
-  sky: '#2563eb',
-  skySoft: '#edf4ff',
-  surface: '#ffffff',
-  warningSoft: '#fff7e6',
+export type AppThemeMode = 'system' | 'light' | 'dark';
+export type AppThemeName = 'light' | 'dark';
+
+export type AppPalette = {
+  amber: string;
+  background: string;
+  border: string;
+  coral: string;
+  coralSoft: string;
+  emerald: string;
+  emeraldDark: string;
+  emeraldSoft: string;
+  ink: string;
+  muted: string;
+  muted2: string;
+  sky: string;
+  skySoft: string;
+  surface: string;
+  surface2: string;
+  violet: string;
+  violetSoft: string;
+  warningSoft: string;
 };
+
+export const lightPalette: AppPalette = {
+  amber: '#ea7a1f',
+  background: '#fbf6ee',
+  border: '#eadfce',
+  coral: '#dc3f49',
+  coralSoft: '#fff0ec',
+  emerald: '#15803d',
+  emeraldDark: '#14532d',
+  emeraldSoft: '#eaf8ee',
+  ink: '#18130d',
+  muted: '#756a5d',
+  muted2: '#a49787',
+  sky: '#d97706',
+  skySoft: '#fff2da',
+  surface: '#ffffff',
+  surface2: '#f5eadb',
+  violet: '#7c3aed',
+  violetSoft: '#f2eafd',
+  warningSoft: '#fff4d8',
+};
+
+export const darkPalette: AppPalette = {
+  amber: '#f59e0b',
+  background: '#050714',
+  border: '#1e2a48',
+  coral: '#fb7185',
+  coralSoft: '#351722',
+  emerald: '#22c55e',
+  emeraldDark: '#86efac',
+  emeraldSoft: '#102d22',
+  ink: '#f8fbff',
+  muted: '#a8b3c7',
+  muted2: '#69758f',
+  sky: '#38bdf8',
+  skySoft: '#0b2542',
+  surface: '#0b1020',
+  surface2: '#121a33',
+  violet: '#a78bfa',
+  violetSoft: '#25184a',
+  warningSoft: '#332810',
+};
+
+export const themePalettes = {
+  light: lightPalette,
+  dark: darkPalette,
+};
+
+export const palette = lightPalette;
 
 export const spacing = {
   xs: 4,
@@ -34,32 +89,28 @@ export const radii = {
 
 export const Colors = {
   light: {
-    text: palette.ink,
-    background: palette.background,
-    tint: palette.emerald,
-    icon: palette.muted,
-    tabIconDefault: palette.muted,
-    tabIconSelected: palette.emerald,
+    text: lightPalette.ink,
+    background: lightPalette.background,
+    tint: lightPalette.sky,
+    icon: lightPalette.muted,
+    tabIconDefault: lightPalette.muted,
+    tabIconSelected: lightPalette.sky,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: '#ffffff',
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: '#ffffff',
+    text: darkPalette.ink,
+    background: darkPalette.background,
+    tint: darkPalette.sky,
+    icon: darkPalette.muted,
+    tabIconDefault: darkPalette.muted,
+    tabIconSelected: darkPalette.sky,
   },
 };
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {

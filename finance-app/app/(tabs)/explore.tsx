@@ -3,13 +3,16 @@ import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, SegmentedButtons, TextInput } from 'react-native-paper';
 
-import { palette } from '@/constants/theme';
+import { AppPalette } from '@/constants/theme';
+import { useAppTheme } from '@/contexts/theme';
 import { addTransaction } from '@/services/api';
 
 const today = new Date().toISOString().slice(0, 10);
 const categories = ['food', 'transport', 'rent', 'salary', 'shopping', 'utilities'];
 
 export default function AddTransactionScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [date, setDate] = useState(today);
@@ -60,7 +63,7 @@ export default function AddTransactionScreen() {
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <View style={styles.iconBox}>
-            <MaterialCommunityIcons color={palette.emerald} name="plus-box-outline" size={24} />
+            <MaterialCommunityIcons color={colors.sky} name="plus-box-outline" size={24} />
           </View>
           <Text style={styles.title}>Add transaction</Text>
           <Text style={styles.subtitle}>Capture income or spending in a few taps.</Text>
@@ -126,7 +129,7 @@ export default function AddTransactionScreen() {
 
           {lastSaved ? (
             <View style={styles.successBox}>
-              <MaterialCommunityIcons color={palette.emerald} name="check-circle-outline" size={20} />
+              <MaterialCommunityIcons color={colors.emerald} name="check-circle-outline" size={20} />
               <Text style={styles.successText}>{lastSaved}</Text>
             </View>
           ) : null}
@@ -146,10 +149,13 @@ export default function AddTransactionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppPalette) {
+  return StyleSheet.create({
   card: {
-    backgroundColor: palette.surface,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 8,
+    borderWidth: 1,
     gap: 14,
     padding: 16,
   },
@@ -159,11 +165,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    backgroundColor: palette.background,
+    backgroundColor: colors.surface2,
     borderRadius: 8,
   },
   chipSelected: {
-    backgroundColor: palette.emeraldSoft,
+    backgroundColor: colors.skySoft,
   },
   container: {
     gap: 16,
@@ -175,29 +181,29 @@ const styles = StyleSheet.create({
   },
   iconBox: {
     alignItems: 'center',
-    backgroundColor: palette.emeraldSoft,
+    backgroundColor: colors.skySoft,
     borderRadius: 8,
     height: 46,
     justifyContent: 'center',
     width: 46,
   },
   input: {
-    backgroundColor: palette.surface,
+    backgroundColor: colors.surface,
   },
   label: {
-    color: palette.ink,
+    color: colors.ink,
     fontSize: 14,
     fontWeight: '800',
   },
   screen: {
-    backgroundColor: palette.background,
+    backgroundColor: colors.background,
     flex: 1,
   },
   segmented: {
     marginBottom: 2,
   },
   submit: {
-    backgroundColor: palette.emerald,
+    backgroundColor: colors.sky,
     borderRadius: 8,
     marginTop: 2,
   },
@@ -205,27 +211,28 @@ const styles = StyleSheet.create({
     height: 52,
   },
   subtitle: {
-    color: palette.muted,
+    color: colors.muted,
     fontSize: 14,
     lineHeight: 20,
   },
   successBox: {
     alignItems: 'center',
-    backgroundColor: palette.emeraldSoft,
+    backgroundColor: colors.emeraldSoft,
     borderRadius: 8,
     flexDirection: 'row',
     gap: 8,
     padding: 12,
   },
   successText: {
-    color: palette.emeraldDark,
+    color: colors.emeraldDark,
     flex: 1,
     fontSize: 13,
     fontWeight: '700',
   },
   title: {
-    color: palette.ink,
+    color: colors.ink,
     fontSize: 32,
     fontWeight: '900',
   },
-});
+  });
+}

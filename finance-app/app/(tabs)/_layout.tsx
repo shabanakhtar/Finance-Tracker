@@ -1,22 +1,24 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
-import { palette } from '@/constants/theme';
+import { useAppTheme } from '@/contexts/theme';
 
 export default function Layout() {
+  const { colors } = useAppTheme();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: palette.emerald,
-        tabBarInactiveTintColor: palette.muted,
+        tabBarActiveTintColor: colors.sky,
+        tabBarInactiveTintColor: colors.muted,
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '700',
         },
         tabBarStyle: {
-          backgroundColor: palette.surface,
-          borderTopColor: palette.border,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
           height: 66,
           paddingBottom: 9,
           paddingTop: 8,
@@ -37,6 +39,24 @@ export default function Layout() {
           title: 'Add',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons color={color} name="plus-box-outline" size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="ai"
+        options={{
+          title: 'AI',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons color={color} name="creation-outline" size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons color={color} name="cog-outline" size={size} />
           ),
         }}
       />

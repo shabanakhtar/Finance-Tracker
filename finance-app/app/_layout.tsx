@@ -3,48 +3,68 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
-import { MD3LightTheme, Provider as PaperProvider } from 'react-native-paper';
+import { MD3DarkTheme, MD3LightTheme, Provider as PaperProvider } from 'react-native-paper';
 import { AuthGate } from '@/components/auth-gate';
-import { palette } from '@/constants/theme';
 import { AuthProvider } from '@/contexts/auth';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { AppThemeProvider, useAppTheme } from '@/contexts/theme';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  return (
+    <AppThemeProvider>
+      <ThemedRootLayout />
+    </AppThemeProvider>
+  );
+}
+
+function ThemedRootLayout() {
+  const { colors, resolvedTheme } = useAppTheme();
+  const basePaperTheme = resolvedTheme === 'dark' ? MD3DarkTheme : MD3LightTheme;
+  const navigationTheme = resolvedTheme === 'dark' ? DarkTheme : DefaultTheme;
   const paperTheme = {
-    ...MD3LightTheme,
+    ...basePaperTheme,
     colors: {
-      ...MD3LightTheme.colors,
-      primary: palette.emerald,
+      ...basePaperTheme.colors,
+      primary: colors.sky,
       onPrimary: '#ffffff',
-      primaryContainer: palette.emeraldSoft,
-      onPrimaryContainer: palette.emeraldDark,
-      secondary: palette.sky,
-      surface: palette.surface,
-      background: palette.background,
-      error: palette.coral,
+      primaryContainer: colors.skySoft,
+      onPrimaryContainer: colors.ink,
+      secondary: colors.violet,
+      surface: colors.surface,
+      background: colors.background,
+      error: colors.coral,
       onError: '#ffffff',
-      onSurface: palette.ink,
-      onSurfaceVariant: palette.muted,
-      outline: palette.border,
+      onSurface: colors.ink,
+      onSurfaceVariant: colors.muted,
+      outline: colors.border,
+    },
+  };
+  const appNavigationTheme = {
+    ...navigationTheme,
+    colors: {
+      ...navigationTheme.colors,
+      background: colors.background,
+      border: colors.border,
+      card: colors.surface,
+      primary: colors.sky,
+      text: colors.ink,
     },
   };
 
   return (
     <PaperProvider theme={paperTheme}>
       <AuthProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <ThemeProvider value={appNavigationTheme}>
           <AuthGate>
             <Stack>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
             </Stack>
           </AuthGate>
-          <StatusBar style="auto" />
+          <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />
         </ThemeProvider>
       </AuthProvider>
     </PaperProvider>

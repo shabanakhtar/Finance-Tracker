@@ -53,6 +53,10 @@ export type Dashboard = {
   transaction_count: number;
 };
 
+export type AiAnswer = {
+  response: string;
+};
+
 type ApiResponse<T> = {
   status: string;
   data: T;
@@ -119,5 +123,12 @@ export function saveBudget(budget: Budget) {
 export function deleteBudget(category: string) {
   return request<{ message: string }>(`/budgets/${encodeURIComponent(category)}`, {
     method: 'DELETE',
+  });
+}
+
+export function askAi(question: string) {
+  return request<AiAnswer>('/ask-ai', {
+    method: 'POST',
+    body: JSON.stringify({ question }),
   });
 }

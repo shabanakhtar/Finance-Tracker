@@ -1,11 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Button, Card, Chip, IconButton, ProgressBar, SegmentedButtons, TextInput } from 'react-native-paper';
 
-import { palette } from '@/constants/theme';
+import { AppPalette } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth';
+import { useAppTheme } from '@/contexts/theme';
 import {
   API_BASE_URL,
   BudgetStatus,
@@ -42,8 +43,25 @@ type TransactionForm = {
   type: 'income' | 'expense';
 };
 
+type DashboardTheme = {
+  colors: AppPalette;
+  styles: ReturnType<typeof createStyles>;
+};
+
+const DashboardThemeContext = createContext<DashboardTheme | null>(null);
+
+function useDashboardTheme() {
+  const value = useContext(DashboardThemeContext);
+  if (!value) {
+    throw new Error('Dashboard theme is missing');
+  }
+  return value;
+}
+
 export default function DashboardScreen() {
   const { session, signOut } = useAuth();
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [budgetAmount, setBudgetAmount] = useState('');
   const [budgetCategory, setBudgetCategory] = useState('');
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
@@ -202,7 +220,7 @@ export default function DashboardScreen() {
     return (
       <View style={styles.centered}>
         <View style={styles.loadingMark}>
-          <ActivityIndicator color={palette.emerald} size="large" />
+          <ActivityIndicator color={colors.emerald} size="large" />
         </View>
         <Text style={styles.loadingTitle}>Preparing your dashboard</Text>
         <Text style={styles.muted}>Syncing Vercel, Supabase, and your latest transactions.</Text>
@@ -211,18 +229,19 @@ export default function DashboardScreen() {
   }
 
   return (
+    <DashboardThemeContext.Provider value={{ colors, styles }}>
     <ScrollView
       contentContainerStyle={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} tintColor={palette.emerald} onRefresh={onRefresh} />}>
+      refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.sky} onRefresh={onRefresh} />}>
       <View style={styles.header}>
         <View>
           <Text style={styles.brand}>Finance Tracker</Text>
           <Text style={styles.title}>Dashboard</Text>
         </View>
-        <IconButton icon="logout" iconColor={palette.ink} mode="contained-tonal" onPress={signOut} size={20} />
+        <IconButton icon="logout" iconColor={colors.ink} mode="contained-tonal" onPress={signOut} size={20} />
       </View>
 
-      <Text style={styles.subtitle}>{session?.user.email ?? 'Signed in'} · API live</Text>
+      <Text style={styles.subtitle}>{session?.user.email ?? 'Signed in'} - API live</Text>
 
       {error ? <ErrorState error={error} onRetry={loadDashboard} /> : null}
 
@@ -256,7 +275,7 @@ export default function DashboardScreen() {
             </View>
             <View style={styles.scoreText}>
               <Text style={styles.cardTitle}>Financial score</Text>
-              <ProgressBar progress={scoreProgress} color={palette.emerald} style={styles.progress} />
+              <ProgressBar progress={scoreProgress} color={colors.emerald} style={styles.progress} />
               <Text style={styles.muted}>{dashboard.transaction_count} transactions analyzed</Text>
             </View>
           </View>
@@ -384,7 +403,7 @@ export default function DashboardScreen() {
                     <Text style={styles.listLabel}>{category}</Text>
                     <Text style={styles.listValue}>{percent.toFixed(1)}%</Text>
                   </View>
-                  <ProgressBar progress={Math.min(percent / 100, 1)} color={palette.sky} style={styles.progress} />
+                  <ProgressBar progress={Math.min(percent / 100, 1)} color={colors.sky} style={styles.progress} />
                 </View>
               ))
             ) : (
@@ -409,6 +428,7 @@ export default function DashboardScreen() {
         </>
       ) : null}
     </ScrollView>
+    </DashboardThemeContext.Provider>
   );
 }
 
@@ -421,11 +441,13 @@ function Section({
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   title: string;
 }) {
+  const { colors, styles } = useDashboardTheme();
+
   return (
     <Card style={styles.card}>
       <Card.Content>
         <View style={styles.sectionHeader}>
-          <MaterialCommunityIcons color={palette.emerald} name={icon} size={20} />
+          <MaterialCommunityIcons color={colors.emerald} name={icon} size={20} />
           <Text style={styles.cardTitle}>{title}</Text>
         </View>
         {children}
@@ -435,6 +457,8 @@ function Section({
 }
 
 function Metric({ label, value, tone }: { label: string; value: string; tone: 'income' | 'expense' }) {
+  const { styles } = useDashboardTheme();
+
   return (
     <View style={[styles.metric, tone === 'income' ? styles.metricIncome : styles.metricExpense]}>
       <Text style={styles.metricLabel}>{label}</Text>
@@ -444,11 +468,12 @@ function Metric({ label, value, tone }: { label: string; value: string; tone: 'i
 }
 
 function TransactionRow({ item, onDelete, onEdit }: { item: Transaction; onDelete: () => void; onEdit: () => void }) {
+  const { colors, styles } = useDashboardTheme();
   const icon = categoryIcons[item.category.toLowerCase()] ?? (item.type === 'income' ? 'cash-plus' : 'cash-minus');
   return (
     <View style={styles.transactionRow}>
       <View style={[styles.transactionIcon, item.type === 'income' ? styles.incomeIcon : styles.expenseIcon]}>
-        <MaterialCommunityIcons color={item.type === 'income' ? palette.emerald : palette.coral} name={icon} size={20} />
+        <MaterialCommunityIcons color={item.type === 'income' ? colors.emerald : colors.coral} name={icon} size={20} />
       </View>
       <View style={styles.transactionText}>
         <Text style={styles.listLabel}>{item.category}</Text>
@@ -459,14 +484,16 @@ function TransactionRow({ item, onDelete, onEdit }: { item: Transaction; onDelet
         {money.format(item.amount)}
       </Text>
       <View style={styles.rowActions}>
-        <IconButton icon="pencil-outline" iconColor={palette.sky} onPress={onEdit} size={18} />
-        <IconButton icon="trash-can-outline" iconColor={palette.coral} onPress={onDelete} size={18} />
+        <IconButton icon="pencil-outline" iconColor={colors.sky} onPress={onEdit} size={18} />
+        <IconButton icon="trash-can-outline" iconColor={colors.coral} onPress={onDelete} size={18} />
       </View>
     </View>
   );
 }
 
 function BudgetRow({ item, onDelete }: { item: BudgetStatus; onDelete: () => void }) {
+  const { colors, styles } = useDashboardTheme();
+
   return (
     <View style={styles.budgetRow}>
       <View style={styles.rowBetween}>
@@ -475,7 +502,7 @@ function BudgetRow({ item, onDelete }: { item: BudgetStatus; onDelete: () => voi
           {money.format(item.spent)} / {money.format(item.limit_amount)}
         </Text>
       </View>
-      <ProgressBar progress={item.progress} color={item.is_over ? palette.coral : palette.emerald} style={styles.progress} />
+      <ProgressBar progress={item.progress} color={item.is_over ? colors.coral : colors.emerald} style={styles.progress} />
       <View style={styles.rowBetween}>
         <Text style={styles.muted}>
           {item.is_over ? `${money.format(Math.abs(item.remaining))} over` : `${money.format(item.remaining)} left`}
@@ -489,20 +516,24 @@ function BudgetRow({ item, onDelete }: { item: BudgetStatus; onDelete: () => voi
 }
 
 function EmptyState({ icon, text }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; text: string }) {
+  const { colors, styles } = useDashboardTheme();
+
   return (
     <View style={styles.emptyState}>
-      <MaterialCommunityIcons color={palette.muted} name={icon} size={24} />
+      <MaterialCommunityIcons color={colors.muted} name={icon} size={24} />
       <Text style={styles.muted}>{text}</Text>
     </View>
   );
 }
 
 function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
+  const { colors, styles } = useDashboardTheme();
+
   return (
     <Card style={styles.errorCard}>
       <Card.Content>
         <View style={styles.sectionHeader}>
-          <MaterialCommunityIcons color={palette.coral} name="cloud-alert-outline" size={22} />
+          <MaterialCommunityIcons color={colors.coral} name="cloud-alert-outline" size={22} />
           <Text style={styles.errorTitle}>Backend unavailable</Text>
         </View>
         <Text style={styles.errorText}>{error}</Text>
@@ -514,7 +545,8 @@ function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) 
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppPalette) {
+  return StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     gap: 10,
@@ -522,12 +554,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   apiHint: {
-    color: palette.muted2,
+    color: colors.muted2,
     fontSize: 11,
     textAlign: 'center',
   },
   balanceCard: {
-    backgroundColor: palette.ink,
+    backgroundColor: colors.ink,
     borderRadius: 8,
   },
   balanceHint: {
@@ -554,7 +586,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   brand: {
-    color: palette.emerald,
+    color: colors.emerald,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -563,23 +595,23 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   budgetRow: {
-    borderTopColor: palette.border,
+    borderTopColor: colors.border,
     borderTopWidth: 1,
     gap: 8,
     paddingTop: 12,
   },
   card: {
-    backgroundColor: palette.surface,
+    backgroundColor: colors.surface,
     borderRadius: 8,
   },
   cardTitle: {
-    color: palette.ink,
+    color: colors.ink,
     fontSize: 18,
     fontWeight: '800',
   },
   centered: {
     alignItems: 'center',
-    backgroundColor: palette.background,
+    backgroundColor: colors.background,
     flex: 1,
     gap: 10,
     justifyContent: 'center',
@@ -593,11 +625,11 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   chip: {
-    backgroundColor: palette.emeraldSoft,
+    backgroundColor: colors.emeraldSoft,
     borderRadius: 8,
   },
   chipText: {
-    color: palette.emeraldDark,
+    color: colors.emeraldDark,
   },
   chipWrap: {
     flexDirection: 'row',
@@ -605,20 +637,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   container: {
-    backgroundColor: palette.background,
+    backgroundColor: colors.background,
     gap: 16,
     padding: 20,
     paddingBottom: 36,
   },
   deleteText: {
-    color: palette.coral,
+    color: colors.coral,
     fontSize: 13,
     fontWeight: '800',
   },
   emptyState: {
     alignItems: 'center',
-    backgroundColor: palette.background,
-    borderColor: palette.border,
+    backgroundColor: colors.background,
+    borderColor: colors.border,
     borderRadius: 8,
     borderStyle: 'dashed',
     borderWidth: 1,
@@ -627,12 +659,12 @@ const styles = StyleSheet.create({
   },
   errorButton: {
     alignSelf: 'flex-start',
-    backgroundColor: palette.coral,
+    backgroundColor: colors.coral,
     borderRadius: 8,
     marginTop: 12,
   },
   errorCard: {
-    backgroundColor: palette.coralSoft,
+    backgroundColor: colors.coralSoft,
     borderRadius: 8,
   },
   errorText: {
@@ -645,18 +677,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   expense: {
-    color: palette.coral,
+    color: colors.coral,
     fontSize: 14,
     fontWeight: '900',
   },
   expenseBar: {
-    backgroundColor: palette.coral,
+    backgroundColor: colors.coral,
     borderRadius: 999,
     minHeight: 8,
     width: 12,
   },
   expenseIcon: {
-    backgroundColor: palette.coralSoft,
+    backgroundColor: colors.coralSoft,
   },
   formGrid: {
     gap: 10,
@@ -668,30 +700,30 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   income: {
-    color: palette.emerald,
+    color: colors.emerald,
     fontSize: 14,
     fontWeight: '900',
   },
   incomeBar: {
-    backgroundColor: palette.emerald,
+    backgroundColor: colors.emerald,
     borderRadius: 999,
     minHeight: 8,
     width: 12,
   },
   incomeIcon: {
-    backgroundColor: palette.emeraldSoft,
+    backgroundColor: colors.emeraldSoft,
   },
   input: {
-    backgroundColor: palette.surface,
+    backgroundColor: colors.surface,
   },
   listLabel: {
-    color: palette.ink,
+    color: colors.ink,
     fontSize: 15,
     fontWeight: '800',
     textTransform: 'capitalize',
   },
   listValue: {
-    color: palette.muted,
+    color: colors.muted,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -717,14 +749,14 @@ const styles = StyleSheet.create({
   },
   loadingMark: {
     alignItems: 'center',
-    backgroundColor: palette.surface,
+    backgroundColor: colors.surface,
     borderRadius: 8,
     height: 58,
     justifyContent: 'center',
     width: 58,
   },
   loadingTitle: {
-    color: palette.ink,
+    color: colors.ink,
     fontSize: 18,
     fontWeight: '900',
   },
@@ -761,17 +793,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   monthLabel: {
-    color: palette.muted,
+    color: colors.muted,
     fontSize: 11,
     fontWeight: '800',
   },
   muted: {
-    color: palette.muted,
+    color: colors.muted,
     fontSize: 13,
     lineHeight: 18,
   },
   primaryButton: {
-    backgroundColor: palette.emerald,
+    backgroundColor: colors.emerald,
     borderRadius: 8,
   },
   progress: {
@@ -788,7 +820,7 @@ const styles = StyleSheet.create({
   },
   scoreCard: {
     alignItems: 'center',
-    backgroundColor: palette.surface,
+    backgroundColor: colors.surface,
     borderRadius: 8,
     flexDirection: 'row',
     gap: 14,
@@ -796,7 +828,7 @@ const styles = StyleSheet.create({
   },
   scoreCircle: {
     alignItems: 'center',
-    backgroundColor: palette.emeraldSoft,
+    backgroundColor: colors.emeraldSoft,
     borderColor: '#c3ead9',
     borderRadius: 999,
     borderWidth: 1,
@@ -805,7 +837,7 @@ const styles = StyleSheet.create({
     width: 72,
   },
   scoreMax: {
-    color: palette.muted,
+    color: colors.muted,
     fontSize: 11,
     fontWeight: '800',
   },
@@ -814,7 +846,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   scoreValue: {
-    color: palette.emerald,
+    color: colors.emerald,
     fontSize: 24,
     fontWeight: '900',
   },
@@ -829,12 +861,12 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   subtitle: {
-    color: palette.muted,
+    color: colors.muted,
     fontSize: 13,
     marginTop: -10,
   },
   title: {
-    color: palette.ink,
+    color: colors.ink,
     fontSize: 32,
     fontWeight: '900',
   },
@@ -847,7 +879,7 @@ const styles = StyleSheet.create({
   },
   transactionRow: {
     alignItems: 'center',
-    borderBottomColor: palette.border,
+    borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: 'row',
     gap: 10,
@@ -856,4 +888,5 @@ const styles = StyleSheet.create({
   transactionText: {
     flex: 1,
   },
-});
+  });
+}

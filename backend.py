@@ -347,13 +347,24 @@ def get_breakdown(request: Request):
 class AIRequest(BaseModel):
     question: str
 
+    @field_validator("question")
+    def validate_question(cls, value):
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Question is required")
+        if len(cleaned) > 1000:
+            raise ValueError("Question must be 1000 characters or fewer")
+        return cleaned
+
 
 
 @app.post("/ask-ai")
 def ask_ai_endpoint(request: AIRequest, http_request: Request):
     try:
-        data = load_data(current_user_id(http_request))
-        response = ask_ai(request.question, data)
+        user_id = current_user_id(http_request)
+        data = load_data(user_id)
+        budgets = load_budget_settings(user_id)
+        response = ask_ai(request.question, data, budgets)
 
         return {
             "status": "success",
@@ -362,12 +373,20 @@ def ask_ai_endpoint(request: AIRequest, http_request: Request):
             }
         }
 
-    except Exception as e: # catch any unexpected errors
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "error",
+                "message": str(e)
+            }
+        )
+    except Exception: # catch any unexpected errors
         raise HTTPException(
             status_code=500,
             detail={
                 "status": "error",
-                "message": str(e)
+                "message": "AI is temporarily unavailable. Please try again soon."
             }
         )
 
