@@ -37,6 +37,13 @@ export type BudgetStatus = Budget & {
   is_over: boolean;
 };
 
+export type Opportunity = {
+  kind: 'recurring' | 'anomaly' | 'value';
+  title: string;
+  detail: string;
+  impact: string;
+};
+
 export type Dashboard = {
   summary: Summary;
   categories: Record<string, { income: number; expense: number }>;
@@ -46,6 +53,7 @@ export type Dashboard = {
   recent_transactions: Transaction[];
   insights: string[];
   recurring: string[];
+  opportunities: Opportunity[];
   budgets: Budget[];
   budget_status: BudgetStatus[];
   warnings: string[];

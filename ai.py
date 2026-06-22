@@ -11,6 +11,7 @@ from analytics import (
     detect_recurring_expenses,
     detect_top_trends,
     generate_smart_warnings,
+    phase_two_opportunities,
     spending_by_weekday,
 )
 
@@ -103,6 +104,7 @@ def ask_ai(user_input, data, budgets=None):
     recurring = detect_recurring_expenses(data)
     trends = detect_top_trends(data)
     warnings = generate_smart_warnings(data, budget_limits)
+    opportunities = phase_two_opportunities(data, budget_limits)
 
     prompt = f"""
 You are a personal finance assistant helping a student improve their financial habits.
@@ -125,6 +127,9 @@ You are a personal finance assistant helping a student improve their financial h
 
 ### Warnings
 {warnings or "No major warnings right now."}
+
+### Phase 2 Opportunities
+{opportunities or "No recurring, unusual spending, or value-saving opportunities detected yet."}
 
 ### Key Insights
 {chr(10).join(insights)}

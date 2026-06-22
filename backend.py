@@ -21,6 +21,7 @@ from analytics import (
     expense_breakdown,
     generate_smart_warnings,
     monthly_summary,
+    phase_two_opportunities,
     top_categories,
 )
 from ai import ask_ai
@@ -251,6 +252,7 @@ def get_dashboard(request: Request):
                 + calculate_savings_rate(data)
             )[:6],
             "recurring": detect_recurring_expenses(data),
+            "opportunities": phase_two_opportunities(data, active_budgets),
             "budgets": budgets,
             "budget_status": budget_status(data, budgets),
             "warnings": generate_smart_warnings(data, active_budgets),

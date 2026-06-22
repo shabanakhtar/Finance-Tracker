@@ -374,6 +374,103 @@ def detect_recurring_expenses(data):
     return recurring
 
 
+def detect_spending_anomalies(data):
+    anomalies = []
+
+    expenses = [row for row in data if row["type"] == "expense"]
+    if len(expenses) < MIN_TRANSACTIONS:
+        return anomalies
+
+    category_rows = {}
+    for row in expenses:
+        category_rows.setdefault(row["category"], []).append(row)
+
+    for category, rows in category_rows.items():
+        if len(rows) < 3:
+            continue
+
+        amounts = [row["amount"] for row in rows]
+        average = sum(amounts) / len(amounts)
+        largest = max(rows, key=lambda row: row["amount"])
+
+        if average > 0 and largest["amount"] >= average * 1.8:
+            difference = largest["amount"] - average
+            anomalies.append(
+                f"{category} had an unusually high {largest['date']} expense, about {difference:.0f} above its average."
+            )
+
+    return anomalies[:3]
+
+
+def find_value_opportunities(data, budgets=None):
+    opportunities = []
+    expenses = [row for row in data if row["type"] == "expense"]
+
+    if len(expenses) < MIN_TRANSACTIONS:
+        return opportunities
+
+    category_totals = get_category_totals(expenses)
+    if not category_totals:
+        return opportunities
+
+    budget_limits = budgets or {}
+    sorted_categories = sorted(category_totals.items(), key=lambda item: item[1], reverse=True)
+    value_categories = {"food", "groceries", "shopping", "transport", "utilities"}
+
+    for category, total in sorted_categories:
+        lower_category = category.lower()
+        budget_limit = budget_limits.get(lower_category) or budget_limits.get(category)
+
+        if lower_category in value_categories:
+            if lower_category in {"shopping", "food", "groceries"}:
+                message = f"Review {category} purchases for cheaper alternatives before buying again."
+            elif lower_category == "transport":
+                message = "Transport is a good place to compare rides, fuel, and public transit costs."
+            else:
+                message = f"Compare providers or usage habits for {category} to lower recurring costs."
+
+            opportunities.append(message)
+
+        if budget_limit and total > budget_limit * 0.75:
+            opportunities.append(f"{category} is near its budget; set a lower target or pause non-essential spending.")
+
+        if len(opportunities) >= 3:
+            break
+
+    return opportunities[:3]
+
+
+def phase_two_opportunities(data, budgets=None):
+    budget_limits = budgets or {}
+    items = []
+
+    for recurring in detect_recurring_expenses(data)[:2]:
+        items.append({
+            "kind": "recurring",
+            "title": "Recurring cost detected",
+            "detail": f"{recurring} looks like a repeated monthly expense. Check if it is still worth keeping.",
+            "impact": "Potential subscription cleanup",
+        })
+
+    for anomaly in detect_spending_anomalies(data)[:2]:
+        items.append({
+            "kind": "anomaly",
+            "title": "Unusual spend spotted",
+            "detail": anomaly,
+            "impact": "Prevents surprise overspending",
+        })
+
+    for opportunity in find_value_opportunities(data, budget_limits):
+        items.append({
+            "kind": "value",
+            "title": "Value opportunity",
+            "detail": opportunity,
+            "impact": "Possible monthly savings",
+        })
+
+    return items[:6]
+
+
 def detect_top_trends(data):
     results = []
     

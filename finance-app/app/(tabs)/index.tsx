@@ -11,6 +11,7 @@ import {
   API_BASE_URL,
   BudgetStatus,
   Dashboard,
+  Opportunity,
   Transaction,
   deleteBudget,
   deleteTransaction,
@@ -283,6 +284,18 @@ export default function DashboardScreen() {
             </View>
           </View>
 
+          <Section title="Opportunities" icon="creation-outline">
+            {dashboard.opportunities?.length ? (
+              <View style={styles.opportunityList}>
+                {dashboard.opportunities.map((item, index) => (
+                  <OpportunityRow item={item} key={`${item.kind}-${index}`} />
+                ))}
+              </View>
+            ) : (
+              <EmptyState icon="magnify-scan" text="Add more transactions to unlock recurring, unusual spend, and value-saving ideas." />
+            )}
+          </Section>
+
           <Section title="Monthly cash flow" icon="chart-bar">
             {monthlyRows.length ? (
               <View style={styles.chartPanel}>
@@ -465,6 +478,26 @@ function StepBadge({ icon, text }: { icon: keyof typeof MaterialCommunityIcons.g
     <View style={styles.stepBadge}>
       <MaterialCommunityIcons color={colors.sky} name={icon} size={16} />
       <Text style={styles.stepText}>{text}</Text>
+    </View>
+  );
+}
+
+function OpportunityRow({ item }: { item: Opportunity }) {
+  const { colors, styles } = useDashboardTheme();
+  const icon =
+    item.kind === 'recurring' ? 'repeat' : item.kind === 'anomaly' ? 'alert-decagram-outline' : 'tag-search-outline';
+  const color = item.kind === 'anomaly' ? colors.coral : item.kind === 'recurring' ? colors.violet : colors.sky;
+
+  return (
+    <View style={styles.opportunityRow}>
+      <View style={[styles.opportunityIcon, { backgroundColor: item.kind === 'anomaly' ? colors.coralSoft : colors.skySoft }]}>
+        <MaterialCommunityIcons color={color} name={icon} size={20} />
+      </View>
+      <View style={styles.opportunityText}>
+        <Text style={styles.listLabel}>{item.title}</Text>
+        <Text style={styles.opportunityDetail}>{item.detail}</Text>
+        <Text style={styles.opportunityImpact}>{item.impact}</Text>
+      </View>
     </View>
   );
 }
@@ -842,6 +875,41 @@ function createStyles(colors: AppPalette) {
     color: colors.muted,
     fontSize: 13,
     lineHeight: 18,
+  },
+  opportunityDetail: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 3,
+  },
+  opportunityIcon: {
+    alignItems: 'center',
+    borderRadius: 8,
+    height: 42,
+    justifyContent: 'center',
+    width: 42,
+  },
+  opportunityImpact: {
+    color: colors.sky,
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 6,
+  },
+  opportunityList: {
+    gap: 10,
+  },
+  opportunityRow: {
+    alignItems: 'flex-start',
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    padding: 12,
+  },
+  opportunityText: {
+    flex: 1,
   },
   primaryButton: {
     backgroundColor: colors.sky,
