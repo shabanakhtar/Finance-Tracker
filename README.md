@@ -107,6 +107,12 @@ npx eas build --platform android --profile preview
 npx eas build --platform android --profile production
 ```
 
+Preview build steps and the manual QA checklist are documented in:
+
+```text
+docs/android-preview-build.md
+```
+
 ## Security Notes
 
 - Never commit `.env` or `finance-app/.env.local`.
