@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -41,6 +42,7 @@ type TransactionForm = {
   amount: string;
   category: string;
   date: string;
+  notes: string;
   type: 'income' | 'expense';
 };
 
@@ -126,6 +128,7 @@ export default function DashboardScreen() {
       amount: String(item.amount),
       category: item.category,
       date: item.date,
+      notes: item.notes ?? '',
       type: item.type,
     });
   };
@@ -146,6 +149,7 @@ export default function DashboardScreen() {
         amount: parsedAmount,
         category: editing.category.trim(),
         date: editing.date,
+        notes: editing.notes.trim(),
         type: editing.type,
       });
       setEditing(null);
@@ -267,6 +271,7 @@ export default function DashboardScreen() {
                 <Metric label="Income" value={money.format(dashboard.summary.income)} tone="income" />
                 <Metric label="Spent" value={money.format(dashboard.summary.expense)} tone="expense" />
               </View>
+              <QuickAddStrip />
             </Card.Content>
           </Card>
 
@@ -384,6 +389,15 @@ export default function DashboardScreen() {
                   style={styles.input}
                   value={editing.date}
                 />
+                <TextInput
+                  label="Notes"
+                  mode="outlined"
+                  multiline
+                  numberOfLines={2}
+                  onChangeText={(value) => setEditing({ ...editing, notes: value })}
+                  style={styles.input}
+                  value={editing.notes}
+                />
               </View>
               <View style={styles.actionRow}>
                 <Button disabled={savingTransaction} mode="outlined" onPress={() => setEditing(null)}>
@@ -478,6 +492,38 @@ function StepBadge({ icon, text }: { icon: keyof typeof MaterialCommunityIcons.g
     <View style={styles.stepBadge}>
       <MaterialCommunityIcons color={colors.sky} name={icon} size={16} />
       <Text style={styles.stepText}>{text}</Text>
+    </View>
+  );
+}
+
+function QuickAddStrip() {
+  const { colors, styles } = useDashboardTheme();
+  const shortcuts = [
+    { category: 'food', icon: 'food-outline', label: 'Food', type: 'expense' },
+    { category: 'transport', icon: 'bus', label: 'Ride', type: 'expense' },
+    { category: 'shopping', icon: 'shopping-outline', label: 'Shop', type: 'expense' },
+    { category: 'salary', icon: 'cash-plus', label: 'Income', type: 'income' },
+  ] as const;
+
+  return (
+    <View style={styles.quickAddPanel}>
+      <View style={styles.rowBetween}>
+        <Text style={styles.quickAddTitle}>Quick add</Text>
+        <TouchableOpacity onPress={() => router.push('/explore')}>
+          <Text style={styles.quickAddLink}>Open full form</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.quickAddRow}>
+        {shortcuts.map((item) => (
+          <TouchableOpacity
+            key={item.category}
+            onPress={() => router.push({ pathname: '/explore', params: { category: item.category, type: item.type } })}
+            style={styles.quickAddButton}>
+            <MaterialCommunityIcons color={colors.sky} name={item.icon} size={18} />
+            <Text style={styles.quickAddButtonText}>{item.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   );
 }
@@ -875,6 +921,44 @@ function createStyles(colors: AppPalette) {
     color: colors.muted,
     fontSize: 13,
     lineHeight: 18,
+  },
+  quickAddButton: {
+    alignItems: 'center',
+    backgroundColor: colors.balancePill,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flex: 1,
+    gap: 6,
+    minHeight: 66,
+    justifyContent: 'center',
+    padding: 8,
+  },
+  quickAddButtonText: {
+    color: colors.balanceText,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  quickAddLink: {
+    color: colors.sky,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  quickAddPanel: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    gap: 10,
+    marginTop: 16,
+    paddingTop: 14,
+  },
+  quickAddRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  quickAddTitle: {
+    color: colors.balanceText,
+    fontSize: 14,
+    fontWeight: '900',
   },
   opportunityDetail: {
     color: colors.muted,

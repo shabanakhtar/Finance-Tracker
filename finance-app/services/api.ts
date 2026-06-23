@@ -178,6 +178,7 @@ export function updateTransaction(transaction: Required<Pick<Transaction, 'id'>>
       category: transaction.category,
       type: transaction.type,
       date: transaction.date,
+      notes: transaction.notes,
     }),
   });
 }

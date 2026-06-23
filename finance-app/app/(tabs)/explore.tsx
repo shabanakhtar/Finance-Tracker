@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, SegmentedButtons, TextInput } from 'react-native-paper';
@@ -17,16 +18,18 @@ const money = new Intl.NumberFormat('en-PK', {
 });
 
 export default function AddTransactionScreen() {
+  const params = useLocalSearchParams<{ category?: string; type?: 'income' | 'expense' }>();
   const { colors } = useAppTheme();
   const styles = createStyles(colors);
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState(params.category ?? '');
   const [date, setDate] = useState(today);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [notes, setNotes] = useState('');
   const [receipt, setReceipt] = useState<ReceiptScanResult | null>(null);
   const [receiptAlternatives, setReceiptAlternatives] = useState<Record<string, MarketSearchAnswer>>({});
   const [checkingItem, setCheckingItem] = useState<string | null>(null);
-  const [type, setType] = useState<'income' | 'expense'>('expense');
+  const [type, setType] = useState<'income' | 'expense'>(params.type === 'income' ? 'income' : 'expense');
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
 
@@ -55,11 +58,13 @@ export default function AddTransactionScreen() {
         category: category.trim(),
         type,
         date,
+        notes: notes.trim(),
       });
       setLastSaved(`${type === 'income' ? 'Income' : 'Expense'} saved: ${category.trim()} - ${money.format(parsedAmount)}`);
       setAmount('');
       setCategory('');
       setDate(today);
+      setNotes('');
       setReceipt(null);
       setReceiptAlternatives({});
       setType('expense');
@@ -255,6 +260,18 @@ export default function AddTransactionScreen() {
             left={<TextInput.Icon icon="calendar-month-outline" />}
             style={styles.input}
             value={date}
+          />
+
+          <TextInput
+            label="Notes"
+            mode="outlined"
+            multiline
+            numberOfLines={2}
+            onChangeText={setNotes}
+            placeholder="optional context, merchant, or reason"
+            left={<TextInput.Icon icon="note-text-outline" />}
+            style={styles.input}
+            value={notes}
           />
 
           {lastSaved ? (
