@@ -8,6 +8,7 @@ import { Button, Chip, SegmentedButtons, TextInput } from 'react-native-paper';
 import { AppPalette } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
 import { MarketSearchAnswer, ReceiptScanResult, addTransaction, scanReceipt, searchMarket } from '@/services/api';
+import { isLikelyNetworkError, queueTransaction } from '@/services/offlineQueue';
 
 const today = new Date().toISOString().slice(0, 10);
 const categories = ['food', 'groceries', 'transport', 'rent', 'salary', 'shopping', 'utilities', 'grooming', 'health', 'education', 'other'];
@@ -53,13 +54,14 @@ export default function AddTransactionScreen() {
 
     try {
       setSaving(true);
-      await addTransaction({
+      const transaction = {
         amount: parsedAmount,
         category: category.trim(),
         type,
         date,
         notes: notes.trim(),
-      });
+      };
+      await addTransaction(transaction);
       setLastSaved(`${type === 'income' ? 'Income' : 'Expense'} saved: ${category.trim()} - ${money.format(parsedAmount)}`);
       setAmount('');
       setCategory('');
@@ -69,6 +71,24 @@ export default function AddTransactionScreen() {
       setReceiptAlternatives({});
       setType('expense');
     } catch (err) {
+      if (isLikelyNetworkError(err)) {
+        await queueTransaction({
+          amount: parsedAmount,
+          category: category.trim(),
+          type,
+          date,
+          notes: notes.trim(),
+        });
+        setLastSaved(`Saved offline: ${category.trim()} - ${money.format(parsedAmount)}. It will sync when the API is reachable.`);
+        setAmount('');
+        setCategory('');
+        setDate(today);
+        setNotes('');
+        setReceipt(null);
+        setReceiptAlternatives({});
+        setType('expense');
+        return;
+      }
       Alert.alert('Could not save', err instanceof Error ? err.message : 'Backend request failed.');
     } finally {
       setSaving(false);

@@ -8,6 +8,7 @@ import { Button, Card, Chip, IconButton, ProgressBar, SegmentedButtons, TextInpu
 import { AppPalette } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth';
 import { useAppTheme } from '@/contexts/theme';
+import { getQueuedTransactions, syncQueuedTransactions } from '@/services/offlineQueue';
 import {
   API_BASE_URL,
   BudgetStatus,
@@ -75,10 +76,14 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [savingBudget, setSavingBudget] = useState(false);
   const [savingTransaction, setSavingTransaction] = useState(false);
+  const [queuedCount, setQueuedCount] = useState(0);
+  const [syncingQueue, setSyncingQueue] = useState(false);
 
   const loadDashboard = useCallback(async () => {
     try {
       setError(null);
+      const queued = await getQueuedTransactions();
+      setQueuedCount(queued.length);
       const nextDashboard = await getDashboard();
       setDashboard(nextDashboard);
     } catch (err) {
@@ -116,6 +121,26 @@ export default function DashboardScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     loadDashboard();
+  };
+
+  const syncOfflineQueue = async () => {
+    try {
+      setSyncingQueue(true);
+      const result = await syncQueuedTransactions();
+      setQueuedCount(result.remaining.length);
+      if (result.synced > 0) {
+        await loadDashboard();
+      }
+      if (!result.online) {
+        Alert.alert('Still offline', 'Queued transactions will sync when your connection is back.');
+      } else if (result.remaining.length) {
+        Alert.alert('Partial sync', `${result.synced} synced, ${result.remaining.length} still waiting.`);
+      }
+    } catch (err) {
+      Alert.alert('Sync failed', err instanceof Error ? err.message : 'Could not sync queued transactions.');
+    } finally {
+      setSyncingQueue(false);
+    }
   };
 
   const startEdit = (item: Transaction) => {
@@ -251,6 +276,7 @@ export default function DashboardScreen() {
       <Text style={styles.subtitle}>{session?.user.email ?? 'Signed in'} - API live</Text>
 
       {error ? <ErrorState error={error} onRetry={loadDashboard} /> : null}
+      {queuedCount > 0 ? <OfflineQueueCard count={queuedCount} syncing={syncingQueue} onSync={syncOfflineQueue} /> : null}
 
       {dashboard ? (
         <>
@@ -692,6 +718,25 @@ function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) 
   );
 }
 
+function OfflineQueueCard({ count, onSync, syncing }: { count: number; onSync: () => void; syncing: boolean }) {
+  const { colors, styles } = useDashboardTheme();
+
+  return (
+    <Card style={styles.offlineCard}>
+      <Card.Content>
+        <View style={styles.sectionHeader}>
+          <MaterialCommunityIcons color={colors.amber} name="cloud-sync-outline" size={22} />
+          <Text style={styles.cardTitle}>{count} offline transaction{count === 1 ? '' : 's'} waiting</Text>
+        </View>
+        <Text style={styles.muted}>These were saved on this device and will be uploaded once the API is reachable.</Text>
+        <Button loading={syncing} mode="contained" onPress={onSync} style={styles.offlineButton}>
+          Sync now
+        </Button>
+      </Card.Content>
+    </Card>
+  );
+}
+
 function createStyles(colors: AppPalette) {
   return StyleSheet.create({
   actionRow: {
@@ -1058,6 +1103,18 @@ function createStyles(colors: AppPalette) {
   },
   opportunityText: {
     flex: 1,
+  },
+  offlineButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.amber,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  offlineCard: {
+    backgroundColor: colors.warningSoft,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
   },
   primaryButton: {
     backgroundColor: colors.sky,
