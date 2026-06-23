@@ -13,6 +13,7 @@ import {
   BudgetStatus,
   Dashboard,
   Opportunity,
+  InsightCard,
   Transaction,
   deleteBudget,
   deleteTransaction,
@@ -442,6 +443,13 @@ export default function DashboardScreen() {
           </Section>
 
           <Section title="Smart insights" icon="lightbulb-on-outline">
+            {dashboard.insight_cards?.length ? (
+              <View style={styles.insightCardList}>
+                {dashboard.insight_cards.map((item) => (
+                  <InsightCardRow item={item} key={`${item.kind}-${item.title}`} />
+                ))}
+              </View>
+            ) : null}
             <View style={styles.chipWrap}>
               {[...dashboard.warnings, ...dashboard.insights].slice(0, 8).map((item, index) => (
                 <Chip key={`${item}-${index}`} compact style={styles.chip} textStyle={styles.chipText}>
@@ -482,6 +490,29 @@ function GettingStartedCard() {
         </View>
       </Card.Content>
     </Card>
+  );
+}
+
+function InsightCardRow({ item }: { item: InsightCard }) {
+  const { colors, styles } = useDashboardTheme();
+  const tone =
+    item.severity === 'high'
+      ? { color: colors.coral, icon: 'alert-circle-outline' as const, surface: colors.coralSoft }
+      : item.severity === 'positive'
+        ? { color: colors.emerald, icon: 'check-decagram-outline' as const, surface: colors.emeraldSoft }
+        : item.severity === 'medium'
+          ? { color: colors.amber, icon: 'lightning-bolt-outline' as const, surface: colors.warningSoft }
+          : { color: colors.sky, icon: 'information-outline' as const, surface: colors.skySoft };
+
+  return (
+    <View style={[styles.insightCard, { backgroundColor: tone.surface }]}>
+      <View style={styles.insightHeader}>
+        <MaterialCommunityIcons color={tone.color} name={tone.icon} size={20} />
+        <Text style={styles.insightTitle}>{item.title}</Text>
+      </View>
+      <Text style={styles.insightDetail}>{item.detail}</Text>
+      <Text style={styles.insightAction}>{item.action}</Text>
+    </View>
   );
 }
 
@@ -832,6 +863,39 @@ function createStyles(colors: AppPalette) {
   },
   incomeIcon: {
     backgroundColor: colors.emeraldSoft,
+  },
+  insightAction: {
+    color: colors.sky,
+    fontSize: 12,
+    fontWeight: '900',
+    lineHeight: 17,
+  },
+  insightCard: {
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 6,
+    padding: 12,
+  },
+  insightCardList: {
+    gap: 10,
+    marginBottom: 12,
+  },
+  insightDetail: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  insightHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  insightTitle: {
+    color: colors.ink,
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '900',
   },
   input: {
     backgroundColor: colors.surface,

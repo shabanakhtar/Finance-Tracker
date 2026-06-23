@@ -23,6 +23,7 @@ from analytics import (
     detect_top_trends,
     expense_breakdown,
     generate_smart_warnings,
+    generate_insight_cards,
     monthly_summary,
     phase_two_opportunities,
     top_categories,
@@ -420,6 +421,7 @@ def get_dashboard(request: Request):
                 + detect_top_trends(data)
                 + calculate_savings_rate(data)
             )[:6],
+            "insight_cards": generate_insight_cards(data, active_budgets),
             "recurring": detect_recurring_expenses(data),
             "opportunities": phase_two_opportunities(data, active_budgets),
             "budgets": budgets,

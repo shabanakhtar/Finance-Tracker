@@ -44,6 +44,14 @@ export type Opportunity = {
   impact: string;
 };
 
+export type InsightCard = {
+  kind: string;
+  severity: 'info' | 'medium' | 'high' | 'positive';
+  title: string;
+  detail: string;
+  action: string;
+};
+
 export type Dashboard = {
   summary: Summary;
   categories: Record<string, { income: number; expense: number }>;
@@ -52,6 +60,7 @@ export type Dashboard = {
   breakdown: Record<string, number>;
   recent_transactions: Transaction[];
   insights: string[];
+  insight_cards: InsightCard[];
   recurring: string[];
   opportunities: Opportunity[];
   budgets: Budget[];

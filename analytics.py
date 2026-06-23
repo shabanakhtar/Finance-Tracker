@@ -545,6 +545,105 @@ def calculate_savings_rate(data):
     return insights
 
 
+def generate_insight_cards(data, budgets=None):
+    summary = calculate_balance(data)
+    cards = []
+    expense_total = summary["expense"]
+    income_total = summary["income"]
+    budget_limits = budgets or {}
+    category_expense = get_category_totals(data)
+    top_expenses = sorted(category_expense.items(), key=lambda item: item[1], reverse=True)
+
+    if not data:
+        return [{
+            "kind": "starter",
+            "severity": "info",
+            "title": "Add your first week of activity",
+            "detail": "A few income and expense entries are enough to unlock useful spending patterns.",
+            "action": "Start with salary, food, transport, and one budget.",
+        }]
+
+    if income_total > 0:
+        savings_rate = ((income_total - expense_total) / income_total) * 100
+        if savings_rate < 0:
+            cards.append({
+                "kind": "cash_flow",
+                "severity": "high",
+                "title": "Spending is above income",
+                "detail": f"Expenses are {abs(savings_rate):.1f}% higher than income for the current data set.",
+                "action": "Pause flexible categories and set limits on the top two expense areas.",
+            })
+        elif savings_rate < 10:
+            cards.append({
+                "kind": "cash_flow",
+                "severity": "medium",
+                "title": "Savings buffer is thin",
+                "detail": f"Current savings rate is {savings_rate:.1f}%, which leaves little room for surprises.",
+                "action": "Try moving one repeated expense or shopping category down by 10%.",
+            })
+        else:
+            cards.append({
+                "kind": "cash_flow",
+                "severity": "positive",
+                "title": "Cash flow is healthy",
+                "detail": f"Current savings rate is {savings_rate:.1f}%.",
+                "action": "Keep tracking and protect this buffer with category budgets.",
+            })
+
+    if top_expenses:
+        top_category, top_amount = top_expenses[0]
+        share = (top_amount / expense_total) * 100 if expense_total else 0
+        cards.append({
+            "kind": "category_focus",
+            "severity": "medium" if share >= 35 else "info",
+            "title": f"{top_category.title()} is your biggest expense",
+            "detail": f"It represents {share:.1f}% of tracked spending.",
+            "action": "Use the AI market check for repeated purchases in this category.",
+        })
+
+    for category, limit in budget_limits.items():
+        spent = category_expense.get(category, 0)
+        if limit <= 0 or spent <= 0:
+            continue
+        ratio = spent / limit
+        if ratio > 1:
+            cards.append({
+                "kind": "budget",
+                "severity": "high",
+                "title": f"{category.title()} budget is over",
+                "detail": f"You are {spent - limit:.0f} over the monthly limit.",
+                "action": "Review recent transactions and lower flexible spending for the rest of the month.",
+            })
+        elif ratio >= 0.8:
+            cards.append({
+                "kind": "budget",
+                "severity": "medium",
+                "title": f"{category.title()} is near its limit",
+                "detail": f"You have used {ratio * 100:.0f}% of this budget.",
+                "action": "Delay non-essential purchases in this category.",
+            })
+
+    if len(data) < MIN_TRANSACTIONS:
+        cards.append({
+            "kind": "data_quality",
+            "severity": "info",
+            "title": "Insights will improve with more history",
+            "detail": f"{len(data)} transactions are tracked so far.",
+            "action": "Add at least five transactions for trend and anomaly detection.",
+        })
+
+    seen = set()
+    unique_cards = []
+    for card in cards:
+        key = (card["kind"], card["title"])
+        if key in seen:
+            continue
+        seen.add(key)
+        unique_cards.append(card)
+
+    return unique_cards[:4]
+
+
 def generate_smart_warnings(data, budgets):
     warnings = []
     
