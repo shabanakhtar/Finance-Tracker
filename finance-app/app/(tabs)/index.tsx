@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { Href, router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -561,6 +561,9 @@ function QuickAddStrip() {
     { category: 'shopping', icon: 'shopping-outline', label: 'Shop', type: 'expense' },
     { category: 'salary', icon: 'cash-plus', label: 'Income', type: 'income' },
   ] as const;
+  const openQuickAdd = (category: string, type: 'income' | 'expense') => {
+    router.push({ pathname: '/quick-add', params: { category, type } } as unknown as Href);
+  };
 
   return (
     <View style={styles.quickAddPanel}>
@@ -574,7 +577,7 @@ function QuickAddStrip() {
         {shortcuts.map((item) => (
           <TouchableOpacity
             key={item.category}
-            onPress={() => router.push({ pathname: '/explore', params: { category: item.category, type: item.type } })}
+            onPress={() => openQuickAdd(item.category, item.type)}
             style={styles.quickAddButton}>
             <MaterialCommunityIcons color={colors.sky} name={item.icon} size={18} />
             <Text style={styles.quickAddButtonText}>{item.label}</Text>

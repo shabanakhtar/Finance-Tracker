@@ -13,7 +13,6 @@
     },
     "android": {
       "package": "com.shabanakhtar.financetracker",
-      "versionCode": 1,
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO"
       ],
@@ -58,6 +57,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a6668b3f-ac90-47b1-a7cc-db95c90a3da8"
+      }
     }
   }
 }
