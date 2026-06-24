@@ -15,7 +15,13 @@ type AuthContextValue = {
   signInWithGoogle: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  signUp: (email: string, password: string) => Promise<{ needsConfirmation: boolean }>;
+  signUp: (email: string, password: string, profile: UserProfileInput) => Promise<{ needsConfirmation: boolean }>;
+  updateProfile: (profile: UserProfileInput) => Promise<void>;
+};
+
+export type UserProfileInput = {
+  firstName: string;
+  lastName: string;
 };
 
 function getAuthParams(url: string) {
@@ -122,12 +128,45 @@ export function AuthProvider({ children }: PropsWithChildren) {
           setLoading(false);
         }
       },
-      signUp: async (email, password) => {
+      signUp: async (email, password, profile) => {
         setLoading(true);
         try {
-          const { data, error } = await supabase.auth.signUp({ email, password });
+          const firstName = profile.firstName.trim();
+          const lastName = profile.lastName.trim();
+          const fullName = [firstName, lastName].filter(Boolean).join(' ');
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                first_name: firstName,
+                last_name: lastName,
+                full_name: fullName,
+              },
+            },
+          });
           if (error) throw error;
           return { needsConfirmation: !data.session };
+        } finally {
+          setLoading(false);
+        }
+      },
+      updateProfile: async (profile) => {
+        setLoading(true);
+        try {
+          const firstName = profile.firstName.trim();
+          const lastName = profile.lastName.trim();
+          const fullName = [firstName, lastName].filter(Boolean).join(' ');
+          const { error } = await supabase.auth.updateUser({
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+              full_name: fullName,
+            },
+          });
+          if (error) throw error;
+          const { data } = await supabase.auth.getSession();
+          setSession(data.session);
         } finally {
           setLoading(false);
         }

@@ -117,6 +117,11 @@ export default function DashboardScreen() {
 
   const isEmptyAccount = (dashboard?.transaction_count ?? 0) === 0;
   const netCashFlow = (dashboard?.summary.income ?? 0) - (dashboard?.summary.expense ?? 0);
+  const profileName =
+    session?.user.user_metadata?.first_name ??
+    session?.user.user_metadata?.full_name ??
+    session?.user.user_metadata?.name ??
+    'there';
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -268,12 +273,12 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.brand}>Finance Tracker</Text>
-          <Text style={styles.title}>Dashboard</Text>
+          <Text style={styles.title}>Welcome, {profileName}</Text>
         </View>
         <IconButton icon="logout" iconColor={colors.ink} mode="contained-tonal" onPress={signOut} size={20} />
       </View>
 
-      <Text style={styles.subtitle}>{session?.user.email ?? 'Signed in'} - API live</Text>
+      <Text style={styles.subtitle}>Here is your money snapshot for today.</Text>
 
       {error ? <ErrorState error={error} onRetry={loadDashboard} /> : null}
       {queuedCount > 0 ? <OfflineQueueCard count={queuedCount} syncing={syncingQueue} onSync={syncOfflineQueue} /> : null}

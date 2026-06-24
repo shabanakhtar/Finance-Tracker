@@ -8,15 +8,21 @@ import { AppPalette } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
 
 export function AuthGate({ children }: { children: ReactNode }) {
-  const { initialized, loading, resetPassword, session, signIn, signInWithGoogle, signUp } = useAuth();
+  const { initialized, loading, resetPassword, session, signIn, signInWithGoogle, signUp, updateProfile } = useAuth();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [password, setPassword] = useState('');
   const [secureEntry, setSecureEntry] = useState(true);
+
+  const metadata = session?.user.user_metadata ?? {};
+  const displayName = metadata.full_name ?? metadata.name ?? metadata.first_name;
+  const needsProfile = Boolean(session) && typeof displayName !== 'string';
 
   const submit = async () => {
     try {
@@ -31,7 +37,14 @@ export function AuthGate({ children }: { children: ReactNode }) {
       if (mode === 'login') {
         await signIn(cleanedEmail, password);
       } else {
-        const result = await signUp(cleanedEmail, password);
+        if (!firstName.trim() || !lastName.trim()) {
+          setError('Enter your first and last name so the app can greet you properly.');
+          return;
+        }
+        const result = await signUp(cleanedEmail, password, {
+          firstName,
+          lastName,
+        });
         if (result.needsConfirmation) {
           setMessage('Account created. Check your email to confirm it, then sign in.');
           setMode('login');
@@ -40,6 +53,21 @@ export function AuthGate({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed.');
+    }
+  };
+
+  const submitProfile = async () => {
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('Enter your first and last name to continue.');
+      return;
+    }
+
+    try {
+      setError(null);
+      setMessage(null);
+      await updateProfile({ firstName, lastName });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save your profile.');
     }
   };
 
@@ -80,6 +108,34 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }
 
   if (session) {
+    if (needsProfile) {
+      return (
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
+          <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+            <View style={styles.header}>
+              <View style={styles.brandMark}>
+                <MaterialCommunityIcons color={colors.sky} name="account-heart-outline" size={24} />
+              </View>
+              <Text style={styles.brand}>Finance Tracker</Text>
+              <Text style={styles.title}>What should we call you?</Text>
+              <Text style={styles.subtitle}>Your dashboard will use your name instead of showing account details.</Text>
+            </View>
+            <Card style={styles.card}>
+              <Card.Content style={styles.cardContent}>
+                <View style={styles.nameRow}>
+                  <TextInput label="First name" mode="outlined" onChangeText={setFirstName} style={styles.nameInput} value={firstName} />
+                  <TextInput label="Last name" mode="outlined" onChangeText={setLastName} style={styles.nameInput} value={lastName} />
+                </View>
+                {error ? <Text style={styles.error}>{error}</Text> : null}
+                <Button disabled={loading} loading={loading} mode="contained" onPress={submitProfile} style={styles.primary}>
+                  Continue
+                </Button>
+              </Card.Content>
+            </Card>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      );
+    }
     return <>{children}</>;
   }
 
@@ -137,6 +193,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
               secureTextEntry={secureEntry}
               value={password}
             />
+            {mode === 'signup' ? (
+              <View style={styles.nameRow}>
+                <TextInput label="First name" mode="outlined" onChangeText={setFirstName} style={styles.nameInput} value={firstName} />
+                <TextInput label="Last name" mode="outlined" onChangeText={setLastName} style={styles.nameInput} value={lastName} />
+              </View>
+            ) : null}
             {message ? <Text style={styles.message}>{message}</Text> : null}
             {error ? <Text style={styles.error}>{error}</Text> : null}
             <Button disabled={loading} labelStyle={styles.primaryLabel} loading={loading} mode="contained" onPress={submit} style={styles.primary}>
@@ -246,6 +308,14 @@ function createStyles(colors: AppPalette) {
     borderWidth: 1,
     flexDirection: 'row',
     padding: 4,
+  },
+  nameInput: {
+    flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   muted: {
     color: colors.muted,

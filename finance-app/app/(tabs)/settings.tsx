@@ -25,6 +25,11 @@ export default function SettingsScreen() {
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<CsvImportPreview | null>(null);
+  const profileName =
+    session?.user.user_metadata?.full_name ??
+    session?.user.user_metadata?.name ??
+    session?.user.user_metadata?.first_name ??
+    'Signed in';
 
   const exportCsv = async () => {
     try {
@@ -122,7 +127,8 @@ export default function SettingsScreen() {
 
       <View style={styles.panel}>
         <Text style={styles.sectionTitle}>Account</Text>
-        <Text style={styles.muted}>{session?.user.email ?? 'Signed in'}</Text>
+        <Text style={styles.muted}>{profileName}</Text>
+        <Text style={styles.muted}>{session?.user.email ?? 'Your private workspace'}</Text>
         <Button icon="logout" mode="outlined" onPress={signOut} style={styles.signOut}>
           Sign Out
         </Button>
@@ -173,10 +179,6 @@ export default function SettingsScreen() {
         ) : null}
       </View>
 
-      <View style={styles.panel}>
-        <Text style={styles.sectionTitle}>Build</Text>
-        <Text style={styles.muted}>Supabase auth, Vercel API, Gemini AI assistant, and UptimeRobot monitoring.</Text>
-      </View>
     </ScrollView>
   );
 }
