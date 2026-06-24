@@ -36,7 +36,7 @@ async function storeTheme(mode: AppThemeMode) {
 
 export function AppThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
-  const [mode, setModeState] = useState<AppThemeMode>('dark');
+  const [mode, setModeState] = useState<AppThemeMode>('light');
 
   useEffect(() => {
     readStoredTheme().then((stored) => {

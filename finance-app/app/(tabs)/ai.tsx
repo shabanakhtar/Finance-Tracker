@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Chip, Text, TextInput } from 'react-native-paper';
@@ -28,7 +28,7 @@ const money = new Intl.NumberFormat('en-PK', {
 
 export default function AiScreen() {
   const { colors } = useAppTheme();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',

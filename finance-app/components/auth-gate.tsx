@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Card, Divider, TextInput } from 'react-native-paper';
@@ -8,9 +8,9 @@ import { AppPalette } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
 
 export function AuthGate({ children }: { children: ReactNode }) {
-  const { initialized, loading, resetPassword, session, signIn, signUp } = useAuth();
+  const { initialized, loading, resetPassword, session, signIn, signInWithGoogle, signUp } = useAuth();
   const { colors } = useAppTheme();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -57,6 +57,16 @@ export function AuthGate({ children }: { children: ReactNode }) {
       setMessage('Password reset email sent. Check your inbox.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not send reset email.');
+    }
+  };
+
+  const submitGoogle = async () => {
+    try {
+      setError(null);
+      setMessage(null);
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google sign-in failed.');
     }
   };
 
@@ -138,6 +148,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
               </Button>
             ) : null}
             <Divider />
+            <Button disabled={loading} icon="google" mode="outlined" onPress={submitGoogle} style={styles.googleButton}>
+              Continue with Google
+            </Button>
             <View style={styles.trustRow}>
               <MaterialCommunityIcons color={colors.sky} name="shield-check-outline" size={18} />
               <Text style={styles.trustText}>Protected by Supabase Auth and per-user data rules.</Text>
@@ -187,6 +200,10 @@ function createStyles(colors: AppPalette) {
   header: {
     gap: 8,
     marginBottom: 20,
+  },
+  googleButton: {
+    borderColor: colors.border,
+    borderRadius: 8,
   },
   title: {
     color: colors.ink,
