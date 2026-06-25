@@ -108,6 +108,16 @@ Make the app useful before the user has data.
 
 Use animation to make the app feel smoother, not flashy.
 
+- Add an animated first-run intro:
+  - Track your money.
+  - Set simple budgets.
+  - Scan receipts.
+  - Ask AI for insights.
+- Use welcoming intro motion:
+  - Cards slide in gently from the bottom.
+  - Progress dots animate between steps.
+  - Icons use small motion such as chart rise, receipt scan, wallet open, or AI sparkle.
+  - Final intro step leads into adding the first transaction or importing CSV.
 - Evaluate navigation transitions between screens and tabs.
 - Add smooth page transitions using existing navigation behavior first.
 - Use `react-native-reanimated` only where the built-in navigation is not enough.
@@ -130,6 +140,30 @@ Use animation to make the app feel smoother, not flashy.
   - Offline transaction synced.
   - AI insight generated.
 - Avoid large celebration animations for routine finance actions.
+- Respect reduced-motion settings before public release.
+
+## Phase 4A: Mobile Navigation And Safe Areas
+
+Make the app feel more native and comfortable on modern phones.
+
+- Redesign the bottom navigation into a floating safe-area-aware bar.
+- Add a raised center quick-add button because adding a transaction is the core daily action.
+- Keep bottom spacing clear of Android navigation controls and iPhone home indicators.
+- Use `react-native-safe-area-context` to calculate bottom padding.
+- Recommended tab structure:
+  - Home
+  - Stats or Transactions
+  - Center quick add
+  - AI
+  - Settings
+- Make the active tab visually clear with color and icon emphasis.
+- Keep inactive tabs muted.
+- Center button should open the dedicated quick-add flow, not a slow full form.
+- Add subtle tab transition feedback:
+  - Active icon color shift.
+  - Center button press scale.
+  - Optional small haptic feedback.
+- Keep the UI warm and welcoming in light mode, and calm/premium in dark mode.
 
 ## Phase 5: Graceful Degradation
 
