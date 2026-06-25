@@ -6,6 +6,16 @@ import { Button, Card, Divider, TextInput } from 'react-native-paper';
 import { useAuth } from '@/contexts/auth';
 import { AppPalette } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
+import {
+  FormField,
+  PasswordChecklist,
+  SuccessBanner,
+  validateEmail,
+  validateName,
+  validatePassword,
+} from '@/components/ux';
+
+type AuthField = 'email' | 'firstName' | 'lastName' | 'password';
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const { initialized, loading, resetPassword, session, signIn, signInWithGoogle, signUp, updateProfile } = useAuth();
@@ -19,18 +29,41 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [password, setPassword] = useState('');
   const [secureEntry, setSecureEntry] = useState(true);
+  const [submitted, setSubmitted] = useState(false);
+  const [touched, setTouched] = useState<Record<AuthField, boolean>>({
+    email: false,
+    firstName: false,
+    lastName: false,
+    password: false,
+  });
 
   const metadata = session?.user.user_metadata ?? {};
   const displayName = metadata.full_name ?? metadata.name ?? metadata.first_name;
   const needsProfile = Boolean(session) && typeof displayName !== 'string';
+  const emailValidation = useMemo(() => validateEmail(email), [email]);
+  const passwordValidation = useMemo(
+    () => (mode === 'login' ? { isValid: Boolean(password), message: 'Password is required.' } : validatePassword(password)),
+    [mode, password],
+  );
+  const firstNameValidation = useMemo(() => validateName(firstName, 'First name'), [firstName]);
+  const lastNameValidation = useMemo(() => validateName(lastName, 'Last name'), [lastName]);
+  const formIsValid =
+    emailValidation.isValid &&
+    passwordValidation.isValid &&
+    (mode === 'login' || (firstNameValidation.isValid && lastNameValidation.isValid));
+  const profileIsValid = firstNameValidation.isValid && lastNameValidation.isValid;
+
+  const markTouched = (field: AuthField) => setTouched((current) => ({ ...current, [field]: true }));
+  const shouldShow = (field: AuthField) => submitted || touched[field];
 
   const submit = async () => {
     try {
+      setSubmitted(true);
       setError(null);
       setMessage(null);
       const cleanedEmail = email.trim().toLowerCase();
-      if (!cleanedEmail || password.length < 6) {
-        setError('Enter a valid email and a password with at least 6 characters.');
+      if (!formIsValid) {
+        setError('Fix the highlighted fields before continuing.');
         return;
       }
 
@@ -57,8 +90,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
   };
 
   const submitProfile = async () => {
-    if (!firstName.trim() || !lastName.trim()) {
-      setError('Enter your first and last name to continue.');
+    setSubmitted(true);
+    if (!profileIsValid) {
+      setError('Fix the highlighted fields before continuing.');
       return;
     }
 
@@ -73,8 +107,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   const sendPasswordReset = async () => {
     const cleanedEmail = email.trim().toLowerCase();
-    if (!cleanedEmail) {
-      setError('Enter your email first, then request a reset link.');
+    markTouched('email');
+    if (!emailValidation.isValid) {
+      setError('Enter a valid email first, then request a reset link.');
       return;
     }
 
@@ -123,11 +158,29 @@ export function AuthGate({ children }: { children: ReactNode }) {
             <Card style={styles.card}>
               <Card.Content style={styles.cardContent}>
                 <View style={styles.nameRow}>
-                  <TextInput label="First name" mode="outlined" onChangeText={setFirstName} style={styles.nameInput} value={firstName} />
-                  <TextInput label="Last name" mode="outlined" onChangeText={setLastName} style={styles.nameInput} value={lastName} />
+                  <FormField
+                    error={firstNameValidation.message}
+                    label="First name"
+                    onBlur={() => markTouched('firstName')}
+                    onChangeText={setFirstName}
+                    required
+                    style={styles.nameInput}
+                    touched={shouldShow('firstName')}
+                    value={firstName}
+                  />
+                  <FormField
+                    error={lastNameValidation.message}
+                    label="Last name"
+                    onBlur={() => markTouched('lastName')}
+                    onChangeText={setLastName}
+                    required
+                    style={styles.nameInput}
+                    touched={shouldShow('lastName')}
+                    value={lastName}
+                  />
                 </View>
                 {error ? <Text style={styles.error}>{error}</Text> : null}
-                <Button disabled={loading} loading={loading} mode="contained" onPress={submitProfile} style={styles.primary}>
+                <Button disabled={loading || !profileIsValid} loading={loading} mode="contained" onPress={submitProfile} style={styles.primary}>
                   Continue
                 </Button>
               </Card.Content>
@@ -171,19 +224,24 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 Create
               </Button>
             </View>
-            <TextInput
+            <FormField
               autoCapitalize="none"
+              error={emailValidation.message}
               keyboardType="email-address"
               label="Email"
-              mode="outlined"
+              onBlur={() => markTouched('email')}
               onChangeText={setEmail}
               placeholder="you@example.com"
+              required
+              touched={shouldShow('email')}
               value={email}
             />
-            <TextInput
+            <FormField
+              error={passwordValidation.message}
               label="Password"
-              mode="outlined"
+              onBlur={() => markTouched('password')}
               onChangeText={setPassword}
+              required
               right={
                 <TextInput.Icon
                   icon={secureEntry ? 'eye-outline' : 'eye-off-outline'}
@@ -191,17 +249,37 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 />
               }
               secureTextEntry={secureEntry}
+              touched={shouldShow('password')}
               value={password}
             />
+            {mode === 'signup' || password.length ? <PasswordChecklist password={password} /> : null}
             {mode === 'signup' ? (
               <View style={styles.nameRow}>
-                <TextInput label="First name" mode="outlined" onChangeText={setFirstName} style={styles.nameInput} value={firstName} />
-                <TextInput label="Last name" mode="outlined" onChangeText={setLastName} style={styles.nameInput} value={lastName} />
+                <FormField
+                  error={firstNameValidation.message}
+                  label="First name"
+                  onBlur={() => markTouched('firstName')}
+                  onChangeText={setFirstName}
+                  required
+                  style={styles.nameInput}
+                  touched={shouldShow('firstName')}
+                  value={firstName}
+                />
+                <FormField
+                  error={lastNameValidation.message}
+                  label="Last name"
+                  onBlur={() => markTouched('lastName')}
+                  onChangeText={setLastName}
+                  required
+                  style={styles.nameInput}
+                  touched={shouldShow('lastName')}
+                  value={lastName}
+                />
               </View>
             ) : null}
-            {message ? <Text style={styles.message}>{message}</Text> : null}
+            {message ? <SuccessBanner message={message} title="Check your inbox" /> : null}
             {error ? <Text style={styles.error}>{error}</Text> : null}
-            <Button disabled={loading} labelStyle={styles.primaryLabel} loading={loading} mode="contained" onPress={submit} style={styles.primary}>
+            <Button disabled={loading || !formIsValid} labelStyle={styles.primaryLabel} loading={loading} mode="contained" onPress={submit} style={styles.primary}>
               {mode === 'login' ? 'Sign In' : 'Sign Up'}
             </Button>
             {mode === 'login' ? (

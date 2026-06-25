@@ -7,6 +7,15 @@ import { Button, Chip, SegmentedButtons, TextInput } from 'react-native-paper';
 
 import { AppPalette } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
+import {
+  CharacterCounter,
+  FormField,
+  SuccessBanner,
+  validateAmount,
+  validateCategory,
+  validateDate,
+  validateMaxLength,
+} from '@/components/ux';
 import { MarketSearchAnswer, ReceiptScanResult, addTransaction, scanReceipt, searchMarket } from '@/services/api';
 import { isLikelyNetworkError, queueTransaction } from '@/services/offlineQueue';
 
@@ -17,6 +26,8 @@ const money = new Intl.NumberFormat('en-PK', {
   style: 'currency',
   currency: 'PKR',
 });
+type AddField = 'amount' | 'category' | 'date' | 'notes';
+const NOTES_LIMIT = 500;
 
 export default function AddTransactionScreen() {
   const params = useLocalSearchParams<{ category?: string; type?: 'income' | 'expense' }>();
@@ -33,22 +44,44 @@ export default function AddTransactionScreen() {
   const [type, setType] = useState<'income' | 'expense'>(params.type === 'income' ? 'income' : 'expense');
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [touched, setTouched] = useState<Record<AddField, boolean>>({
+    amount: false,
+    category: false,
+    date: false,
+    notes: false,
+  });
+
+  const amountValidation = useMemo(() => validateAmount(amount), [amount]);
+  const categoryValidation = useMemo(() => validateCategory(category), [category]);
+  const dateValidation = useMemo(() => validateDate(date), [date]);
+  const notesValidation = useMemo(() => validateMaxLength(notes, NOTES_LIMIT, 'Notes'), [notes]);
+  const formIsValid = amountValidation.isValid && categoryValidation.isValid && dateValidation.isValid && notesValidation.isValid;
+  const markTouched = (field: AddField) => setTouched((current) => ({ ...current, [field]: true }));
+  const shouldShow = (field: AddField) => submitted || touched[field];
+
+  const resetForm = () => {
+    setAmount('');
+    setCategory('');
+    setDate(today);
+    setNotes('');
+    setReceipt(null);
+    setReceiptAlternatives({});
+    setType('expense');
+    setSubmitted(false);
+    setTouched({
+      amount: false,
+      category: false,
+      date: false,
+      notes: false,
+    });
+  };
 
   const submit = async () => {
+    setSubmitted(true);
     const parsedAmount = Number(amount);
 
-    if (!parsedAmount || parsedAmount <= 0) {
-      Alert.alert('Check amount', 'Enter an amount greater than zero.');
-      return;
-    }
-
-    if (!category.trim()) {
-      Alert.alert('Check category', 'Choose or enter a category like food, salary, rent, or transport.');
-      return;
-    }
-
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      Alert.alert('Check date', 'Use YYYY-MM-DD format.');
+    if (!formIsValid) {
       return;
     }
 
@@ -63,13 +96,7 @@ export default function AddTransactionScreen() {
       };
       await addTransaction(transaction);
       setLastSaved(`${type === 'income' ? 'Income' : 'Expense'} saved: ${category.trim()} - ${money.format(parsedAmount)}`);
-      setAmount('');
-      setCategory('');
-      setDate(today);
-      setNotes('');
-      setReceipt(null);
-      setReceiptAlternatives({});
-      setType('expense');
+      resetForm();
     } catch (err) {
       if (isLikelyNetworkError(err)) {
         await queueTransaction({
@@ -80,13 +107,7 @@ export default function AddTransactionScreen() {
           notes: notes.trim(),
         });
         setLastSaved(`Saved offline: ${category.trim()} - ${money.format(parsedAmount)}. It will sync when the API is reachable.`);
-        setAmount('');
-        setCategory('');
-        setDate(today);
-        setNotes('');
-        setReceipt(null);
-        setReceiptAlternatives({});
-        setType('expense');
+        resetForm();
         return;
       }
       Alert.alert('Could not save', err instanceof Error ? err.message : 'Backend request failed.');
@@ -236,25 +257,31 @@ export default function AddTransactionScreen() {
             style={styles.segmented}
           />
 
-          <TextInput
+          <FormField
+            error={amountValidation.message}
             keyboardType="decimal-pad"
             label="Amount"
-            mode="outlined"
+            onBlur={() => markTouched('amount')}
             onChangeText={setAmount}
             placeholder="5000"
+            required
             left={<TextInput.Icon icon="cash" />}
             style={styles.input}
+            touched={shouldShow('amount')}
             value={amount}
           />
 
-          <TextInput
+          <FormField
             autoCapitalize="none"
+            error={categoryValidation.message}
             label="Category"
-            mode="outlined"
+            onBlur={() => markTouched('category')}
             onChangeText={setCategory}
             placeholder="food, salary, rent"
+            required
             left={<TextInput.Icon icon="tag-outline" />}
             style={styles.input}
+            touched={shouldShow('category')}
             value={category}
           />
 
@@ -271,35 +298,37 @@ export default function AddTransactionScreen() {
             ))}
           </View>
 
-          <TextInput
+          <FormField
+            error={dateValidation.message}
             keyboardType="numbers-and-punctuation"
             label="Date"
-            mode="outlined"
+            onBlur={() => markTouched('date')}
             onChangeText={setDate}
             placeholder="YYYY-MM-DD"
+            required
             left={<TextInput.Icon icon="calendar-month-outline" />}
             style={styles.input}
+            touched={shouldShow('date')}
             value={date}
           />
 
-          <TextInput
+          <FormField
+            counter={<CharacterCounter max={NOTES_LIMIT} value={notes} />}
+            error={notesValidation.message}
+            helper="Optional context, merchant, or reason."
             label="Notes"
-            mode="outlined"
             multiline
             numberOfLines={2}
+            onBlur={() => markTouched('notes')}
             onChangeText={setNotes}
             placeholder="optional context, merchant, or reason"
             left={<TextInput.Icon icon="note-text-outline" />}
             style={styles.input}
+            touched={shouldShow('notes')}
             value={notes}
           />
 
-          {lastSaved ? (
-            <View style={styles.successBox}>
-              <MaterialCommunityIcons color={colors.emerald} name="check-circle-outline" size={20} />
-              <Text style={styles.successText}>{lastSaved}</Text>
-            </View>
-          ) : null}
+          {lastSaved ? <SuccessBanner message={lastSaved} title="Transaction saved" /> : null}
 
           {receipt ? (
             <View style={styles.receiptPreview}>
@@ -369,7 +398,7 @@ export default function AddTransactionScreen() {
           ) : null}
 
           <Button
-            disabled={saving || scanning}
+            disabled={saving || scanning || !formIsValid}
             loading={saving}
             mode="contained"
             onPress={submit}

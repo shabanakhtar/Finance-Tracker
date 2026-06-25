@@ -2,9 +2,18 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Button, Chip, SegmentedButtons, TextInput } from 'react-native-paper';
+import { Button, Chip, SegmentedButtons } from 'react-native-paper';
 
 import { AppPalette, spacing } from '@/constants/theme';
+import {
+  CharacterCounter,
+  FormField,
+  SuccessBanner,
+  validateAmount,
+  validateCategory,
+  validateDate,
+  validateMaxLength,
+} from '@/components/ux';
 import { useAppTheme } from '@/contexts/theme';
 import { addTransaction } from '@/services/api';
 import { isLikelyNetworkError, queueTransaction } from '@/services/offlineQueue';
@@ -24,6 +33,8 @@ const money = new Intl.NumberFormat('en-PK', {
   maximumFractionDigits: 0,
   style: 'currency',
 });
+type QuickAddField = 'amount' | 'category' | 'date' | 'notes';
+const NOTES_LIMIT = 500;
 
 export default function QuickAddScreen() {
   const params = useLocalSearchParams<{ amount?: string; category?: string; type?: 'income' | 'expense' }>();
@@ -34,15 +45,37 @@ export default function QuickAddScreen() {
   const [date, setDate] = useState(today);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [touched, setTouched] = useState<Record<QuickAddField, boolean>>({
+    amount: false,
+    category: false,
+    date: false,
+    notes: false,
+  });
   const [type, setType] = useState<'income' | 'expense'>(params.type === 'income' ? 'income' : 'expense');
 
   const selectedCategory = quickCategories.find((item) => item.category === category);
   const parsedAmount = Number(amount);
+  const amountValidation = useMemo(() => validateAmount(amount), [amount]);
+  const categoryValidation = useMemo(() => validateCategory(category), [category]);
+  const dateValidation = useMemo(() => validateDate(date), [date]);
+  const notesValidation = useMemo(() => validateMaxLength(notes, NOTES_LIMIT, 'Notes'), [notes]);
+  const formIsValid = amountValidation.isValid && categoryValidation.isValid && dateValidation.isValid && notesValidation.isValid;
+  const markTouched = (field: QuickAddField) => setTouched((current) => ({ ...current, [field]: true }));
+  const shouldShow = (field: QuickAddField) => submitted || touched[field];
 
   const resetForNext = () => {
     setAmount('');
     setNotes('');
     setDate(today);
+    setSubmitted(false);
+    setTouched({
+      amount: false,
+      category: false,
+      date: false,
+      notes: false,
+    });
     if (type === 'income') {
       setType('expense');
       setCategory('food');
@@ -50,18 +83,9 @@ export default function QuickAddScreen() {
   };
 
   const save = async (closeAfterSave: boolean) => {
-    if (!parsedAmount || parsedAmount <= 0) {
-      Alert.alert('Check amount', 'Choose or enter an amount greater than zero.');
-      return;
-    }
-
-    if (!category.trim()) {
-      Alert.alert('Check category', 'Choose a category before saving.');
-      return;
-    }
-
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      Alert.alert('Check date', 'Use YYYY-MM-DD format.');
+    setSubmitted(true);
+    setSaveMessage(null);
+    if (!formIsValid) {
       return;
     }
 
@@ -80,7 +104,7 @@ export default function QuickAddScreen() {
         router.back();
       } else {
         resetForNext();
-        Alert.alert('Saved', `${category} ${money.format(parsedAmount)} was added.`);
+        setSaveMessage(`${category} ${money.format(parsedAmount)} was added.`);
       }
     } catch (error) {
       if (isLikelyNetworkError(error)) {
@@ -91,7 +115,7 @@ export default function QuickAddScreen() {
           ]);
         } else {
           resetForNext();
-          Alert.alert('Saved offline', 'This transaction will sync when the API is reachable.');
+          setSaveMessage('Saved offline. This transaction will sync when the API is reachable.');
         }
         return;
       }
@@ -148,11 +172,14 @@ export default function QuickAddScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          <TextInput
+          <FormField
+            error={amountValidation.message}
             keyboardType="decimal-pad"
             label="Custom amount"
-            mode="outlined"
+            onBlur={() => markTouched('amount')}
             onChangeText={setAmount}
+            required
+            touched={shouldShow('amount')}
             value={amount}
           />
         </View>
@@ -175,39 +202,51 @@ export default function QuickAddScreen() {
               </Chip>
             ))}
           </View>
-          <TextInput
+          <FormField
             autoCapitalize="none"
+            error={categoryValidation.message}
             label="Custom category"
-            mode="outlined"
+            onBlur={() => markTouched('category')}
             onChangeText={setCategory}
+            required
+            touched={shouldShow('category')}
             value={category}
           />
         </View>
 
         <View style={styles.panel}>
-          <TextInput
+          <FormField
+            error={dateValidation.message}
             keyboardType="numbers-and-punctuation"
             label="Date"
-            mode="outlined"
+            onBlur={() => markTouched('date')}
             onChangeText={setDate}
+            required
+            touched={shouldShow('date')}
             value={date}
           />
-          <TextInput
+          <FormField
+            counter={<CharacterCounter max={NOTES_LIMIT} value={notes} />}
+            error={notesValidation.message}
+            helper="Optional merchant or reason."
             label="Notes"
-            mode="outlined"
             multiline
             numberOfLines={2}
+            onBlur={() => markTouched('notes')}
             onChangeText={setNotes}
             placeholder="optional merchant or reason"
+            touched={shouldShow('notes')}
             value={notes}
           />
         </View>
 
+        {saveMessage ? <SuccessBanner message={saveMessage} title="Transaction saved" /> : null}
+
         <View style={styles.actions}>
-          <Button disabled={saving} mode="outlined" onPress={() => save(false)} style={styles.secondaryButton}>
+          <Button disabled={saving || !formIsValid} mode="outlined" onPress={() => save(false)} style={styles.secondaryButton}>
             Save another
           </Button>
-          <Button disabled={saving} loading={saving} mode="contained" onPress={() => save(true)} style={styles.primaryButton}>
+          <Button disabled={saving || !formIsValid} loading={saving} mode="contained" onPress={() => save(true)} style={styles.primaryButton}>
             Save
           </Button>
         </View>

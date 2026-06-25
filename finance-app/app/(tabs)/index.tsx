@@ -2,10 +2,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Href, router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Button, Card, Chip, IconButton, ProgressBar, SegmentedButtons, TextInput } from 'react-native-paper';
 
 import { AppPalette } from '@/constants/theme';
+import { AppErrorState, DelayedLoader, SkeletonList } from '@/components/ux';
 import { useAuth } from '@/contexts/auth';
 import { useAppTheme } from '@/contexts/theme';
 import { getQueuedTransactions, syncQueuedTransactions } from '@/services/offlineQueue';
@@ -255,12 +256,11 @@ export default function DashboardScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <View style={styles.loadingMark}>
-          <ActivityIndicator color={colors.sky} size="large" />
-        </View>
+      <View style={styles.loadingScreen}>
         <Text style={styles.loadingTitle}>Preparing your dashboard</Text>
         <Text style={styles.muted}>Syncing Vercel, Supabase, and your latest transactions.</Text>
+        <SkeletonList count={4} />
+        <DelayedLoader label="Still loading your dashboard..." longLabel="Still working. Your connection or backend may be slow." />
       </View>
     );
   }
@@ -708,21 +708,13 @@ function EmptyState({ icon, text }: { icon: keyof typeof MaterialCommunityIcons.
 }
 
 function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
-  const { colors, styles } = useDashboardTheme();
-
   return (
-    <Card style={styles.errorCard}>
-      <Card.Content>
-        <View style={styles.sectionHeader}>
-          <MaterialCommunityIcons color={colors.coral} name="cloud-alert-outline" size={22} />
-          <Text style={styles.errorTitle}>Backend unavailable</Text>
-        </View>
-        <Text style={styles.errorText}>{error}</Text>
-        <Button mode="contained" onPress={onRetry} style={styles.errorButton}>
-          Retry
-        </Button>
-      </Card.Content>
-    </Card>
+    <AppErrorState
+      actionLabel="Retry"
+      message={error}
+      onAction={onRetry}
+      title="Could not load your dashboard"
+    />
   );
 }
 
@@ -813,13 +805,13 @@ function createStyles(colors: AppPalette) {
     fontSize: 18,
     fontWeight: '800',
   },
-  centered: {
-    alignItems: 'center',
+  loadingScreen: {
     backgroundColor: colors.background,
     flex: 1,
-    gap: 10,
-    justifyContent: 'center',
-    padding: 24,
+    gap: 16,
+    justifyContent: 'flex-start',
+    padding: 20,
+    paddingTop: 72,
   },
   chartPanel: {
     alignItems: 'flex-end',
