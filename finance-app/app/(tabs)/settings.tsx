@@ -7,6 +7,7 @@ import { Button, SegmentedButtons, Text } from 'react-native-paper';
 import { useState } from 'react';
 
 import { AppPalette, AppThemeMode, radii, spacing } from '@/constants/theme';
+import { AppErrorState, EmptyState, SuccessBanner } from '@/components/ux';
 import { useAuth } from '@/contexts/auth';
 import { useAppTheme } from '@/contexts/theme';
 import { CsvImportPreview, exportTransactionsCsv, importTransactionsCsv, previewTransactionsCsv } from '@/services/api';
@@ -23,7 +24,9 @@ export default function SettingsScreen() {
   const styles = createStyles(colors);
   const [csvText, setCsvText] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
   const [preview, setPreview] = useState<CsvImportPreview | null>(null);
   const profileName =
     session?.user.user_metadata?.full_name ??
@@ -33,6 +36,8 @@ export default function SettingsScreen() {
 
   const exportCsv = async () => {
     try {
+      setFeedback(null);
+      setImportError(null);
       setExporting(true);
       const result = await exportTransactionsCsv();
       const available = await Sharing.isAvailableAsync();
@@ -54,7 +59,7 @@ export default function SettingsScreen() {
         UTI: 'public.comma-separated-values-text',
       });
     } catch (err) {
-      Alert.alert('Export failed', err instanceof Error ? err.message : 'Could not export transactions.');
+      setImportError(err instanceof Error ? err.message : 'Could not export transactions.');
     } finally {
       setExporting(false);
     }
@@ -62,6 +67,8 @@ export default function SettingsScreen() {
 
   const pickCsv = async () => {
     try {
+      setFeedback(null);
+      setImportError(null);
       const result = await DocumentPicker.getDocumentAsync({
         copyToCacheDirectory: true,
         type: ['text/csv', 'text/comma-separated-values', 'application/csv', 'application/vnd.ms-excel'],
@@ -76,25 +83,27 @@ export default function SettingsScreen() {
       setCsvText(text);
       setPreview(nextPreview);
     } catch (err) {
-      Alert.alert('Import preview failed', err instanceof Error ? err.message : 'Could not read this CSV.');
+      setImportError(err instanceof Error ? err.message : 'Could not read this CSV.');
     }
   };
 
   const confirmImport = async () => {
     if (!csvText || !preview) return;
     if (preview.error_count > 0) {
-      Alert.alert('Fix CSV first', 'Invalid rows must be fixed before importing.');
+      setImportError('Invalid rows must be fixed before importing.');
       return;
     }
 
     try {
+      setFeedback(null);
+      setImportError(null);
       setImporting(true);
       const result = await importTransactionsCsv(csvText);
-      Alert.alert('Import complete', `${result.imported ?? result.valid_count} transactions imported.`);
+      setFeedback(`${result.imported ?? result.valid_count} transactions imported.`);
       setCsvText(null);
       setPreview(null);
     } catch (err) {
-      Alert.alert('Import failed', err instanceof Error ? err.message : 'Could not import transactions.');
+      setImportError(err instanceof Error ? err.message : 'Could not import transactions.');
     } finally {
       setImporting(false);
     }
@@ -150,6 +159,15 @@ export default function SettingsScreen() {
             Import CSV
           </Button>
         </View>
+        {!preview ? (
+          <EmptyState
+            icon="file-import-outline"
+            text="Import works best with columns for date, type, category, amount, and notes. You will preview rows before anything is saved."
+            title="Bring in existing history"
+          />
+        ) : null}
+        {feedback ? <SuccessBanner message={feedback} title="Import complete" /> : null}
+        {importError ? <AppErrorState message={importError} title="Data action needs attention" /> : null}
         {preview ? (
           <View style={styles.previewBox}>
             <Text style={styles.previewTitle}>Import preview</Text>

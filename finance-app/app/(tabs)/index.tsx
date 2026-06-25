@@ -361,7 +361,7 @@ export default function DashboardScreen() {
             </Card.Content>
           </Card>
 
-          {isEmptyAccount ? <GettingStartedCard /> : null}
+          {isEmptyAccount ? <GettingStartedCard dashboard={dashboard} /> : null}
 
           <View style={styles.scoreCard}>
             <View style={styles.scoreCircle}>
@@ -383,7 +383,7 @@ export default function DashboardScreen() {
                 ))}
               </View>
             ) : (
-              <EmptyState icon="magnify-scan" text="Add more transactions to unlock recurring, unusual spend, and value-saving ideas." />
+              <EmptyState icon="magnify-scan" text="Opportunities highlight recurring bills, unusual spending, and places where a cheaper choice may help. Add a few transactions to unlock them." />
             )}
           </Section>
 
@@ -401,7 +401,7 @@ export default function DashboardScreen() {
                 ))}
               </View>
             ) : (
-              <EmptyState icon="chart-line" text="Add income and expenses to see monthly trends." />
+              <EmptyState icon="chart-line" text="Monthly trends compare income and spending over time. Add income and expenses to see your cash-flow pattern." />
             )}
           </Section>
 
@@ -439,7 +439,7 @@ export default function DashboardScreen() {
                   <BudgetRow key={item.category} item={item} onDelete={() => removeBudget(item.category)} />
                 ))
               ) : (
-                <EmptyState icon="wallet-plus-outline" text="Set your first monthly limit for food, rent, or transport." />
+                <EmptyState icon="wallet-plus-outline" text="Budgets help you spot overspending before the month gets away from you. Set your first limit for food, rent, transport, or shopping." />
               )}
             </View>
           </Section>
@@ -520,7 +520,7 @@ export default function DashboardScreen() {
                 />
               ))
             ) : (
-              <EmptyState icon="receipt-text-plus-outline" text="No transactions yet. Use the Add tab to create your first entry." />
+              <EmptyState icon="receipt-text-plus-outline" text="Transactions are your money history. Add income, log an expense, scan a receipt, or import a CSV to begin." />
             )}
           </Section>
 
@@ -536,7 +536,7 @@ export default function DashboardScreen() {
                 </View>
               ))
             ) : (
-              <EmptyState icon="chart-pie" text="Expense categories will appear after your first spending entries." />
+              <EmptyState icon="chart-pie" text="Spending mix shows where your money goes by category. Expense categories will appear after your first spending entries." />
             )}
           </Section>
 
@@ -555,7 +555,7 @@ export default function DashboardScreen() {
                 </Chip>
               ))}
               {!dashboard.warnings.length && !dashboard.insights.length ? (
-                <EmptyState icon="creation-outline" text="More transaction history will unlock AI finance insights." />
+                <EmptyState icon="creation-outline" text="AI insights become more useful once the app has income, expenses, and budgets to compare." />
               ) : null}
             </View>
           </Section>
@@ -568,8 +568,11 @@ export default function DashboardScreen() {
   );
 }
 
-function GettingStartedCard() {
+function GettingStartedCard({ dashboard }: { dashboard: Dashboard }) {
   const { colors, styles } = useDashboardTheme();
+  const hasIncome = dashboard.summary.income > 0;
+  const hasExpense = dashboard.summary.expense > 0;
+  const hasBudget = dashboard.budgets.length > 0;
 
   return (
     <Card style={styles.startCard}>
@@ -582,11 +585,21 @@ function GettingStartedCard() {
           Complete these first steps and the dashboard, budgets, and AI assistant will start giving useful feedback.
         </Text>
         <View style={styles.startSteps}>
-          <StepBadge icon="cash-plus" text="Add income" />
-          <StepBadge icon="receipt-text-plus-outline" text="Add expense" />
-          <StepBadge icon="target" text="Set budget" />
-          <StepBadge icon="creation-outline" text="Ask AI" />
-          <StepBadge icon="file-import-outline" text="Import CSV" />
+          <StepBadge
+            complete={hasIncome}
+            icon="cash-plus"
+            onPress={() => router.push({ pathname: '/quick-add', params: { category: 'salary', type: 'income' } } as unknown as Href)}
+            text="Add income"
+          />
+          <StepBadge
+            complete={hasExpense}
+            icon="receipt-text-plus-outline"
+            onPress={() => router.push({ pathname: '/quick-add', params: { category: 'food', type: 'expense' } } as unknown as Href)}
+            text="Add expense"
+          />
+          <StepBadge complete={hasBudget} icon="target" text="Set budget below" />
+          <StepBadge icon="creation-outline" onPress={() => router.push('/ai')} text="Ask AI" />
+          <StepBadge icon="file-import-outline" onPress={() => router.push('/settings')} text="Import CSV" />
         </View>
       </Card.Content>
     </Card>
@@ -616,13 +629,36 @@ function InsightCardRow({ item }: { item: InsightCard }) {
   );
 }
 
-function StepBadge({ icon, text }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; text: string }) {
+function StepBadge({
+  complete = false,
+  icon,
+  onPress,
+  text,
+}: {
+  complete?: boolean;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  onPress?: () => void;
+  text: string;
+}) {
   const { colors, styles } = useDashboardTheme();
+  const content = (
+    <>
+      <MaterialCommunityIcons color={complete ? colors.emerald : colors.sky} name={complete ? 'check-circle-outline' : icon} size={16} />
+      <Text style={styles.stepText}>{text}</Text>
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity onPress={onPress} style={[styles.stepBadge, complete ? styles.stepBadgeComplete : null]}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
 
   return (
-    <View style={styles.stepBadge}>
-      <MaterialCommunityIcons color={colors.sky} name={icon} size={16} />
-      <Text style={styles.stepText}>{text}</Text>
+    <View style={[styles.stepBadge, complete ? styles.stepBadgeComplete : null]}>
+      {content}
     </View>
   );
 }
@@ -1270,6 +1306,9 @@ function createStyles(colors: AppPalette) {
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 8,
+  },
+  stepBadgeComplete: {
+    backgroundColor: colors.emeraldSoft,
   },
   stepText: {
     color: colors.ink,

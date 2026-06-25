@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Chip, Text } from 'react-native-paper';
 
 import { AppPalette, radii, spacing } from '@/constants/theme';
-import { CharacterCounter, FormField, validateAmount, validateMaxLength } from '@/components/ux';
+import { CharacterCounter, EmptyState, FormField, validateAmount, validateMaxLength } from '@/components/ux';
 import { useAppTheme } from '@/contexts/theme';
 import { MarketSearchAnswer, askAi, searchMarket } from '@/services/api';
 
@@ -209,6 +209,13 @@ export default function AiScreen() {
               <Text style={styles.assistantText}>Thinking through your latest numbers...</Text>
             </View>
           ) : null}
+          {messages.length === 1 ? (
+            <EmptyState
+              icon="message-question-outline"
+              text="Start with a quick question, or use market check to compare a product before buying it again."
+              title="Your AI coach is ready"
+            />
+          ) : null}
         </View>
 
         <View style={styles.panel}>
@@ -303,7 +310,11 @@ export default function AiScreen() {
                   </View>
                 ))
               ) : (
-                <Text style={styles.panelHint}>No clearly cheaper verified alternatives were found yet.</Text>
+                <EmptyState
+                  icon="shield-search"
+                  text="No reliable cheaper alternative was found. Keep the item if it still fits your budget, and verify prices before switching stores."
+                  title="No strong match yet"
+                />
               )}
               {marketResult.warnings.map((warning) => (
                 <Text key={warning} style={styles.warningText}>
