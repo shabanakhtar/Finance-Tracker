@@ -211,3 +211,47 @@ def delete_budget(category, user_id):
     )
     _request("DELETE", query, prefer="return=minimal")
     return {"message": "Budget deleted successfully"}
+
+
+def get_ai_usage(user_id, feature, period):
+    user_id = require_user_id(user_id)
+    query = (
+        "/rest/v1/ai_usage"
+        "?select=id,count,last_used_at,cached_response,cached_at"
+        f"&user_id=eq.{quote(user_id)}"
+        f"&feature=eq.{quote(feature)}"
+        f"&period_start=eq.{quote(period)}"
+        "&limit=1"
+    )
+    try:
+        rows = _request("GET", query)
+    except RuntimeError as exc:
+        if "ai_usage" in str(exc) and ("PGRST" in str(exc) or "schema cache" in str(exc)):
+            return None
+        raise
+    return rows[0] if rows else None
+
+
+def upsert_ai_usage(user_id, feature, period, count, last_used_at, cached_response=None, cached_at=None):
+    user_id = require_user_id(user_id)
+    payload = {
+        "user_id": user_id,
+        "feature": feature,
+        "period_start": period,
+        "count": int(count),
+        "last_used_at": last_used_at,
+        "cached_response": cached_response,
+        "cached_at": cached_at,
+    }
+    try:
+        _request(
+            "POST",
+            "/rest/v1/ai_usage?on_conflict=user_id,feature,period_start",
+            payload,
+            prefer="resolution=merge-duplicates,return=minimal",
+        )
+    except RuntimeError as exc:
+        if "ai_usage" in str(exc) and ("PGRST" in str(exc) or "schema cache" in str(exc)):
+            raise RuntimeError("AI usage table is not set up yet. Run the add_ai_usage_limits migration in Supabase.") from exc
+        raise
+    return {"message": "AI usage recorded"}

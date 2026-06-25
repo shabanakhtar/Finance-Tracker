@@ -230,6 +230,8 @@ Status: completed before Phase 4, with offline edit/delete intentionally left fo
 
 Do this before public release to protect costs.
 
+Status: completed for backend-enforced free daily limits. Paid subscription work remains future-only.
+
 - Keep all AI features free for now.
 - Add backend-enforced usage limits.
 - Track usage by user, feature, and time period.
@@ -243,6 +245,19 @@ Do this before public release to protect costs.
 - Add cooldown/limit headers or response fields for the app.
 - Store cached AI insight results with timestamps.
 - Do not build paid subscription checkout yet.
+
+Implemented:
+
+- Supabase-backed `ai_usage` table migration.
+- Backend-enforced daily limits:
+  - AI chat: 10/day.
+  - Receipt scan: 5/day.
+  - Product recommendation: 5/day.
+- Usage tracking by user, feature, and day.
+- Friendly HTTP 429 response before Gemini is called.
+- Limit metadata returned with successful AI responses and limit errors.
+- App-side friendly limit messages for AI chat, market search, and receipt scan.
+- Paid subscription, Play Billing, and higher-tier AI routing intentionally left for the future subscription agenda.
 
 ## Future Subscription Agenda
 

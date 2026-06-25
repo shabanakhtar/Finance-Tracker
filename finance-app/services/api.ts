@@ -144,19 +144,30 @@ export type CsvImportPreview = {
 type ApiResponse<T> = {
   status: string;
   data: T;
+  limit?: AiLimitStatus;
+};
+
+export type AiLimitStatus = {
+  feature: string;
+  limit: number;
+  period: string;
+  remaining: number;
+  used: number;
 };
 
 export type ApiErrorKind = 'network' | 'timeout' | 'auth' | 'rate_limit' | 'backend' | 'parse' | 'unknown';
 
 export class AppApiError extends Error {
   kind: ApiErrorKind;
+  limit?: AiLimitStatus;
   retryable: boolean;
   status?: number;
 
-  constructor(message: string, options: { kind?: ApiErrorKind; retryable?: boolean; status?: number } = {}) {
+  constructor(message: string, options: { kind?: ApiErrorKind; limit?: AiLimitStatus; retryable?: boolean; status?: number } = {}) {
     super(message);
     this.name = 'AppApiError';
     this.kind = options.kind ?? 'unknown';
+    this.limit = options.limit;
     this.retryable = options.retryable ?? false;
     this.status = options.status;
   }
@@ -181,6 +192,32 @@ function extractApiError(body: unknown, fallback: string) {
     if (typeof detail === 'string') return detail;
   }
   return fallback;
+}
+
+function extractLimit(body: unknown): AiLimitStatus | undefined {
+  if (!body || typeof body !== 'object') return undefined;
+  const record = body as Record<string, unknown>;
+  const detail = record.detail;
+  const source = detail && typeof detail === 'object' ? detail as Record<string, unknown> : record;
+  const limit = source.limit;
+  if (!limit || typeof limit !== 'object') return undefined;
+  const next = limit as Record<string, unknown>;
+  if (
+    typeof next.feature === 'string' &&
+    typeof next.limit === 'number' &&
+    typeof next.period === 'string' &&
+    typeof next.remaining === 'number' &&
+    typeof next.used === 'number'
+  ) {
+    return {
+      feature: next.feature,
+      limit: next.limit,
+      period: next.period,
+      remaining: next.remaining,
+      used: next.used,
+    };
+  }
+  return undefined;
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -232,6 +269,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     const kind = classifyStatus(response.status);
     throw new AppApiError(extractApiError(body, `Request failed with status ${response.status}.`), {
       kind,
+      limit: extractLimit(body),
       retryable: kind === 'network' || kind === 'timeout' || kind === 'backend' || kind === 'rate_limit',
       status: response.status,
     });

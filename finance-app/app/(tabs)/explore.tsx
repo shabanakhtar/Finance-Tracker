@@ -17,7 +17,7 @@ import {
   validateDate,
   validateMaxLength,
 } from '@/components/ux';
-import { MarketSearchAnswer, ReceiptScanResult, addTransaction, scanReceipt, searchMarket } from '@/services/api';
+import { AppApiError, MarketSearchAnswer, ReceiptScanResult, addTransaction, scanReceipt, searchMarket } from '@/services/api';
 import { isLikelyNetworkError, queueTransaction } from '@/services/offlineQueue';
 
 const today = new Date().toISOString().slice(0, 10);
@@ -170,7 +170,12 @@ export default function AddTransactionScreen() {
       });
       applyReceipt(result);
     } catch (err) {
-      setReceiptError(err instanceof Error ? err.message : 'AI could not read this receipt.');
+      if (err instanceof AppApiError && err.kind === 'rate_limit') {
+        const suffix = err.limit ? ` (${err.limit.used}/${err.limit.limit} used today)` : '';
+        setReceiptError(`You have used today's receipt scan limit${suffix}. You can still enter this transaction manually.`);
+      } else {
+        setReceiptError(err instanceof Error ? err.message : 'AI could not read this receipt.');
+      }
     } finally {
       setScanning(false);
     }

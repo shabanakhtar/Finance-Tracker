@@ -29,6 +29,7 @@ from analytics import (
     top_categories,
 )
 from ai import ask_ai, scan_receipt_image, search_local_market
+from ai_usage import AiLimitExceeded, ensure_ai_limit, record_ai_usage
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from settings import env_list, use_supabase
@@ -59,6 +60,12 @@ DEFAULT_BUDGETS = {
 }
 
 CSV_HEADERS = ["date", "type", "category", "amount", "notes"]
+
+AI_FEATURES = {
+    "chat": "ai_chat",
+    "market": "product_recommendation",
+    "receipt": "receipt_scan",
+}
 
 class TransactionRequest(BaseModel):
     amount: float
@@ -160,6 +167,28 @@ def current_user_id(request: Request):
             }
         )
     return user_id
+
+
+def ai_limit_error(status):
+    return HTTPException(
+        status_code=429,
+        detail={
+            "status": "error",
+            "code": "AI_DAILY_LIMIT_REACHED",
+            "message": status.message,
+            "limit": status.as_dict(),
+        },
+    )
+
+
+def ai_success(data, usage_status=None):
+    payload = {
+        "status": "success",
+        "data": data,
+    }
+    if usage_status:
+        payload["limit"] = usage_status.as_dict()
+    return payload
 
 
 def budget_status(data, budgets):
@@ -588,17 +617,16 @@ class ReceiptScanRequest(BaseModel):
 def ask_ai_endpoint(request: AIRequest, http_request: Request):
     try:
         user_id = current_user_id(http_request)
+        ensure_ai_limit(user_id, AI_FEATURES["chat"])
         data = load_data(user_id)
         budgets = load_budget_settings(user_id)
         response = ask_ai(request.question, data, budgets)
+        usage_status = record_ai_usage(user_id, AI_FEATURES["chat"])
 
-        return {
-            "status": "success",
-            "data": {
-                "response": response
-            }
-        }
+        return ai_success({"response": response}, usage_status)
 
+    except AiLimitExceeded as e:
+        raise ai_limit_error(e.status)
     except RuntimeError as e:
         raise HTTPException(
             status_code=503,
@@ -620,19 +648,20 @@ def ask_ai_endpoint(request: AIRequest, http_request: Request):
 @app.post("/market-search")
 def market_search_endpoint(request: MarketSearchRequest, http_request: Request):
     try:
-        current_user_id(http_request)
+        user_id = current_user_id(http_request)
+        ensure_ai_limit(user_id, AI_FEATURES["market"])
         result = search_local_market(
             request.product_name,
             request.current_price,
             request.category,
             request.location,
         )
+        usage_status = record_ai_usage(user_id, AI_FEATURES["market"])
 
-        return {
-            "status": "success",
-            "data": result
-        }
+        return ai_success(result, usage_status)
 
+    except AiLimitExceeded as e:
+        raise ai_limit_error(e.status)
     except RuntimeError as e:
         raise HTTPException(
             status_code=503,
@@ -654,14 +683,15 @@ def market_search_endpoint(request: MarketSearchRequest, http_request: Request):
 @app.post("/scan-receipt")
 def scan_receipt_endpoint(request: ReceiptScanRequest, http_request: Request):
     try:
-        current_user_id(http_request)
+        user_id = current_user_id(http_request)
+        ensure_ai_limit(user_id, AI_FEATURES["receipt"])
         result = scan_receipt_image(request.image_base64, request.mime_type)
+        usage_status = record_ai_usage(user_id, AI_FEATURES["receipt"])
 
-        return {
-            "status": "success",
-            "data": result
-        }
+        return ai_success(result, usage_status)
 
+    except AiLimitExceeded as e:
+        raise ai_limit_error(e.status)
     except RuntimeError as e:
         raise HTTPException(
             status_code=503,

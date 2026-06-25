@@ -34,9 +34,10 @@ const CATEGORY_LIMIT = 40;
 function getAiUnavailableMessage(error: unknown, feature: 'chat' | 'market') {
   if (error instanceof AppApiError) {
     if (error.kind === 'rate_limit') {
+      const suffix = error.limit ? ` (${error.limit.used}/${error.limit.limit} used today)` : '';
       return feature === 'chat'
-        ? 'AI is at its limit right now. Your dashboard, transactions, budgets, and CSV tools still work.'
-        : 'Market search is at its limit right now. I will not guess prices, so try again later or compare stores manually.';
+        ? `You have used today's AI chat limit${suffix}. Your dashboard, transactions, budgets, and CSV tools still work.`
+        : `You have used today's market search limit${suffix}. I will not guess prices, so try again tomorrow or compare stores manually.`;
     }
     if (error.kind === 'network' || error.kind === 'timeout' || error.kind === 'backend') {
       return feature === 'chat'
