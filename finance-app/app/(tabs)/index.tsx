@@ -3,17 +3,23 @@ import { Href, router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Button, Card, Chip, IconButton, ProgressBar, SegmentedButtons } from 'react-native-paper';
+import { Button, Card, Chip, IconButton, SegmentedButtons } from 'react-native-paper';
 
 import { AppPalette } from '@/constants/theme';
 import {
   AppErrorState,
+  AnimatedCard,
+  AnimatedProgressBar,
+  AnimatedScreen,
   CharacterCounter,
   ConfirmDialog,
   DelayedLoader,
   FormField,
+  PressableScale,
   SkeletonList,
   SuccessToast,
+  triggerSelection,
+  triggerSuccess,
   validateAmount,
   validateCategory,
   validateDate,
@@ -184,6 +190,7 @@ export default function DashboardScreen() {
     loadDashboard();
   };
   const showToast = (message: string) => {
+    triggerSuccess();
     setToastMessage(message);
     setToastVisible(true);
   };
@@ -354,10 +361,10 @@ export default function DashboardScreen() {
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.sky} onRefresh={onRefresh} />}>
       <View style={styles.header}>
-        <View>
+        <AnimatedScreen>
           <Text style={styles.brand}>Finance Tracker</Text>
           <Text style={styles.title}>Welcome, {profileName}</Text>
-        </View>
+        </AnimatedScreen>
         <IconButton icon="logout" iconColor={colors.ink} mode="contained-tonal" onPress={signOut} size={20} />
       </View>
 
@@ -371,41 +378,45 @@ export default function DashboardScreen() {
 
       {dashboard ? (
         <>
-          <Card style={styles.balanceCard}>
-            <Card.Content>
-              <View style={styles.rowBetween}>
-                <Text style={styles.balanceLabel}>Available balance</Text>
-                <View style={styles.livePill}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveText}>Live</Text>
+          <AnimatedCard>
+            <Card style={styles.balanceCard}>
+              <Card.Content>
+                <View style={styles.rowBetween}>
+                  <Text style={styles.balanceLabel}>Available balance</Text>
+                  <View style={styles.livePill}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveText}>Live</Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.balanceValue}>{money.format(dashboard.summary.balance)}</Text>
-              <Text style={styles.balanceHint}>
-                {netCashFlow >= 0 ? '+' : ''}
-                {money.format(netCashFlow)} net cash flow
-              </Text>
-              <View style={styles.metricRow}>
-                <Metric label="Income" value={money.format(dashboard.summary.income)} tone="income" />
-                <Metric label="Spent" value={money.format(dashboard.summary.expense)} tone="expense" />
-              </View>
-              <QuickAddStrip />
-            </Card.Content>
-          </Card>
+                <Text style={styles.balanceValue}>{money.format(dashboard.summary.balance)}</Text>
+                <Text style={styles.balanceHint}>
+                  {netCashFlow >= 0 ? '+' : ''}
+                  {money.format(netCashFlow)} net cash flow
+                </Text>
+                <View style={styles.metricRow}>
+                  <Metric label="Income" value={money.format(dashboard.summary.income)} tone="income" />
+                  <Metric label="Spent" value={money.format(dashboard.summary.expense)} tone="expense" />
+                </View>
+                <QuickAddStrip />
+              </Card.Content>
+            </Card>
+          </AnimatedCard>
 
           {isEmptyAccount ? <GettingStartedCard dashboard={dashboard} /> : null}
 
-          <View style={styles.scoreCard}>
-            <View style={styles.scoreCircle}>
-              <Text style={styles.scoreValue}>{dashboard.financial_score}</Text>
-              <Text style={styles.scoreMax}>/100</Text>
+          <AnimatedCard index={1}>
+            <View style={styles.scoreCard}>
+              <View style={styles.scoreCircle}>
+                <Text style={styles.scoreValue}>{dashboard.financial_score}</Text>
+                <Text style={styles.scoreMax}>/100</Text>
+              </View>
+              <View style={styles.scoreText}>
+                <Text style={styles.cardTitle}>Financial score</Text>
+                <AnimatedProgressBar progress={scoreProgress} color={colors.emerald} />
+                <Text style={styles.muted}>{dashboard.transaction_count} transactions analyzed</Text>
+              </View>
             </View>
-            <View style={styles.scoreText}>
-              <Text style={styles.cardTitle}>Financial score</Text>
-              <ProgressBar progress={scoreProgress} color={colors.emerald} style={styles.progress} />
-              <Text style={styles.muted}>{dashboard.transaction_count} transactions analyzed</Text>
-            </View>
-          </View>
+          </AnimatedCard>
 
           <Section title="Opportunities" icon="creation-outline">
             {dashboard.opportunities?.length ? (
@@ -572,7 +583,7 @@ export default function DashboardScreen() {
                     <Text style={styles.listLabel}>{category}</Text>
                     <Text style={styles.listValue}>{percent.toFixed(1)}%</Text>
                   </View>
-                  <ProgressBar progress={Math.min(percent / 100, 1)} color={colors.sky} style={styles.progress} />
+                  <AnimatedProgressBar progress={Math.min(percent / 100, 1)} color={colors.sky} />
                 </View>
               ))
             ) : (
@@ -642,8 +653,15 @@ function GettingStartedCard({ dashboard }: { dashboard: Dashboard }) {
   const hasIncome = dashboard.summary.income > 0;
   const hasExpense = dashboard.summary.expense > 0;
   const hasBudget = dashboard.budgets.length > 0;
+  const introSteps = [
+    { icon: 'chart-line', label: 'Track money' },
+    { icon: 'target', label: 'Set budgets' },
+    { icon: 'receipt-text-outline', label: 'Scan receipts' },
+    { icon: 'creation-outline', label: 'Ask AI' },
+  ] as const;
 
   return (
+    <AnimatedCard index={2}>
     <Card style={styles.startCard}>
       <Card.Content>
         <View style={styles.sectionHeader}>
@@ -653,6 +671,19 @@ function GettingStartedCard({ dashboard }: { dashboard: Dashboard }) {
         <Text style={styles.startText}>
           Complete these first steps and the dashboard, budgets, and AI assistant will start giving useful feedback.
         </Text>
+        <View style={styles.introMotionGrid}>
+          {introSteps.map((step, index) => (
+            <AnimatedCard index={index} key={step.label} style={styles.introTile}>
+              <MaterialCommunityIcons color={colors.sky} name={step.icon} size={20} />
+              <Text style={styles.introTileText}>{step.label}</Text>
+            </AnimatedCard>
+          ))}
+        </View>
+        <View style={styles.introDots}>
+          {introSteps.map((step, index) => (
+            <View key={`${step.label}-dot`} style={[styles.introDot, index === 0 ? styles.introDotActive : null]} />
+          ))}
+        </View>
         <View style={styles.startSteps}>
           <StepBadge
             complete={hasIncome}
@@ -672,6 +703,7 @@ function GettingStartedCard({ dashboard }: { dashboard: Dashboard }) {
         </View>
       </Card.Content>
     </Card>
+    </AnimatedCard>
   );
 }
 
@@ -719,9 +751,9 @@ function StepBadge({
 
   if (onPress) {
     return (
-      <TouchableOpacity onPress={onPress} style={[styles.stepBadge, complete ? styles.stepBadgeComplete : null]}>
+      <PressableScale onPress={onPress} style={[styles.stepBadge, complete ? styles.stepBadgeComplete : null]}>
         {content}
-      </TouchableOpacity>
+      </PressableScale>
     );
   }
 
@@ -748,19 +780,22 @@ function QuickAddStrip() {
     <View style={styles.quickAddPanel}>
       <View style={styles.rowBetween}>
         <Text style={styles.quickAddTitle}>Quick add</Text>
-        <TouchableOpacity onPress={() => router.push('/explore')}>
+        <PressableScale onPress={() => router.push('/explore')}>
           <Text style={styles.quickAddLink}>Open full form</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
       <View style={styles.quickAddRow}>
         {shortcuts.map((item) => (
-          <TouchableOpacity
+          <PressableScale
             key={item.category}
-            onPress={() => openQuickAdd(item.category, item.type)}
+            onPress={() => {
+              triggerSelection();
+              openQuickAdd(item.category, item.type);
+            }}
             style={styles.quickAddButton}>
             <MaterialCommunityIcons color={colors.sky} name={item.icon} size={18} />
             <Text style={styles.quickAddButtonText}>{item.label}</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
       </View>
     </View>
@@ -799,15 +834,17 @@ function Section({
   const { colors, styles } = useDashboardTheme();
 
   return (
-    <Card style={styles.card}>
-      <Card.Content>
-        <View style={styles.sectionHeader}>
-          <MaterialCommunityIcons color={colors.sky} name={icon} size={20} />
-          <Text style={styles.cardTitle}>{title}</Text>
-        </View>
-        {children}
-      </Card.Content>
-    </Card>
+    <AnimatedCard>
+      <Card style={styles.card}>
+        <Card.Content>
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons color={colors.sky} name={icon} size={20} />
+            <Text style={styles.cardTitle}>{title}</Text>
+          </View>
+          {children}
+        </Card.Content>
+      </Card>
+    </AnimatedCard>
   );
 }
 
@@ -857,7 +894,7 @@ function BudgetRow({ item, onDelete }: { item: BudgetStatus; onDelete: () => voi
           {money.format(item.spent)} / {money.format(item.limit_amount)}
         </Text>
       </View>
-      <ProgressBar progress={item.progress} color={item.is_over ? colors.coral : colors.emerald} style={styles.progress} />
+      <AnimatedProgressBar progress={item.progress} color={item.is_over ? colors.coral : colors.emerald} />
       <View style={styles.rowBetween}>
         <Text style={styles.muted}>
           {item.is_over ? `${money.format(Math.abs(item.remaining))} over` : `${money.format(item.remaining)} left`}
@@ -1225,6 +1262,45 @@ function createStyles(colors: AppPalette) {
     color: colors.ink,
     flex: 1,
     fontSize: 15,
+    fontWeight: '900',
+  },
+  introDot: {
+    backgroundColor: colors.border,
+    borderRadius: 999,
+    height: 7,
+    width: 7,
+  },
+  introDotActive: {
+    backgroundColor: colors.sky,
+    width: 22,
+  },
+  introDots: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 14,
+  },
+  introMotionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  introTile: {
+    alignItems: 'center',
+    backgroundColor: colors.skySoft,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexBasis: '48%',
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 48,
+    padding: 10,
+  },
+  introTileText: {
+    color: colors.ink,
+    flex: 1,
+    fontSize: 12,
     fontWeight: '900',
   },
   input: {

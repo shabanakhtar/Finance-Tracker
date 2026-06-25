@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Chip, Text } from 'react-native-paper';
 
 import { AppPalette, radii, spacing } from '@/constants/theme';
-import { CharacterCounter, EmptyState, FormField, validateAmount, validateMaxLength } from '@/components/ux';
+import { AnimatedCard, CharacterCounter, EmptyState, FormField, TypingText, triggerSuccess, validateAmount, validateMaxLength } from '@/components/ux';
 import { useAppTheme } from '@/contexts/theme';
 import { AppApiError, MarketSearchAnswer, askAi, searchMarket } from '@/services/api';
 
@@ -127,6 +127,7 @@ export default function AiScreen() {
 
     try {
       const result = await askAi(cleaned);
+      triggerSuccess();
       setMessages((current) => [
         ...current,
         {
@@ -174,6 +175,7 @@ export default function AiScreen() {
         category: marketCategory.trim() || undefined,
         location: 'Pakistan',
       });
+      triggerSuccess();
       setMarketResult(result);
 
       setMessages((current) => [
@@ -222,15 +224,25 @@ export default function AiScreen() {
         </View>
 
         <View style={styles.chatPanel}>
-          {messages.map((message) => (
-            <View
+          {messages.map((message, index) => {
+            const shouldType = message.role === 'assistant' && index === messages.length - 1 && message.id !== 'welcome';
+            return (
+            <AnimatedCard
               key={message.id}
               style={[styles.bubble, message.role === 'user' ? styles.userBubble : styles.assistantBubble]}>
-              <Text style={[styles.bubbleText, message.role === 'user' ? styles.userText : styles.assistantText]}>
-                {message.text}
-              </Text>
-            </View>
-          ))}
+              {shouldType ? (
+                <TypingText
+                  text={message.text}
+                  style={[styles.bubbleText, message.role === 'user' ? styles.userText : styles.assistantText]}
+                />
+              ) : (
+                <Text style={[styles.bubbleText, message.role === 'user' ? styles.userText : styles.assistantText]}>
+                  {message.text}
+                </Text>
+              )}
+            </AnimatedCard>
+          );
+          })}
           {loading ? (
             <View style={[styles.bubble, styles.assistantBubble]}>
               <Text style={styles.assistantText}>Thinking through your latest numbers...</Text>

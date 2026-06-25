@@ -107,6 +107,8 @@ Make the app useful before the user has data.
 
 Use animation to make the app feel smoother, not flashy.
 
+Status: completed together with Phase 4A.
+
 - Add an animated first-run intro:
   - Track your money.
   - Set simple budgets.
@@ -141,9 +143,29 @@ Use animation to make the app feel smoother, not flashy.
 - Avoid large celebration animations for routine finance actions.
 - Respect reduced-motion settings before public release.
 
+Implemented:
+
+- Reusable motion primitives:
+  - `AnimatedScreen`
+  - `AnimatedCard`
+  - `PressableScale`
+  - `AnimatedProgressBar`
+  - `SuccessPulse`
+  - `TypingText`
+- Dashboard card entrance motion.
+- Animated score and budget progress bars.
+- First-run guidance tiles with gentle card entrance motion.
+- Quick-add button/chip press feedback.
+- Success haptics for save/delete/sync/AI completion moments.
+- Smooth newest AI assistant response typing.
+- Native stack transitions for tab screens and quick-add modal.
+- Reduced-motion awareness in reusable motion primitives.
+
 ## Phase 4A: Mobile Navigation And Safe Areas
 
 Make the app feel more native and comfortable on modern phones.
+
+Status: completed together with Phase 4.
 
 - Redesign the bottom navigation into a floating safe-area-aware bar.
 - Add a raised center quick-add button because adding a transaction is the core daily action.
@@ -163,6 +185,15 @@ Make the app feel more native and comfortable on modern phones.
   - Center button press scale.
   - Optional small haptic feedback.
 - Keep the UI warm and welcoming in light mode, and calm/premium in dark mode.
+
+Implemented:
+
+- Custom floating tab bar.
+- Safe-area-aware bottom padding.
+- Raised center quick-add action that opens the dedicated quick-add flow.
+- Active tab color and surface emphasis.
+- Muted inactive tabs.
+- Press scale and haptic feedback on tab/quick-add actions.
 
 ## Phase 5: Graceful Degradation
 

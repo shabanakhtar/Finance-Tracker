@@ -59,9 +59,20 @@ function ThemedRootLayout() {
       <AuthProvider>
         <ThemeProvider value={appNavigationTheme}>
           <AuthGate>
-            <Stack>
+            <Stack
+              screenOptions={{
+                animation: 'fade_from_bottom',
+                contentStyle: { backgroundColor: colors.background },
+              }}>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="quick-add" options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen
+                name="quick-add"
+                options={{
+                  animation: 'slide_from_bottom',
+                  headerShown: false,
+                  presentation: 'modal',
+                }}
+              />
               <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
             </Stack>
           </AuthGate>

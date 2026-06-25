@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
+import { FloatingTabBar } from '@/components/navigation/floating-tab-bar';
 import { useAppTheme } from '@/contexts/theme';
 
 export default function Layout() {
@@ -8,21 +9,11 @@ export default function Layout() {
 
   return (
     <Tabs
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.sky,
         tabBarInactiveTintColor: colors.muted,
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '700',
-        },
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          height: 66,
-          paddingBottom: 9,
-          paddingTop: 8,
-        },
       }}>
       <Tabs.Screen
         name="index"

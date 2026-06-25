@@ -1,14 +1,18 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, SegmentedButtons } from 'react-native-paper';
 
 import { AppPalette, spacing } from '@/constants/theme';
 import {
   CharacterCounter,
   FormField,
+  PressableScale,
   SuccessBanner,
+  SuccessPulse,
+  triggerSelection,
+  triggerSuccess,
   validateAmount,
   validateCategory,
   validateDate,
@@ -100,6 +104,7 @@ export default function QuickAddScreen() {
     try {
       setSaving(true);
       await addTransaction(transaction);
+      triggerSuccess();
       if (closeAfterSave) {
         router.back();
       } else {
@@ -110,11 +115,13 @@ export default function QuickAddScreen() {
       if (isLikelyNetworkError(error)) {
         await queueTransaction(transaction);
         if (closeAfterSave) {
+          triggerSuccess();
           Alert.alert('Saved offline', 'This transaction will sync when the API is reachable.', [
             { text: 'OK', onPress: () => router.back() },
           ]);
         } else {
           resetForNext();
+          triggerSuccess();
           setSaveMessage('Saved offline. This transaction will sync when the API is reachable.');
         }
         return;
@@ -129,9 +136,9 @@ export default function QuickAddScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+          <PressableScale onPress={() => router.back()} style={styles.closeButton}>
             <MaterialCommunityIcons color={colors.ink} name="close" size={22} />
-          </TouchableOpacity>
+          </PressableScale>
           <View style={styles.headerText}>
             <Text style={styles.eyebrow}>Quick add</Text>
             <Text style={styles.title}>Log it before you forget</Text>
@@ -162,14 +169,17 @@ export default function QuickAddScreen() {
           <Text style={styles.label}>Amount</Text>
           <View style={styles.amountGrid}>
             {amountPresets.map((value) => (
-              <TouchableOpacity
+              <PressableScale
                 key={value}
-                onPress={() => setAmount(String(value))}
+                onPress={() => {
+                  triggerSelection();
+                  setAmount(String(value));
+                }}
                 style={[styles.amountButton, amount === String(value) ? styles.amountButtonActive : null]}>
                 <Text style={[styles.amountButtonText, amount === String(value) ? styles.amountButtonTextActive : null]}>
                   {money.format(value)}
                 </Text>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
           <FormField
@@ -193,6 +203,7 @@ export default function QuickAddScreen() {
                 icon={item.icon}
                 key={item.category}
                 onPress={() => {
+                  triggerSelection();
                   setCategory(item.category);
                   setType(item.type);
                 }}
@@ -240,7 +251,12 @@ export default function QuickAddScreen() {
           />
         </View>
 
-        {saveMessage ? <SuccessBanner message={saveMessage} title="Transaction saved" /> : null}
+        {saveMessage ? (
+          <View style={styles.successStack}>
+            <SuccessPulse label="Saved" visible />
+            <SuccessBanner message={saveMessage} title="Transaction saved" />
+          </View>
+        ) : null}
 
         <View style={styles.actions}>
           <Button disabled={saving || !formIsValid} mode="outlined" onPress={() => save(false)} style={styles.secondaryButton}>
@@ -393,6 +409,9 @@ function createStyles(colors: AppPalette) {
       color: colors.balanceText,
       fontSize: 28,
       fontWeight: '900',
+    },
+    successStack: {
+      gap: spacing.sm,
     },
     title: {
       color: colors.ink,
