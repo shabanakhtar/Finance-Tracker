@@ -19,6 +19,8 @@ This roadmap captures the current state, the remaining agenda, and the order of 
 - Local product alternative search exists through Gemini with Google Search grounding.
 - AI chat exists.
 - Offline add queue exists for transactions.
+- Dashboard snapshots are cached locally and can be shown when live backend loading fails.
+- Offline queue status and recent sync history are visible on the dashboard.
 - Quick add modal exists inside the app.
 - EAS Android preview build path exists.
 
@@ -26,11 +28,8 @@ This roadmap captures the current state, the remaining agenda, and the order of 
 
 - The installed phone build may not include the latest commits until a new EAS preview build is created and installed.
 - Google login needs real-device verification after Supabase and Google Cloud setup.
-- The app has useful empty states, but they are not yet a full guided onboarding system.
-- Forms still rely too much on alerts instead of reusable real-time validation.
-- Loading/error/success states are inconsistent between screens.
+- The app has useful empty states and a first-run checklist, but not a full animated onboarding story yet.
 - AI usage has no backend quota yet.
-- Gemini failures/rate limits need more graceful app behavior.
 - Offline support only covers adding transactions, not edit/delete.
 - Notification quick add and home screen widgets are not implemented.
 - Production CORS, rate limiting, and observability need a hardening pass.
@@ -169,27 +168,32 @@ Make the app feel more native and comfortable on modern phones.
 
 The app should remain useful when services fail.
 
+Status: completed before Phase 4, with offline edit/delete intentionally left for a later offline expansion.
+
 - Backend unavailable:
-  - Preserve user input.
-  - Offer retry.
-  - Offer save offline where possible.
+  - API failures are classified as network, timeout, auth, rate-limit, backend, parse, or unknown.
+  - Dashboard retries are available from the error state.
+  - If a previous dashboard snapshot exists, the app shows cached data instead of a blank failure.
+  - Add transaction and quick add preserve useful input behavior and save offline on likely network/backend failures.
 - Gemini unavailable or rate-limited:
-  - Show normal non-AI summaries.
-  - Explain that AI is temporarily unavailable.
-  - Avoid blocking core finance tracking.
+  - AI chat explains that AI is temporarily unavailable and core tracking still works.
+  - Market search explains that no reliable recommendation can be made instead of guessing.
+  - Non-AI dashboard summaries, budgets, transactions, and CSV tools remain usable.
 - Supabase slow or temporarily unavailable:
-  - Show cached/local content where available.
-  - Keep add transaction recoverable.
+  - Dashboard cache is stored locally after successful loads.
+  - Cached dashboard mode clearly labels that it is showing a saved snapshot and offers retry.
+  - Add transaction remains recoverable through the offline queue when the API is unreachable.
 - Offline:
-  - Add transaction queue already exists.
-  - Add offline edit/delete queue later.
-  - Show queue status and sync history.
+  - Add transaction queue exists.
+  - Dashboard shows queue count.
+  - Dashboard shows recent sync history for success, partial sync, offline, and failed sync attempts.
+  - Offline edit/delete queue remains a future enhancement because conflict handling needs a separate design.
 - Receipt scan fails:
-  - Let the user manually enter values.
-  - Keep the image failure message specific.
+  - The manual form stays available.
+  - Failure messages stay specific enough for users to retry with a better image or enter values themselves.
 - Product recommendation weak:
-  - Say no reliable cheaper option was found.
-  - Never invent prices, stores, or sources.
+  - Empty/weak market results say no reliable cheaper option was found.
+  - The app avoids inventing prices, stores, or sources when Gemini/search is unavailable.
 
 ## Phase 6: AI Limits While Keeping The App Free
 

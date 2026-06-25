@@ -146,6 +146,29 @@ type ApiResponse<T> = {
   data: T;
 };
 
+export type ApiErrorKind = 'network' | 'timeout' | 'auth' | 'rate_limit' | 'backend' | 'parse' | 'unknown';
+
+export class AppApiError extends Error {
+  kind: ApiErrorKind;
+  retryable: boolean;
+  status?: number;
+
+  constructor(message: string, options: { kind?: ApiErrorKind; retryable?: boolean; status?: number } = {}) {
+    super(message);
+    this.name = 'AppApiError';
+    this.kind = options.kind ?? 'unknown';
+    this.retryable = options.retryable ?? false;
+    this.status = options.status;
+  }
+}
+
+function classifyStatus(status: number): ApiErrorKind {
+  if (status === 401 || status === 403) return 'auth';
+  if (status === 429) return 'rate_limit';
+  if (status >= 500) return 'backend';
+  return 'unknown';
+}
+
 function extractApiError(body: unknown, fallback: string) {
   if (body && typeof body === 'object') {
     const record = body as Record<string, unknown>;
@@ -163,6 +186,8 @@ function extractApiError(body: unknown, fallback: string) {
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
 
   let response: Response;
   try {
@@ -172,10 +197,19 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options?.headers,
       },
+      signal: controller.signal,
       ...options,
     });
-  } catch {
-    throw new Error('Could not reach the backend. Check your internet connection or try again in a moment.');
+  } catch (error) {
+    const isAbort = error instanceof Error && error.name === 'AbortError';
+    throw new AppApiError(
+      isAbort
+        ? 'The backend is taking too long to respond. You can retry, or keep entering transactions offline.'
+        : 'Could not reach the backend. Check your internet connection or try again in a moment.',
+      { kind: isAbort ? 'timeout' : 'network', retryable: true },
+    );
+  } finally {
+    clearTimeout(timeout);
   }
 
   const rawBody = await response.text();
@@ -185,16 +219,22 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       body = JSON.parse(rawBody);
     } catch {
       const preview = rawBody.replace(/\s+/g, ' ').slice(0, 120);
-      throw new Error(
+      throw new AppApiError(
         response.ok
           ? 'Backend returned an unreadable response. Please try again.'
           : `Backend returned ${response.status}. ${preview || 'Please try again.'}`,
+        { kind: 'parse', retryable: true, status: response.status },
       );
     }
   }
 
   if (!response.ok || (body && typeof body === 'object' && (body as { status?: string }).status === 'error')) {
-    throw new Error(extractApiError(body, `Request failed with status ${response.status}.`));
+    const kind = classifyStatus(response.status);
+    throw new AppApiError(extractApiError(body, `Request failed with status ${response.status}.`), {
+      kind,
+      retryable: kind === 'network' || kind === 'timeout' || kind === 'backend' || kind === 'rate_limit',
+      status: response.status,
+    });
   }
 
   return (body as ApiResponse<T>).data;

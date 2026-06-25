@@ -4,10 +4,17 @@ import NetInfo from '@react-native-community/netinfo';
 import { Transaction, addTransaction } from '@/services/api';
 
 const QUEUE_KEY = 'finance.offline.transactions.v1';
+const SYNC_HISTORY_KEY = 'finance.offline.syncHistory.v1';
 
 export type QueuedTransaction = Transaction & {
   localId: string;
   queuedAt: string;
+};
+
+export type SyncHistoryItem = {
+  at: string;
+  message: string;
+  status: 'success' | 'partial' | 'offline' | 'failed';
 };
 
 export function isLikelyNetworkError(error: unknown) {
@@ -17,7 +24,9 @@ export function isLikelyNetworkError(error: unknown) {
     message.includes('network') ||
     message.includes('failed to fetch') ||
     message.includes('timeout') ||
-    message.includes('backend unavailable')
+    message.includes('backend unavailable') ||
+    message.includes('could not reach the backend') ||
+    message.includes('taking too long')
   );
 }
 
@@ -43,6 +52,24 @@ async function saveQueue(items: QueuedTransaction[]) {
   await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(items));
 }
 
+export async function getSyncHistory() {
+  const raw = await AsyncStorage.getItem(SYNC_HISTORY_KEY);
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as SyncHistoryItem[]) : [];
+  } catch {
+    await AsyncStorage.removeItem(SYNC_HISTORY_KEY);
+    return [];
+  }
+}
+
+async function recordSyncHistory(item: SyncHistoryItem) {
+  const current = await getSyncHistory();
+  await AsyncStorage.setItem(SYNC_HISTORY_KEY, JSON.stringify([item, ...current].slice(0, 8)));
+}
+
 export async function queueTransaction(transaction: Transaction) {
   const current = await getQueuedTransactions();
   const item: QueuedTransaction = {
@@ -56,7 +83,13 @@ export async function queueTransaction(transaction: Transaction) {
 
 export async function syncQueuedTransactions() {
   if (!(await isOnline())) {
-    return { synced: 0, remaining: await getQueuedTransactions(), online: false };
+    const remaining = await getQueuedTransactions();
+    await recordSyncHistory({
+      at: new Date().toISOString(),
+      message: `${remaining.length} transaction${remaining.length === 1 ? '' : 's'} still waiting for internet.`,
+      status: 'offline',
+    });
+    return { synced: 0, remaining, online: false };
   }
 
   const queue = await getQueuedTransactions();
@@ -76,13 +109,22 @@ export async function syncQueuedTransactions() {
       synced += 1;
     } catch (error) {
       remaining.push(item, ...queue.slice(index + 1));
-      if (!isLikelyNetworkError(error)) {
-        continue;
-      }
       break;
     }
   }
 
   await saveQueue(remaining);
+  if (synced > 0 || remaining.length > 0) {
+    const failed = synced === 0 && remaining.length > 0;
+    await recordSyncHistory({
+      at: new Date().toISOString(),
+      message: failed
+        ? 'Sync could not complete. Your queued transactions are still saved on this device.'
+        : remaining.length
+        ? `${synced} synced, ${remaining.length} still waiting.`
+        : `${synced} offline transaction${synced === 1 ? '' : 's'} synced.`,
+      status: failed ? 'failed' : remaining.length ? 'partial' : 'success',
+    });
+  }
   return { synced, remaining, online: true };
 }

@@ -21,7 +21,8 @@ import {
 } from '@/components/ux';
 import { useAuth } from '@/contexts/auth';
 import { useAppTheme } from '@/contexts/theme';
-import { getQueuedTransactions, syncQueuedTransactions } from '@/services/offlineQueue';
+import { getQueuedTransactions, getSyncHistory, SyncHistoryItem, syncQueuedTransactions } from '@/services/offlineQueue';
+import { cacheDashboard, formatCachedAt, getCachedDashboard } from '@/services/resilience';
 import {
   API_BASE_URL,
   BudgetStatus,
@@ -85,6 +86,8 @@ export default function DashboardScreen() {
   const [budgetAmount, setBudgetAmount] = useState('');
   const [budgetCategory, setBudgetCategory] = useState('');
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [dashboardCachedAt, setDashboardCachedAt] = useState<string | null>(null);
+  const [degradedMessage, setDegradedMessage] = useState<string | null>(null);
   const [editing, setEditing] = useState<TransactionForm | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,6 +95,7 @@ export default function DashboardScreen() {
   const [savingBudget, setSavingBudget] = useState(false);
   const [savingTransaction, setSavingTransaction] = useState(false);
   const [queuedCount, setQueuedCount] = useState(0);
+  const [syncHistory, setSyncHistory] = useState<SyncHistoryItem[]>([]);
   const [syncingQueue, setSyncingQueue] = useState(false);
   const [pendingBudgetDelete, setPendingBudgetDelete] = useState<string | null>(null);
   const [pendingTransactionDelete, setPendingTransactionDelete] = useState<Transaction | null>(null);
@@ -109,12 +113,24 @@ export default function DashboardScreen() {
   const loadDashboard = useCallback(async () => {
     try {
       setError(null);
+      setDegradedMessage(null);
       const queued = await getQueuedTransactions();
+      const history = await getSyncHistory();
       setQueuedCount(queued.length);
+      setSyncHistory(history);
       const nextDashboard = await getDashboard();
+      await cacheDashboard(nextDashboard);
+      setDashboardCachedAt(null);
       setDashboard(nextDashboard);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load dashboard');
+      const cached = await getCachedDashboard();
+      if (cached) {
+        setDashboard(cached.dashboard);
+        setDashboardCachedAt(cached.cachedAt);
+        setDegradedMessage(err instanceof Error ? err.message : 'Live dashboard is temporarily unavailable.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Unable to load dashboard');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -185,6 +201,7 @@ export default function DashboardScreen() {
     try {
       setSyncingQueue(true);
       const result = await syncQueuedTransactions();
+      setSyncHistory(await getSyncHistory());
       setQueuedCount(result.remaining.length);
       if (result.synced > 0) {
         await loadDashboard();
@@ -347,7 +364,10 @@ export default function DashboardScreen() {
       <Text style={styles.subtitle}>Here is your money snapshot for today.</Text>
 
       {error ? <ErrorState error={error} onRetry={loadDashboard} /> : null}
-      {queuedCount > 0 ? <OfflineQueueCard count={queuedCount} syncing={syncingQueue} onSync={syncOfflineQueue} /> : null}
+      {degradedMessage ? <CachedDashboardNotice cachedAt={dashboardCachedAt} message={degradedMessage} onRetry={loadDashboard} /> : null}
+      {queuedCount > 0 || syncHistory.length ? (
+        <OfflineQueueCard count={queuedCount} history={syncHistory} syncing={syncingQueue} onSync={syncOfflineQueue} />
+      ) : null}
 
       {dashboard ? (
         <>
@@ -580,7 +600,9 @@ export default function DashboardScreen() {
             </View>
           </Section>
 
-          <Text style={styles.apiHint}>Connected to {API_BASE_URL.replace('https://', '')}</Text>
+          <Text style={styles.apiHint}>
+            {dashboardCachedAt ? `Showing saved snapshot from ${formatCachedAt(dashboardCachedAt)}` : `Connected to ${API_BASE_URL.replace('https://', '')}`}
+          </Text>
           <ConfirmDialog
             confirmLabel="Delete"
             destructive
@@ -887,20 +909,87 @@ function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) 
   );
 }
 
-function OfflineQueueCard({ count, onSync, syncing }: { count: number; onSync: () => void; syncing: boolean }) {
+function CachedDashboardNotice({
+  cachedAt,
+  message,
+  onRetry,
+}: {
+  cachedAt: string | null;
+  message: string;
+  onRetry: () => void;
+}) {
   const { colors, styles } = useDashboardTheme();
+
+  return (
+    <Card style={styles.degradedCard}>
+      <Card.Content>
+        <View style={styles.sectionHeader}>
+          <MaterialCommunityIcons color={colors.amber} name="cloud-alert-outline" size={22} />
+          <Text style={styles.cardTitle}>Live update is delayed</Text>
+        </View>
+        <Text style={styles.muted}>
+          Showing your saved dashboard{cachedAt ? ` from ${formatCachedAt(cachedAt)}` : ''}. Core tracking still works, and
+          new transactions can be saved offline if needed.
+        </Text>
+        <Text style={styles.degradedDetail}>{message}</Text>
+        <Button mode="contained-tonal" onPress={onRetry} style={styles.degradedButton}>
+          Retry live dashboard
+        </Button>
+      </Card.Content>
+    </Card>
+  );
+}
+
+function OfflineQueueCard({
+  count,
+  history,
+  onSync,
+  syncing,
+}: {
+  count: number;
+  history: SyncHistoryItem[];
+  onSync: () => void;
+  syncing: boolean;
+}) {
+  const { colors, styles } = useDashboardTheme();
+  const latestHistory = history.slice(0, 3);
 
   return (
     <Card style={styles.offlineCard}>
       <Card.Content>
         <View style={styles.sectionHeader}>
           <MaterialCommunityIcons color={colors.amber} name="cloud-sync-outline" size={22} />
-          <Text style={styles.cardTitle}>{count} offline transaction{count === 1 ? '' : 's'} waiting</Text>
+          <Text style={styles.cardTitle}>
+            {count > 0 ? `${count} offline transaction${count === 1 ? '' : 's'} waiting` : 'Offline sync history'}
+          </Text>
         </View>
-        <Text style={styles.muted}>These were saved on this device and will be uploaded once the API is reachable.</Text>
-        <Button loading={syncing} mode="contained" onPress={onSync} style={styles.offlineButton}>
-          Sync now
-        </Button>
+        <Text style={styles.muted}>
+          {count > 0
+            ? 'These were saved on this device and will be uploaded once the API is reachable.'
+            : 'Recent offline sync activity is shown here so you know what happened.'}
+        </Text>
+        {latestHistory.length ? (
+          <View style={styles.syncHistoryList}>
+            {latestHistory.map((item) => (
+              <View key={`${item.at}-${item.message}`} style={styles.syncHistoryRow}>
+                <MaterialCommunityIcons
+                  color={item.status === 'success' ? colors.emerald : item.status === 'failed' ? colors.coral : colors.amber}
+                  name={item.status === 'success' ? 'check-circle-outline' : item.status === 'failed' ? 'alert-circle-outline' : 'clock-outline'}
+                  size={16}
+                />
+                <View style={styles.syncHistoryText}>
+                  <Text style={styles.syncHistoryMessage}>{item.message}</Text>
+                  <Text style={styles.syncHistoryTime}>{formatCachedAt(item.at)}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : null}
+        {count > 0 ? (
+          <Button loading={syncing} mode="contained" onPress={onSync} style={styles.offlineButton}>
+            Sync now
+          </Button>
+        ) : null}
       </Card.Content>
     </Card>
   );
@@ -1011,6 +1100,23 @@ function createStyles(colors: AppPalette) {
     color: colors.coral,
     fontSize: 13,
     fontWeight: '800',
+  },
+  degradedButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  degradedCard: {
+    backgroundColor: colors.warningSoft,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  degradedDetail: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 8,
   },
   emptyActionButton: {
     borderRadius: 8,
@@ -1393,6 +1499,34 @@ function createStyles(colors: AppPalette) {
     color: colors.muted,
     fontSize: 13,
     marginTop: -10,
+  },
+  syncHistoryList: {
+    gap: 8,
+    marginTop: 12,
+  },
+  syncHistoryMessage: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 17,
+  },
+  syncHistoryRow: {
+    alignItems: 'flex-start',
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    padding: 10,
+  },
+  syncHistoryText: {
+    flex: 1,
+  },
+  syncHistoryTime: {
+    color: colors.muted2,
+    fontSize: 11,
+    marginTop: 2,
   },
   title: {
     color: colors.ink,

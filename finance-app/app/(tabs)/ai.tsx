@@ -6,7 +6,7 @@ import { Button, Chip, Text } from 'react-native-paper';
 import { AppPalette, radii, spacing } from '@/constants/theme';
 import { CharacterCounter, EmptyState, FormField, validateAmount, validateMaxLength } from '@/components/ux';
 import { useAppTheme } from '@/contexts/theme';
-import { MarketSearchAnswer, askAi, searchMarket } from '@/services/api';
+import { AppApiError, MarketSearchAnswer, askAi, searchMarket } from '@/services/api';
 
 type ChatMessage = {
   id: string;
@@ -30,6 +30,26 @@ type AiField = 'question' | 'marketProduct' | 'marketPrice' | 'marketCategory';
 const QUESTION_LIMIT = 1000;
 const PRODUCT_LIMIT = 160;
 const CATEGORY_LIMIT = 40;
+
+function getAiUnavailableMessage(error: unknown, feature: 'chat' | 'market') {
+  if (error instanceof AppApiError) {
+    if (error.kind === 'rate_limit') {
+      return feature === 'chat'
+        ? 'AI is at its limit right now. Your dashboard, transactions, budgets, and CSV tools still work.'
+        : 'Market search is at its limit right now. I will not guess prices, so try again later or compare stores manually.';
+    }
+    if (error.kind === 'network' || error.kind === 'timeout' || error.kind === 'backend') {
+      return feature === 'chat'
+        ? 'AI is temporarily unavailable, but core finance tracking still works. Try again when the connection settles.'
+        : 'Market search is temporarily unavailable. No recommendation is safer than an unreliable one, so try again later.';
+    }
+  }
+  return error instanceof Error
+    ? error.message
+    : feature === 'chat'
+      ? 'AI is temporarily unavailable. Please try again soon.'
+      : 'Market search is temporarily unavailable. Please try again soon.';
+}
 
 export default function AiScreen() {
   const { colors } = useAppTheme();
@@ -121,7 +141,7 @@ export default function AiScreen() {
         {
           id: `${Date.now()}-error`,
           role: 'assistant',
-          text: err instanceof Error ? err.message : 'AI is temporarily unavailable. Please try again soon.',
+          text: getAiUnavailableMessage(err, 'chat'),
         },
       ]);
     } finally {
@@ -165,12 +185,19 @@ export default function AiScreen() {
         },
       ]);
     } catch (err) {
+      setMarketResult({
+        alternatives: [],
+        response: getAiUnavailableMessage(err, 'market'),
+        sources: [],
+        verdict: 'No reliable cheaper option could be checked right now.',
+        warnings: ['Prices and stores were not verified because the AI/search service was unavailable.'],
+      });
       setMessages((current) => [
         ...current,
         {
           id: `${Date.now()}-market-error`,
           role: 'assistant',
-          text: err instanceof Error ? err.message : 'Market search is temporarily unavailable. Please try again soon.',
+          text: getAiUnavailableMessage(err, 'market'),
         },
       ]);
     } finally {
