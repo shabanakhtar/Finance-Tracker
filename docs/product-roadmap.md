@@ -291,6 +291,32 @@ These are useful, but should come after core UX and AI quota work.
   - Android hardware camera-button interception is limited and device-dependent.
   - Better route is notification action, widget, or app shortcut deep-link.
 
+## Phase 9A: Bank Statements And Share-To-App Capture
+
+Add safer financial import paths before considering direct bank integrations.
+
+- Bank statement import:
+  - Add an import path for app/exported statements from Nayapay, JazzCash, and other local wallets.
+  - Support CSV first when available.
+  - Evaluate PDF statement parsing only after the CSV import/review flow is mature.
+  - Parse statement rows into a review screen before saving.
+  - Let users map columns such as date, description, amount, debit/credit, and category.
+  - Detect likely duplicates before import.
+  - Preserve the original file only if the user explicitly opts in; otherwise process and discard.
+- Provider templates:
+  - Create import templates for Nayapay and JazzCash statement formats.
+  - Keep a generic statement importer for unknown banks/wallets.
+  - Add a sample-file based test fixture for each supported provider.
+- Receipt and statement sharing:
+  - Add Android share-to-app support so users can share receipt images or statement files directly from WhatsApp, gallery, file manager, or email.
+  - Shared receipt image should open the receipt scan/review flow.
+  - Shared CSV/PDF statement should open the import preview flow.
+  - Never save imported rows without a review/confirm step.
+- Direct bank connections:
+  - Treat as future/high-risk work, not near-term scope.
+  - Requires bank/open-banking providers, compliance review, explicit user consent, token storage, revocation flows, and stronger security controls.
+  - Do not request bank credentials directly inside the app.
+
 ## Phase 10: Release Engineering
 
 Ignore branding details here, but keep production mechanics ready.
