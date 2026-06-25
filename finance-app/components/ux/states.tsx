@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ReactNode, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Button, Card } from 'react-native-paper';
+import { Button, Card, Dialog, Portal, Snackbar } from 'react-native-paper';
 
 import { AppPalette, spacing } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
@@ -163,6 +163,73 @@ export function SuccessBanner({
         <Text style={styles.successText}>{message}</Text>
       </View>
     </View>
+  );
+}
+
+export function SuccessToast({
+  actionLabel,
+  message,
+  onAction,
+  onDismiss,
+  visible,
+}: {
+  actionLabel?: string;
+  message: string;
+  onAction?: () => void;
+  onDismiss: () => void;
+  visible: boolean;
+}) {
+  return (
+    <Snackbar
+      action={actionLabel && onAction ? { label: actionLabel, onPress: onAction } : undefined}
+      duration={3500}
+      onDismiss={onDismiss}
+      visible={visible}>
+      {message}
+    </Snackbar>
+  );
+}
+
+export function ConfirmDialog({
+  cancelLabel = 'Cancel',
+  confirmLabel = 'Confirm',
+  destructive = false,
+  loading = false,
+  message,
+  onCancel,
+  onConfirm,
+  title,
+  visible,
+}: {
+  cancelLabel?: string;
+  confirmLabel?: string;
+  destructive?: boolean;
+  loading?: boolean;
+  message: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  title: string;
+  visible: boolean;
+}) {
+  const { colors } = useAppTheme();
+
+  return (
+    <Portal>
+      <Dialog onDismiss={loading ? undefined : onCancel} visible={visible}>
+        <Dialog.Title>{title}</Dialog.Title>
+        <Dialog.Content>
+          <Text style={{ color: colors.muted, fontSize: 14, lineHeight: 20 }}>{message}</Text>
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button disabled={loading} onPress={onCancel}>
+            {cancelLabel}
+          </Button>
+          <Button loading={loading} onPress={onConfirm} textColor={destructive ? colors.coral : colors.sky}>
+            {confirmLabel}
+          </Button>
+        </Dialog.Actions>
+      </Dialog>
+    </Portal>
   );
 }
 

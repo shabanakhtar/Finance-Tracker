@@ -9,9 +9,11 @@ import { AppPalette } from '@/constants/theme';
 import {
   AppErrorState,
   CharacterCounter,
+  ConfirmDialog,
   DelayedLoader,
   FormField,
   SkeletonList,
+  SuccessToast,
   validateAmount,
   validateCategory,
   validateDate,
@@ -91,6 +93,10 @@ export default function DashboardScreen() {
   const [savingTransaction, setSavingTransaction] = useState(false);
   const [queuedCount, setQueuedCount] = useState(0);
   const [syncingQueue, setSyncingQueue] = useState(false);
+  const [pendingBudgetDelete, setPendingBudgetDelete] = useState<string | null>(null);
+  const [pendingTransactionDelete, setPendingTransactionDelete] = useState<Transaction | null>(null);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastVisible, setToastVisible] = useState(false);
   const [submittedFields, setSubmittedFields] = useState<Record<DashboardFormField, boolean>>({
     budgetAmount: false,
     budgetCategory: false,
@@ -161,6 +167,10 @@ export default function DashboardScreen() {
     setRefreshing(true);
     loadDashboard();
   };
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setToastVisible(true);
+  };
   const markSubmitted = (...fields: DashboardFormField[]) => {
     setSubmittedFields((current) => {
       const next = { ...current };
@@ -183,6 +193,8 @@ export default function DashboardScreen() {
         Alert.alert('Still offline', 'Queued transactions will sync when your connection is back.');
       } else if (result.remaining.length) {
         Alert.alert('Partial sync', `${result.synced} synced, ${result.remaining.length} still waiting.`);
+      } else if (result.synced > 0) {
+        showToast(`${result.synced} offline transaction${result.synced === 1 ? '' : 's'} synced.`);
       }
     } catch (err) {
       Alert.alert('Sync failed', err instanceof Error ? err.message : 'Could not sync queued transactions.');
@@ -234,6 +246,7 @@ export default function DashboardScreen() {
         type: editing.type,
       });
       setEditing(null);
+      showToast('Transaction updated.');
       await loadDashboard();
     } catch (err) {
       Alert.alert('Could not update', err instanceof Error ? err.message : 'Backend request failed.');
@@ -244,22 +257,21 @@ export default function DashboardScreen() {
 
   const removeTransaction = async (item: Transaction) => {
     if (!item.id) return;
-    Alert.alert('Delete transaction?', `${item.category} for ${money.format(item.amount)} will be removed.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteTransaction(item.id!);
-            if (editing?.id === item.id) setEditing(null);
-            await loadDashboard();
-          } catch (err) {
-            Alert.alert('Could not delete', err instanceof Error ? err.message : 'Backend request failed.');
-          }
-        },
-      },
-    ]);
+    setPendingTransactionDelete(item);
+  };
+
+  const confirmDeleteTransaction = async () => {
+    const transactionId = pendingTransactionDelete?.id;
+    if (!transactionId) return;
+    try {
+      setPendingTransactionDelete(null);
+      await deleteTransaction(transactionId);
+      if (editing?.id === transactionId) setEditing(null);
+      showToast('Transaction deleted.');
+      await loadDashboard();
+    } catch (err) {
+      Alert.alert('Could not delete', err instanceof Error ? err.message : 'Backend request failed.');
+    }
   };
 
   const submitBudget = async () => {
@@ -282,6 +294,7 @@ export default function DashboardScreen() {
         budgetAmount: false,
         budgetCategory: false,
       }));
+      showToast('Budget saved.');
       await loadDashboard();
     } catch (err) {
       Alert.alert('Could not save budget', err instanceof Error ? err.message : 'Backend request failed.');
@@ -291,21 +304,20 @@ export default function DashboardScreen() {
   };
 
   const removeBudget = async (category: string) => {
-    Alert.alert('Delete budget?', `Remove the ${category} monthly limit?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteBudget(category);
-            await loadDashboard();
-          } catch (err) {
-            Alert.alert('Could not delete budget', err instanceof Error ? err.message : 'Backend request failed.');
-          }
-        },
-      },
-    ]);
+    setPendingBudgetDelete(category);
+  };
+
+  const confirmDeleteBudget = async () => {
+    if (!pendingBudgetDelete) return;
+    const category = pendingBudgetDelete;
+    try {
+      setPendingBudgetDelete(null);
+      await deleteBudget(category);
+      showToast('Budget deleted.');
+      await loadDashboard();
+    } catch (err) {
+      Alert.alert('Could not delete budget', err instanceof Error ? err.message : 'Backend request failed.');
+    }
   };
 
   if (loading) {
@@ -520,7 +532,15 @@ export default function DashboardScreen() {
                 />
               ))
             ) : (
-              <EmptyState icon="receipt-text-plus-outline" text="Transactions are your money history. Add income, log an expense, scan a receipt, or import a CSV to begin." />
+              <EmptyState
+                actions={[
+                  { label: 'Add manually', onPress: () => router.push('/explore') },
+                  { label: 'Scan receipt', onPress: () => router.push('/explore') },
+                  { label: 'Import CSV', onPress: () => router.push('/settings') },
+                ]}
+                icon="receipt-text-plus-outline"
+                text="Transactions are your money history. Add income, log an expense, scan a receipt, or import a CSV to begin."
+              />
             )}
           </Section>
 
@@ -561,6 +581,33 @@ export default function DashboardScreen() {
           </Section>
 
           <Text style={styles.apiHint}>Connected to {API_BASE_URL.replace('https://', '')}</Text>
+          <ConfirmDialog
+            confirmLabel="Delete"
+            destructive
+            message={
+              pendingTransactionDelete
+                ? `${pendingTransactionDelete.category} for ${money.format(pendingTransactionDelete.amount)} will be removed.`
+                : ''
+            }
+            onCancel={() => setPendingTransactionDelete(null)}
+            onConfirm={confirmDeleteTransaction}
+            title="Delete transaction?"
+            visible={Boolean(pendingTransactionDelete)}
+          />
+          <ConfirmDialog
+            confirmLabel="Delete"
+            destructive
+            message={pendingBudgetDelete ? `Remove the ${pendingBudgetDelete} monthly limit?` : ''}
+            onCancel={() => setPendingBudgetDelete(null)}
+            onConfirm={confirmDeleteBudget}
+            title="Delete budget?"
+            visible={Boolean(pendingBudgetDelete)}
+          />
+          <SuccessToast
+            message={toastMessage}
+            onDismiss={() => setToastVisible(false)}
+            visible={toastVisible}
+          />
         </>
       ) : null}
     </ScrollView>
@@ -801,13 +848,30 @@ function BudgetRow({ item, onDelete }: { item: BudgetStatus; onDelete: () => voi
   );
 }
 
-function EmptyState({ icon, text }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; text: string }) {
+function EmptyState({
+  actions,
+  icon,
+  text,
+}: {
+  actions?: { label: string; onPress: () => void }[];
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  text: string;
+}) {
   const { colors, styles } = useDashboardTheme();
 
   return (
     <View style={styles.emptyState}>
       <MaterialCommunityIcons color={colors.muted} name={icon} size={24} />
       <Text style={styles.muted}>{text}</Text>
+      {actions?.length ? (
+        <View style={styles.emptyActionRow}>
+          {actions.map((action) => (
+            <Button compact key={action.label} mode="contained-tonal" onPress={action.onPress} style={styles.emptyActionButton}>
+              {action.label}
+            </Button>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -947,6 +1011,16 @@ function createStyles(colors: AppPalette) {
     color: colors.coral,
     fontSize: 13,
     fontWeight: '800',
+  },
+  emptyActionButton: {
+    borderRadius: 8,
+  },
+  emptyActionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'center',
+    marginTop: 6,
   },
   emptyState: {
     alignItems: 'center',
