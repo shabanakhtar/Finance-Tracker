@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Button, Chip, Text, TextInput } from 'react-native-paper';
+import { Button, Chip, Text } from 'react-native-paper';
 
 import { AppPalette, radii, spacing } from '@/constants/theme';
+import { CharacterCounter, FormField, validateAmount, validateMaxLength } from '@/components/ux';
 import { useAppTheme } from '@/contexts/theme';
 import { MarketSearchAnswer, askAi, searchMarket } from '@/services/api';
 
@@ -25,6 +26,10 @@ const money = new Intl.NumberFormat('en-PK', {
   style: 'currency',
   currency: 'PKR',
 });
+type AiField = 'question' | 'marketProduct' | 'marketPrice' | 'marketCategory';
+const QUESTION_LIMIT = 1000;
+const PRODUCT_LIMIT = 160;
+const CATEGORY_LIMIT = 40;
 
 export default function AiScreen() {
   const { colors } = useAppTheme();
@@ -43,11 +48,50 @@ export default function AiScreen() {
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [marketLoading, setMarketLoading] = useState(false);
+  const [submitted, setSubmitted] = useState<Record<AiField, boolean>>({
+    question: false,
+    marketProduct: false,
+    marketPrice: false,
+    marketCategory: false,
+  });
+
+  const questionValidation = useMemo(() => {
+    const length = validateMaxLength(question, QUESTION_LIMIT, 'Question');
+    if (!length.isValid) return length;
+    if (!question.trim()) return { isValid: false, message: 'Question is required.' };
+    return { isValid: true };
+  }, [question]);
+  const productValidation = useMemo(() => {
+    const length = validateMaxLength(marketProduct, PRODUCT_LIMIT, 'Product');
+    if (!length.isValid) return length;
+    if (!marketProduct.trim()) return { isValid: false, message: 'Product is required.' };
+    return { isValid: true };
+  }, [marketProduct]);
+  const marketPriceValidation = useMemo(() => {
+    if (!marketPrice.trim()) return { isValid: true };
+    return validateAmount(marketPrice);
+  }, [marketPrice]);
+  const marketCategoryValidation = useMemo(() => validateMaxLength(marketCategory, CATEGORY_LIMIT, 'Category'), [marketCategory]);
+  const marketFormIsValid = productValidation.isValid && marketPriceValidation.isValid && marketCategoryValidation.isValid;
+  const markSubmitted = (...fields: AiField[]) => {
+    setSubmitted((current) => {
+      const next = { ...current };
+      fields.forEach((field) => {
+        next[field] = true;
+      });
+      return next;
+    });
+  };
 
   async function submit(nextQuestion = question) {
     const cleaned = nextQuestion.trim();
+    const isPreset = nextQuestion !== question;
     if (!cleaned) {
-      Alert.alert('Ask a question', 'Type a finance question first.');
+      markSubmitted('question');
+      return;
+    }
+    if (!isPreset && !questionValidation.isValid) {
+      markSubmitted('question');
       return;
     }
 
@@ -89,13 +133,8 @@ export default function AiScreen() {
     const product = marketProduct.trim();
     const parsedPrice = marketPrice.trim() ? Number(marketPrice) : undefined;
 
-    if (!product) {
-      Alert.alert('Product needed', 'Enter a product name first.');
-      return;
-    }
-
-    if (parsedPrice !== undefined && (!parsedPrice || parsedPrice <= 0)) {
-      Alert.alert('Check price', 'Enter a price greater than zero, or leave it blank.');
+    markSubmitted('marketProduct', 'marketPrice', 'marketCategory');
+    if (!marketFormIsValid) {
       return;
     }
 
@@ -183,53 +222,53 @@ export default function AiScreen() {
             </View>
           </View>
 
-          <TextInput
-            activeOutlineColor={colors.sky}
+          <FormField
+            counter={<CharacterCounter max={PRODUCT_LIMIT} value={marketProduct} />}
+            error={productValidation.message}
             label="Product"
-            mode="outlined"
             onChangeText={(value) => {
               setMarketProduct(value);
               setMarketResult(null);
             }}
-            outlineColor={colors.border}
             placeholder="Sea salt hair spray"
+            required
             style={styles.input}
+            touched={submitted.marketProduct}
             value={marketProduct}
           />
 
           <View style={styles.marketRow}>
-            <TextInput
-              activeOutlineColor={colors.sky}
+            <FormField
+              error={marketPriceValidation.message}
               keyboardType="decimal-pad"
               label="Paid price"
-              mode="outlined"
               onChangeText={(value) => {
                 setMarketPrice(value);
                 setMarketResult(null);
               }}
-              outlineColor={colors.border}
               placeholder="5000"
               style={[styles.input, styles.marketInput]}
+              touched={submitted.marketPrice}
               value={marketPrice}
             />
-            <TextInput
-              activeOutlineColor={colors.sky}
+            <FormField
               autoCapitalize="none"
+              counter={<CharacterCounter max={CATEGORY_LIMIT} value={marketCategory} />}
+              error={marketCategoryValidation.message}
               label="Category"
-              mode="outlined"
               onChangeText={(value) => {
                 setMarketCategory(value);
                 setMarketResult(null);
               }}
-              outlineColor={colors.border}
               placeholder="grooming"
               style={[styles.input, styles.marketInput]}
+              touched={submitted.marketCategory}
               value={marketCategory}
             />
           </View>
 
           <Button
-            disabled={marketLoading || loading}
+            disabled={marketLoading || loading || !marketFormIsValid}
             icon="magnify"
             loading={marketLoading}
             mode="contained"
@@ -315,25 +354,29 @@ export default function AiScreen() {
             ))}
           </View>
 
-          <TextInput
-            activeOutlineColor={colors.sky}
+          <FormField
+            counter={<CharacterCounter max={QUESTION_LIMIT} value={question} />}
+            error={questionValidation.message}
             label="Ask a question"
-            mode="outlined"
             multiline
             numberOfLines={3}
             onChangeText={setQuestion}
-            outlineColor={colors.border}
             placeholder="Example: What category should I cut back on first?"
+            required
             style={[styles.input, styles.questionInput]}
+            touched={submitted.question}
             value={question}
           />
 
           <Button
-            disabled={loading}
+            disabled={loading || !questionValidation.isValid}
             icon="send-outline"
             loading={loading}
             mode="contained"
-            onPress={() => submit()}
+            onPress={() => {
+              markSubmitted('question');
+              submit();
+            }}
             style={styles.button}>
             Send
           </Button>

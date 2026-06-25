@@ -10,6 +10,7 @@ import { useAppTheme } from '@/contexts/theme';
 import {
   CharacterCounter,
   FormField,
+  AppErrorState,
   SuccessBanner,
   validateAmount,
   validateCategory,
@@ -40,6 +41,7 @@ export default function AddTransactionScreen() {
   const [notes, setNotes] = useState('');
   const [receipt, setReceipt] = useState<ReceiptScanResult | null>(null);
   const [receiptAlternatives, setReceiptAlternatives] = useState<Record<string, MarketSearchAnswer>>({});
+  const [receiptError, setReceiptError] = useState<string | null>(null);
   const [checkingItem, setCheckingItem] = useState<string | null>(null);
   const [type, setType] = useState<'income' | 'expense'>(params.type === 'income' ? 'income' : 'expense');
   const [saving, setSaving] = useState(false);
@@ -66,6 +68,7 @@ export default function AddTransactionScreen() {
     setDate(today);
     setNotes('');
     setReceipt(null);
+    setReceiptError(null);
     setReceiptAlternatives({});
     setType('expense');
     setSubmitted(false);
@@ -123,12 +126,13 @@ export default function AddTransactionScreen() {
     setType('expense');
     setReceipt(result);
     setReceiptAlternatives({});
+    setReceiptError(null);
     setLastSaved(null);
   };
 
   const checkAlternatives = async (itemName: string, itemPrice?: number | null) => {
     if (!itemPrice || itemPrice <= 0) {
-      Alert.alert('Price needed', 'AI needs an item price to compare cheaper options.');
+      setReceiptError('This receipt item needs a clear price before AI can compare cheaper options.');
       return;
     }
 
@@ -145,7 +149,7 @@ export default function AddTransactionScreen() {
         [itemName]: result,
       }));
     } catch (err) {
-      Alert.alert('Could not check alternatives', err instanceof Error ? err.message : 'Market search failed.');
+      setReceiptError(err instanceof Error ? err.message : 'Market search failed.');
     } finally {
       setCheckingItem(null);
     }
@@ -153,11 +157,12 @@ export default function AddTransactionScreen() {
 
   const scanFromAsset = async (asset: ImagePicker.ImagePickerAsset) => {
     if (!asset.base64) {
-      Alert.alert('Could not read image', 'Try another photo or lower image quality.');
+      setReceiptError('Could not read this image. Try another photo or lower image quality.');
       return;
     }
 
     try {
+      setReceiptError(null);
       setScanning(true);
       const result = await scanReceipt({
         image_base64: asset.base64,
@@ -165,7 +170,7 @@ export default function AddTransactionScreen() {
       });
       applyReceipt(result);
     } catch (err) {
-      Alert.alert('Receipt scan failed', err instanceof Error ? err.message : 'AI could not read this receipt.');
+      setReceiptError(err instanceof Error ? err.message : 'AI could not read this receipt.');
     } finally {
       setScanning(false);
     }
@@ -329,6 +334,12 @@ export default function AddTransactionScreen() {
           />
 
           {lastSaved ? <SuccessBanner message={lastSaved} title="Transaction saved" /> : null}
+          {receiptError ? (
+            <AppErrorState
+              message={receiptError}
+              title="Receipt or market check needs attention"
+            />
+          ) : null}
 
           {receipt ? (
             <View style={styles.receiptPreview}>

@@ -3,10 +3,20 @@ import { Href, router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Button, Card, Chip, IconButton, ProgressBar, SegmentedButtons, TextInput } from 'react-native-paper';
+import { Button, Card, Chip, IconButton, ProgressBar, SegmentedButtons } from 'react-native-paper';
 
 import { AppPalette } from '@/constants/theme';
-import { AppErrorState, DelayedLoader, SkeletonList } from '@/components/ux';
+import {
+  AppErrorState,
+  CharacterCounter,
+  DelayedLoader,
+  FormField,
+  SkeletonList,
+  validateAmount,
+  validateCategory,
+  validateDate,
+  validateMaxLength,
+} from '@/components/ux';
 import { useAuth } from '@/contexts/auth';
 import { useAppTheme } from '@/contexts/theme';
 import { getQueuedTransactions, syncQueuedTransactions } from '@/services/offlineQueue';
@@ -48,6 +58,8 @@ type TransactionForm = {
   notes: string;
   type: 'income' | 'expense';
 };
+type DashboardFormField = 'budgetAmount' | 'budgetCategory' | 'editAmount' | 'editCategory' | 'editDate' | 'editNotes';
+const NOTES_LIMIT = 500;
 
 type DashboardTheme = {
   colors: AppPalette;
@@ -79,6 +91,14 @@ export default function DashboardScreen() {
   const [savingTransaction, setSavingTransaction] = useState(false);
   const [queuedCount, setQueuedCount] = useState(0);
   const [syncingQueue, setSyncingQueue] = useState(false);
+  const [submittedFields, setSubmittedFields] = useState<Record<DashboardFormField, boolean>>({
+    budgetAmount: false,
+    budgetCategory: false,
+    editAmount: false,
+    editCategory: false,
+    editDate: false,
+    editNotes: false,
+  });
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -118,6 +138,19 @@ export default function DashboardScreen() {
 
   const isEmptyAccount = (dashboard?.transaction_count ?? 0) === 0;
   const netCashFlow = (dashboard?.summary.income ?? 0) - (dashboard?.summary.expense ?? 0);
+  const budgetAmountValidation = useMemo(() => validateAmount(budgetAmount), [budgetAmount]);
+  const budgetCategoryValidation = useMemo(() => validateCategory(budgetCategory), [budgetCategory]);
+  const budgetFormIsValid = budgetAmountValidation.isValid && budgetCategoryValidation.isValid;
+  const editAmountValidation = useMemo(() => validateAmount(editing?.amount ?? ''), [editing?.amount]);
+  const editCategoryValidation = useMemo(() => validateCategory(editing?.category ?? ''), [editing?.category]);
+  const editDateValidation = useMemo(() => validateDate(editing?.date ?? ''), [editing?.date]);
+  const editNotesValidation = useMemo(() => validateMaxLength(editing?.notes ?? '', NOTES_LIMIT, 'Notes'), [editing?.notes]);
+  const editFormIsValid =
+    Boolean(editing?.id) &&
+    editAmountValidation.isValid &&
+    editCategoryValidation.isValid &&
+    editDateValidation.isValid &&
+    editNotesValidation.isValid;
   const profileName =
     session?.user.user_metadata?.first_name ??
     session?.user.user_metadata?.full_name ??
@@ -127,6 +160,15 @@ export default function DashboardScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     loadDashboard();
+  };
+  const markSubmitted = (...fields: DashboardFormField[]) => {
+    setSubmittedFields((current) => {
+      const next = { ...current };
+      fields.forEach((field) => {
+        next[field] = true;
+      });
+      return next;
+    });
   };
 
   const syncOfflineQueue = async () => {
@@ -163,14 +205,21 @@ export default function DashboardScreen() {
       notes: item.notes ?? '',
       type: item.type,
     });
+    setSubmittedFields((current) => ({
+      ...current,
+      editAmount: false,
+      editCategory: false,
+      editDate: false,
+      editNotes: false,
+    }));
   };
 
   const submitEdit = async () => {
     if (!editing?.id) return;
+    markSubmitted('editAmount', 'editCategory', 'editDate', 'editNotes');
     const parsedAmount = Number(editing.amount);
 
-    if (!parsedAmount || parsedAmount <= 0 || !editing.category.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(editing.date)) {
-      Alert.alert('Check transaction', 'Use a positive amount, category, and YYYY-MM-DD date.');
+    if (!editFormIsValid) {
       return;
     }
 
@@ -214,9 +263,9 @@ export default function DashboardScreen() {
   };
 
   const submitBudget = async () => {
+    markSubmitted('budgetAmount', 'budgetCategory');
     const parsedAmount = Number(budgetAmount);
-    if (!budgetCategory.trim() || !parsedAmount || parsedAmount <= 0) {
-      Alert.alert('Check budget', 'Enter a category and a monthly limit greater than zero.');
+    if (!budgetFormIsValid) {
       return;
     }
 
@@ -228,6 +277,11 @@ export default function DashboardScreen() {
       });
       setBudgetAmount('');
       setBudgetCategory('');
+      setSubmittedFields((current) => ({
+        ...current,
+        budgetAmount: false,
+        budgetCategory: false,
+      }));
       await loadDashboard();
     } catch (err) {
       Alert.alert('Could not save budget', err instanceof Error ? err.message : 'Backend request failed.');
@@ -353,25 +407,29 @@ export default function DashboardScreen() {
 
           <Section title="Budgets" icon="target">
             <View style={styles.formGrid}>
-              <TextInput
+              <FormField
                 autoCapitalize="none"
+                error={budgetCategoryValidation.message}
                 label="Category"
-                mode="outlined"
                 onChangeText={setBudgetCategory}
                 placeholder="food"
+                required
                 style={styles.input}
+                touched={submittedFields.budgetCategory}
                 value={budgetCategory}
               />
-              <TextInput
+              <FormField
+                error={budgetAmountValidation.message}
                 keyboardType="decimal-pad"
                 label="Monthly limit"
-                mode="outlined"
                 onChangeText={setBudgetAmount}
                 placeholder="15000"
+                required
                 style={styles.input}
+                touched={submittedFields.budgetAmount}
                 value={budgetAmount}
               />
-              <Button disabled={savingBudget} loading={savingBudget} mode="contained" onPress={submitBudget} style={styles.primaryButton}>
+              <Button disabled={savingBudget || !budgetFormIsValid} loading={savingBudget} mode="contained" onPress={submitBudget} style={styles.primaryButton}>
                 Save Budget
               </Button>
             </View>
@@ -397,37 +455,46 @@ export default function DashboardScreen() {
                 ]}
               />
               <View style={styles.formGrid}>
-                <TextInput
+                <FormField
+                  error={editAmountValidation.message}
                   keyboardType="decimal-pad"
                   label="Amount"
-                  mode="outlined"
                   onChangeText={(value) => setEditing({ ...editing, amount: value })}
+                  required
                   style={styles.input}
+                  touched={submittedFields.editAmount}
                   value={editing.amount}
                 />
-                <TextInput
+                <FormField
                   autoCapitalize="none"
+                  error={editCategoryValidation.message}
                   label="Category"
-                  mode="outlined"
                   onChangeText={(value) => setEditing({ ...editing, category: value })}
+                  required
                   style={styles.input}
+                  touched={submittedFields.editCategory}
                   value={editing.category}
                 />
-                <TextInput
+                <FormField
+                  error={editDateValidation.message}
                   keyboardType="numbers-and-punctuation"
                   label="Date"
-                  mode="outlined"
                   onChangeText={(value) => setEditing({ ...editing, date: value })}
+                  required
                   style={styles.input}
+                  touched={submittedFields.editDate}
                   value={editing.date}
                 />
-                <TextInput
+                <FormField
+                  counter={<CharacterCounter max={NOTES_LIMIT} value={editing.notes} />}
+                  error={editNotesValidation.message}
+                  helper="Optional context, merchant, or reason."
                   label="Notes"
-                  mode="outlined"
                   multiline
                   numberOfLines={2}
                   onChangeText={(value) => setEditing({ ...editing, notes: value })}
                   style={styles.input}
+                  touched={submittedFields.editNotes}
                   value={editing.notes}
                 />
               </View>
@@ -435,7 +502,7 @@ export default function DashboardScreen() {
                 <Button disabled={savingTransaction} mode="outlined" onPress={() => setEditing(null)}>
                   Cancel
                 </Button>
-                <Button disabled={savingTransaction} loading={savingTransaction} mode="contained" onPress={submitEdit} style={styles.primaryButton}>
+                <Button disabled={savingTransaction || !editFormIsValid} loading={savingTransaction} mode="contained" onPress={submitEdit} style={styles.primaryButton}>
                   Update
                 </Button>
               </View>
@@ -509,15 +576,17 @@ function GettingStartedCard() {
       <Card.Content>
         <View style={styles.sectionHeader}>
           <MaterialCommunityIcons color={colors.sky} name="map-marker-path" size={20} />
-          <Text style={styles.cardTitle}>Start with three entries</Text>
+          <Text style={styles.cardTitle}>Build your first money snapshot</Text>
         </View>
         <Text style={styles.startText}>
-          Add one income entry, one normal expense, and one budget. The dashboard and AI assistant become much more useful after that.
+          Complete these first steps and the dashboard, budgets, and AI assistant will start giving useful feedback.
         </Text>
         <View style={styles.startSteps}>
-          <StepBadge icon="cash-plus" text="Income" />
-          <StepBadge icon="receipt-text-plus-outline" text="Expense" />
-          <StepBadge icon="target" text="Budget" />
+          <StepBadge icon="cash-plus" text="Add income" />
+          <StepBadge icon="receipt-text-plus-outline" text="Add expense" />
+          <StepBadge icon="target" text="Set budget" />
+          <StepBadge icon="creation-outline" text="Ask AI" />
+          <StepBadge icon="file-import-outline" text="Import CSV" />
         </View>
       </Card.Content>
     </Card>
