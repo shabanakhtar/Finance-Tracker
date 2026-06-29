@@ -11,7 +11,9 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://finance-tracker-shateam1.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://finance-tracker-shateam1.vercel.app",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://pmyysyovszlywljoajun.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_9V31nWgaNq3dkCvk79xI5w_8CsXcSs9"
       }
     },
     "preview": {
@@ -20,7 +22,9 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://finance-tracker-shateam1.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://finance-tracker-shateam1.vercel.app",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://pmyysyovszlywljoajun.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_9V31nWgaNq3dkCvk79xI5w_8CsXcSs9"
       }
     },
     "production": {
@@ -29,7 +33,9 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://finance-tracker-shateam1.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://finance-tracker-shateam1.vercel.app",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://pmyysyovszlywljoajun.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_9V31nWgaNq3dkCvk79xI5w_8CsXcSs9"
       }
     }
   },
