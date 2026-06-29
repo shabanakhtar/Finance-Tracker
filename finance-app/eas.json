@@ -11,7 +11,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://finance-tracker-api.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://finance-tracker-shateam1.vercel.app"
       }
     },
     "preview": {
@@ -20,7 +20,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://finance-tracker-api.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://finance-tracker-shateam1.vercel.app"
       }
     },
     "production": {
@@ -29,7 +29,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://finance-tracker-api.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://finance-tracker-shateam1.vercel.app"
       }
     }
   },

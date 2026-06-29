@@ -1,4 +1,7 @@
 .env
+*.env.local
+finance-app/.env
+finance-app/.env.local
 __pycache__/
 *.pyc
 data.csv
