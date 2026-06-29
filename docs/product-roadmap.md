@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Polish first run setup flow`
+- `Personalize quick add shortcuts`
 
 Recent important commits:
 
+- `Personalize quick add shortcuts`
 - `Polish first run setup flow`
 - `Document SQL-backed AI insight plan`
 - `Keep setup visible until essentials complete`
@@ -332,7 +333,7 @@ Quality bar:
 
 ## Level 5: Quick Add Personalization
 
-Status: next coding batch.
+Status: implemented for the current mobile app cycle. Needs phone APK review after the next preview build.
 
 Quick Add is the daily-use feature. It should become personal.
 
@@ -341,9 +342,11 @@ Current state:
 - Quick add modal exists.
 - Home quick-add shortcuts exist.
 - Success states already exist for saving transactions in the quick-add flow.
-- Shortcuts are still fixed defaults.
+- Shortcuts are now editable from Settings.
+- Home and Quick Add both load the same saved shortcut list.
+- Shortcut preferences are persisted locally with AsyncStorage.
 
-Desired editable shortcut fields:
+Implemented editable shortcut fields:
 
 - Label
 - Category
@@ -360,22 +363,26 @@ Default shortcuts:
 
 Implementation plan:
 
-1. Create quick-add shortcut model.
-2. Store preferences locally first with AsyncStorage.
-3. Load shortcuts on Home and Quick Add.
-4. Add shortcut editor UI:
-   - Could live in Settings first.
-   - Later can support long-press edit on shortcut tile.
-5. Validate shortcut fields:
-   - Label required.
-   - Category required.
-   - Type must be income or expense.
-   - Default amount optional but must be positive if present.
-6. Add success feedback:
-   - Shortcut updated.
-   - Quick transaction added.
-   - Offline quick transaction queued.
-7. Push as its own GitHub checkpoint.
+- Shared shortcut model added in `finance-app/services/quickAddShortcuts.ts`.
+- Defaults are available even when local storage is empty or corrupt.
+- Settings has a shortcut editor for each default tile.
+- Editor validates:
+  - Label required.
+  - Label length.
+  - Category required.
+  - Category length.
+  - Default amount optional, positive, and capped.
+- Settings includes success/error feedback and reset-to-defaults.
+- Home reloads shortcuts on focus.
+- Quick Add reloads shortcuts on focus.
+- Shortcut default amount is passed into Quick Add when available.
+- First-run setup now routes "Plan shortcuts" to Settings.
+
+Still pending after Level 5:
+
+- Long-press edit directly from Home shortcut tiles.
+- Allow adding/removing/reordering shortcuts beyond the current default slots.
+- Cloud sync of shortcut preferences if users expect settings to follow them across devices.
 
 Potential checkpoint name:
 
@@ -785,10 +792,11 @@ Polish first run setup flow
 
 ### Step 5: Quick Add Personalization
 
-- Implement shortcut editor.
-- Store locally.
-- Add success states.
-- Validate.
+- Shared shortcut model.
+- Settings editor.
+- Home and Quick Add loading.
+- Default amounts.
+- Validation and reset.
 - Push checkpoint.
 
 Potential commit:

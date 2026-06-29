@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, SegmentedButtons } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,16 +22,10 @@ import {
 import { useAppTheme } from '@/contexts/theme';
 import { addTransaction } from '@/services/api';
 import { isLikelyNetworkError, queueTransaction } from '@/services/offlineQueue';
+import { defaultQuickAddShortcuts, getQuickAddShortcuts, QuickAddShortcut } from '@/services/quickAddShortcuts';
 
 const today = new Date().toISOString().slice(0, 10);
 const amountPresets = [250, 500, 1000, 2500, 5000, 10000];
-const quickCategories = [
-  { category: 'food', icon: 'food-outline', label: 'Food', type: 'expense' },
-  { category: 'transport', icon: 'bus', label: 'Ride', type: 'expense' },
-  { category: 'shopping', icon: 'shopping-outline', label: 'Shop', type: 'expense' },
-  { category: 'groceries', icon: 'cart-outline', label: 'Groceries', type: 'expense' },
-  { category: 'salary', icon: 'cash-plus', label: 'Income', type: 'income' },
-] as const;
 
 const money = new Intl.NumberFormat('en-PK', {
   currency: 'PKR',
@@ -50,6 +44,7 @@ export default function QuickAddScreen() {
   const [category, setCategory] = useState(params.category ?? 'food');
   const [date, setDate] = useState(today);
   const [notes, setNotes] = useState('');
+  const [quickAddShortcuts, setQuickAddShortcuts] = useState<QuickAddShortcut[]>(defaultQuickAddShortcuts);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -61,7 +56,24 @@ export default function QuickAddScreen() {
   });
   const [type, setType] = useState<'income' | 'expense'>(params.type === 'income' ? 'income' : 'expense');
 
-  const selectedCategory = quickCategories.find((item) => item.category === category);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getQuickAddShortcuts()
+        .then((shortcuts) => {
+          if (active) setQuickAddShortcuts(shortcuts);
+        })
+        .catch(() => {
+          if (active) setQuickAddShortcuts(defaultQuickAddShortcuts);
+        });
+
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+
+  const selectedCategory = quickAddShortcuts.find((item) => item.category === category);
   const parsedAmount = Number(amount);
   const amountValidation = useMemo(() => validateAmount(amount), [amount]);
   const categoryValidation = useMemo(() => validateCategory(category), [category]);
@@ -199,14 +211,15 @@ export default function QuickAddScreen() {
         <View style={styles.panel}>
           <Text style={styles.label}>Category</Text>
           <View style={styles.categoryWrap}>
-            {quickCategories.map((item) => (
+            {quickAddShortcuts.map((item) => (
               <Chip
                 compact
                 icon={item.icon}
-                key={item.category}
+                key={item.id}
                 onPress={() => {
                   triggerSelection();
                   setCategory(item.category);
+                  if (item.defaultAmount) setAmount(String(item.defaultAmount));
                   setType(item.type);
                 }}
                 selected={category === item.category}

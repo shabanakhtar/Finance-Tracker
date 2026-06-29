@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Href, router } from 'expo-router';
+import { Href, router, useFocusEffect } from 'expo-router';
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -29,6 +29,7 @@ import {
 import { useAuth } from '@/contexts/auth';
 import { useAppTheme } from '@/contexts/theme';
 import { getQueuedTransactions, getSyncHistory, SyncHistoryItem, syncQueuedTransactions } from '@/services/offlineQueue';
+import { defaultQuickAddShortcuts, getQuickAddShortcuts, QuickAddShortcut } from '@/services/quickAddShortcuts';
 import { cacheDashboard, formatCachedAt, getCachedDashboard } from '@/services/resilience';
 import { getSetupDismissed, setSetupDismissed as persistSetupDismissed } from '@/services/setupProgress';
 import {
@@ -111,6 +112,7 @@ export default function DashboardScreen() {
   const [savingBudget, setSavingBudget] = useState(false);
   const [savingTransaction, setSavingTransaction] = useState(false);
   const [queuedCount, setQueuedCount] = useState(0);
+  const [quickAddShortcuts, setQuickAddShortcuts] = useState<QuickAddShortcut[]>(defaultQuickAddShortcuts);
   const [syncHistory, setSyncHistory] = useState<SyncHistoryItem[]>([]);
   const [syncingQueue, setSyncingQueue] = useState(false);
   const [setupDismissed, setSetupDismissed] = useState(false);
@@ -163,6 +165,23 @@ export default function DashboardScreen() {
       .then(setSetupDismissed)
       .catch(() => {});
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getQuickAddShortcuts()
+        .then((shortcuts) => {
+          if (active) setQuickAddShortcuts(shortcuts);
+        })
+        .catch(() => {
+          if (active) setQuickAddShortcuts(defaultQuickAddShortcuts);
+        });
+
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   const netCashFlow = (dashboard?.summary.income ?? 0) - (dashboard?.summary.expense ?? 0);
   const setupComplete = Boolean(
@@ -437,7 +456,7 @@ export default function DashboardScreen() {
                   <Metric label="Income" value={money.format(dashboard.summary.income)} tone="income" />
                   <Metric label="Spent" value={money.format(dashboard.summary.expense)} tone="expense" />
                 </View>
-                <QuickAddStrip />
+                <QuickAddStrip shortcuts={quickAddShortcuts} />
               </Card.Content>
             </Card>
           </AnimatedCard>
@@ -764,11 +783,11 @@ function GettingStartedCard({
       state: 'optional',
     },
     {
-      detail: 'Quick Add personalization starts in Level 5.',
+      detail: 'Tune the Home shortcut tiles in Settings.',
       icon: 'tune-variant',
       key: 'quick-add',
       label: 'Plan shortcuts',
-      onPress: () => router.push('/quick-add' as Href),
+      onPress: () => router.push('/settings' as Href),
       state: 'optional',
     },
   ];
@@ -896,16 +915,17 @@ function StepBadge({
   );
 }
 
-function QuickAddStrip() {
+function QuickAddStrip({ shortcuts }: { shortcuts: QuickAddShortcut[] }) {
   const { colors, styles } = useDashboardTheme();
-  const shortcuts = [
-    { category: 'food', icon: 'food-outline', label: 'Food', type: 'expense' },
-    { category: 'transport', icon: 'bus', label: 'Ride', type: 'expense' },
-    { category: 'shopping', icon: 'shopping-outline', label: 'Shop', type: 'expense' },
-    { category: 'salary', icon: 'cash-plus', label: 'Income', type: 'income' },
-  ] as const;
-  const openQuickAdd = (category: string, type: 'income' | 'expense') => {
-    router.push({ pathname: '/quick-add', params: { category, type } } as unknown as Href);
+  const openQuickAdd = (shortcut: QuickAddShortcut) => {
+    router.push({
+      pathname: '/quick-add',
+      params: {
+        amount: shortcut.defaultAmount ? String(shortcut.defaultAmount) : undefined,
+        category: shortcut.category,
+        type: shortcut.type,
+      },
+    } as unknown as Href);
   };
 
   return (
@@ -919,14 +939,15 @@ function QuickAddStrip() {
       <View style={styles.quickAddRow}>
         {shortcuts.map((item) => (
           <PressableScale
-            key={item.category}
+            key={item.id}
             onPress={() => {
               triggerSelection();
-              openQuickAdd(item.category, item.type);
+              openQuickAdd(item);
             }}
             style={styles.quickAddButton}>
             <MaterialCommunityIcons color={colors.sky} name={item.icon} size={18} />
             <Text style={styles.quickAddButtonText}>{item.label}</Text>
+            {item.defaultAmount ? <Text style={styles.quickAddAmount}>{money.format(item.defaultAmount)}</Text> : null}
           </PressableScale>
         ))}
       </View>
@@ -1570,6 +1591,11 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
   quickAddButtonText: {
     color: colors.balanceText,
     fontSize: 12,
+    fontWeight: '800',
+  },
+  quickAddAmount: {
+    color: colors.balanceMuted,
+    fontSize: 10,
     fontWeight: '800',
   },
   quickAddLink: {

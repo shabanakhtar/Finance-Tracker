@@ -3,15 +3,28 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Button, SegmentedButtons, Text } from 'react-native-paper';
-import { useState } from 'react';
+import { Button, Chip, SegmentedButtons, Text } from 'react-native-paper';
+import { useEffect, useMemo, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppPalette, AppThemeMode, radii, spacing } from '@/constants/theme';
-import { AppErrorState, EmptyState, SuccessBanner } from '@/components/ux';
+import { AppErrorState, EmptyState, FormField, SuccessBanner, triggerSuccess } from '@/components/ux';
 import { useAuth } from '@/contexts/auth';
 import { useAppTheme } from '@/contexts/theme';
 import { CsvImportPreview, exportTransactionsCsv, importTransactionsCsv, previewTransactionsCsv } from '@/services/api';
+import {
+  defaultQuickAddShortcuts,
+  draftToShortcut,
+  getQuickAddShortcuts,
+  quickAddIconOptions,
+  QuickAddShortcut,
+  QuickAddShortcutDraft,
+  QuickAddShortcutType,
+  resetQuickAddShortcuts,
+  saveQuickAddShortcuts,
+  shortcutToDraft,
+  validateQuickAddShortcut,
+} from '@/services/quickAddShortcuts';
 import { setSetupDismissed as persistSetupDismissed } from '@/services/setupProgress';
 
 const themeOptions = [
@@ -31,12 +44,66 @@ export default function SettingsScreen() {
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [preview, setPreview] = useState<CsvImportPreview | null>(null);
+  const [shortcutDraft, setShortcutDraft] = useState<QuickAddShortcutDraft>(() => shortcutToDraft(defaultQuickAddShortcuts[0]));
+  const [shortcutFeedback, setShortcutFeedback] = useState<string | null>(null);
+  const [shortcutError, setShortcutError] = useState<string | null>(null);
+  const [shortcuts, setShortcuts] = useState<QuickAddShortcut[]>(defaultQuickAddShortcuts);
   const [setupFeedback, setSetupFeedback] = useState<string | null>(null);
+  const shortcutValidation = useMemo(() => validateQuickAddShortcut(shortcutDraft), [shortcutDraft]);
+  const shortcutIsValid = Object.keys(shortcutValidation).length === 0;
   const profileName =
     session?.user.user_metadata?.full_name ??
     session?.user.user_metadata?.name ??
     session?.user.user_metadata?.first_name ??
     'Signed in';
+
+  useEffect(() => {
+    getQuickAddShortcuts()
+      .then((items) => {
+        setShortcuts(items);
+        setShortcutDraft(shortcutToDraft(items[0] ?? defaultQuickAddShortcuts[0]));
+      })
+      .catch(() => {
+        setShortcuts(defaultQuickAddShortcuts);
+      });
+  }, []);
+
+  const selectShortcut = (shortcut: QuickAddShortcut) => {
+    setShortcutDraft(shortcutToDraft(shortcut));
+    setShortcutError(null);
+    setShortcutFeedback(null);
+  };
+
+  const updateShortcutDraft = <Key extends keyof QuickAddShortcutDraft>(key: Key, value: QuickAddShortcutDraft[Key]) => {
+    setShortcutDraft((current) => ({ ...current, [key]: value }));
+  };
+
+  const saveShortcut = async () => {
+    setShortcutFeedback(null);
+    setShortcutError(null);
+    const validation = validateQuickAddShortcut(shortcutDraft);
+    if (Object.keys(validation).length > 0) {
+      setShortcutError('Fix the highlighted shortcut fields before saving.');
+      return;
+    }
+
+    const nextShortcut = draftToShortcut(shortcutDraft);
+    const nextShortcuts = shortcuts.map((shortcut) => (shortcut.id === nextShortcut.id ? nextShortcut : shortcut));
+    await saveQuickAddShortcuts(nextShortcuts);
+    setShortcuts(nextShortcuts);
+    setShortcutDraft(shortcutToDraft(nextShortcut));
+    triggerSuccess();
+    setShortcutFeedback(`${nextShortcut.label} shortcut updated.`);
+  };
+
+  const resetShortcuts = async () => {
+    const nextShortcuts = await resetQuickAddShortcuts();
+    setShortcuts(nextShortcuts);
+    setShortcutDraft(shortcutToDraft(nextShortcuts[0]));
+    setShortcutError(null);
+    triggerSuccess();
+    setShortcutFeedback('Quick Add shortcuts reset to defaults.');
+  };
 
   const exportCsv = async () => {
     try {
@@ -169,6 +236,89 @@ export default function SettingsScreen() {
       <View style={styles.panel}>
         <View style={styles.row}>
           <View style={styles.rowText}>
+            <Text style={styles.sectionTitle}>Quick Add shortcuts</Text>
+            <Text style={styles.muted}>Edit the tiles that appear on Home and inside Quick Add.</Text>
+          </View>
+          <MaterialCommunityIcons color={colors.violet} name="tune-variant" size={24} />
+        </View>
+        <View style={styles.shortcutGrid}>
+          {shortcuts.map((shortcut) => (
+            <Chip
+              compact
+              icon={shortcut.icon}
+              key={shortcut.id}
+              onPress={() => selectShortcut(shortcut)}
+              selected={shortcut.id === shortcutDraft.id}
+              style={shortcut.id === shortcutDraft.id ? styles.shortcutChipSelected : styles.shortcutChip}>
+              {shortcut.label}
+            </Chip>
+          ))}
+        </View>
+        <View style={styles.shortcutEditor}>
+          <FormField
+            error={shortcutValidation.label}
+            label="Shortcut label"
+            onChangeText={(value) => updateShortcutDraft('label', value)}
+            required
+            touched
+            value={shortcutDraft.label}
+          />
+          <FormField
+            autoCapitalize="none"
+            error={shortcutValidation.category}
+            label="Category"
+            onChangeText={(value) => updateShortcutDraft('category', value)}
+            required
+            touched
+            value={shortcutDraft.category}
+          />
+          <SegmentedButtons
+            buttons={[
+              { icon: 'minus-circle-outline', label: 'Expense', value: 'expense' },
+              { icon: 'plus-circle-outline', label: 'Income', value: 'income' },
+            ]}
+            onValueChange={(value) => updateShortcutDraft('type', value as QuickAddShortcutType)}
+            value={shortcutDraft.type}
+          />
+          <FormField
+            error={shortcutValidation.defaultAmount}
+            helper="Optional amount prefilled when this shortcut is tapped."
+            keyboardType="decimal-pad"
+            label="Default amount"
+            onChangeText={(value) => updateShortcutDraft('defaultAmount', value)}
+            touched={Boolean(shortcutDraft.defaultAmount)}
+            value={shortcutDraft.defaultAmount}
+          />
+          <Text style={styles.shortcutSubhead}>Icon</Text>
+          <View style={styles.iconGrid}>
+            {quickAddIconOptions.map((item) => (
+              <Chip
+                compact
+                icon={item.icon}
+                key={item.icon}
+                onPress={() => updateShortcutDraft('icon', item.icon)}
+                selected={shortcutDraft.icon === item.icon}
+                style={shortcutDraft.icon === item.icon ? styles.shortcutChipSelected : styles.shortcutChip}>
+                {item.label}
+              </Chip>
+            ))}
+          </View>
+        </View>
+        {shortcutFeedback ? <SuccessBanner message={shortcutFeedback} title="Shortcut saved" /> : null}
+        {shortcutError ? <AppErrorState message={shortcutError} title="Shortcut needs attention" /> : null}
+        <View style={styles.actionRow}>
+          <Button disabled={!shortcutIsValid} icon="content-save-outline" mode="contained" onPress={saveShortcut} style={styles.actionButton}>
+            Save Shortcut
+          </Button>
+          <Button icon="restore" mode="outlined" onPress={resetShortcuts} style={styles.actionButton}>
+            Reset
+          </Button>
+        </View>
+      </View>
+
+      <View style={styles.panel}>
+        <View style={styles.row}>
+          <View style={styles.rowText}>
             <Text style={styles.sectionTitle}>Data portability</Text>
             <Text style={styles.muted}>Export a backup or import transactions from a CSV file.</Text>
           </View>
@@ -243,6 +393,11 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     header: {
       gap: spacing.sm,
     },
+    iconGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
     iconBox: {
       alignItems: 'center',
       backgroundColor: colors.skySoft,
@@ -300,6 +455,32 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     restoreSetupButton: {
       borderColor: colors.border,
       borderRadius: radii.card,
+    },
+    shortcutChip: {
+      backgroundColor: colors.surface2,
+      borderRadius: radii.card,
+    },
+    shortcutChipSelected: {
+      backgroundColor: colors.skySoft,
+      borderRadius: radii.card,
+    },
+    shortcutEditor: {
+      backgroundColor: colors.background,
+      borderColor: colors.border,
+      borderRadius: radii.card,
+      borderWidth: 1,
+      gap: spacing.md,
+      padding: spacing.md,
+    },
+    shortcutGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    shortcutSubhead: {
+      color: colors.ink,
+      fontSize: 13,
+      fontWeight: '900',
     },
     screen: {
       backgroundColor: colors.background,
