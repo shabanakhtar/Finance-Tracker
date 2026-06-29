@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Harden forms and keyboard behavior`
+- `Smooth motion and success feedback`
 
 Recent important commits:
 
+- `Smooth motion and success feedback`
 - `Harden forms and keyboard behavior`
 - `Personalize quick add shortcuts`
 - `Polish first run setup flow`
@@ -431,7 +432,7 @@ Potential follow-up:
 
 ## Level 7: Motion, Microinteractions, And Success States
 
-Status: good foundation exists.
+Status: implemented for the current mobile app cycle. Needs phone APK review after the next preview build.
 
 The app should feel alive, but not silly. Finance apps need calm motion.
 
@@ -453,6 +454,11 @@ Implemented interaction polish:
 - AI response typing effect.
 - Quick-add success pulse/banner.
 - Auth entrance animation in latest batch.
+- Passive entrance/progress animations are marked non-interactive so they do not block gestures.
+- Pressable scaling now stops overlapping animations and respects disabled state.
+- Success banners now use the same calm entrance motion as other UI.
+- First-run setup progress now uses the shared animated progress primitive.
+- Shortcut editor saves/resets now show a small success pulse plus banner.
 
 Quality rules:
 
@@ -463,9 +469,9 @@ Quality rules:
 
 Still useful:
 
-- Better first-run setup completion animation.
-- Shortcut edit success toast.
-- Quick transaction added toast from Home shortcut.
+- Phone APK review for animation pacing on low-end Android devices.
+- Optional long-press shortcut edit motion after shortcut reordering exists.
+- Quick transaction added toast if Home shortcuts become one-tap save actions instead of prefilled Quick Add links.
 
 ## Level 8: Graceful Degradation And Offline Use
 

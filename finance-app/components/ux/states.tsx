@@ -5,6 +5,7 @@ import { Button, Card, Dialog, Portal, Snackbar } from 'react-native-paper';
 
 import { AppPalette, spacing } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
+import { AnimatedScreen } from './motion';
 
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
@@ -156,13 +157,13 @@ export function SuccessBanner({
   const styles = createStyles(colors);
 
   return (
-    <View style={styles.successBanner}>
+    <AnimatedScreen style={styles.successBanner}>
       <MaterialCommunityIcons color={colors.emerald} name={icon} size={22} />
       <View style={styles.successTextWrap}>
         <Text style={styles.successTitle}>{title}</Text>
         <Text style={styles.successText}>{message}</Text>
       </View>
-    </View>
+    </AnimatedScreen>
   );
 }
 

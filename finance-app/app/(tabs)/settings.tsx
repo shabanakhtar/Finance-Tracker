@@ -8,7 +8,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppPalette, AppThemeMode, radii, spacing } from '@/constants/theme';
-import { AppErrorState, EmptyState, FormField, KeyboardAwareScrollView, SuccessBanner, triggerSuccess, triggerWarning } from '@/components/ux';
+import {
+  AppErrorState,
+  EmptyState,
+  FormField,
+  KeyboardAwareScrollView,
+  SuccessBanner,
+  SuccessPulse,
+  triggerSuccess,
+  triggerWarning,
+} from '@/components/ux';
 import { useAuth } from '@/contexts/auth';
 import { useAppTheme } from '@/contexts/theme';
 import { CsvImportPreview, exportTransactionsCsv, importTransactionsCsv, previewTransactionsCsv } from '@/services/api';
@@ -304,7 +313,12 @@ export default function SettingsScreen() {
             ))}
           </View>
         </View>
-        {shortcutFeedback ? <SuccessBanner message={shortcutFeedback} title="Shortcut saved" /> : null}
+        {shortcutFeedback ? (
+          <View style={styles.successStack}>
+            <SuccessPulse label="Updated" visible />
+            <SuccessBanner message={shortcutFeedback} title="Shortcut saved" />
+          </View>
+        ) : null}
         {shortcutError ? <AppErrorState message={shortcutError} title="Shortcut needs attention" /> : null}
         <View style={styles.actionRow}>
           <Button icon="content-save-outline" mode="contained" onPress={saveShortcut} style={styles.actionButton}>
@@ -484,6 +498,9 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
       color: colors.ink,
       fontSize: 13,
       fontWeight: '900',
+    },
+    successStack: {
+      gap: spacing.sm,
     },
     screen: {
       backgroundColor: colors.background,

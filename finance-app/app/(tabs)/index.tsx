@@ -821,9 +821,7 @@ function GettingStartedCard({
           <Text style={styles.setupProgressText}>{completedSteps} of {setupSteps.length} essentials done</Text>
           <Text style={styles.setupProgressText}>{Math.round(progress * 100)}%</Text>
         </View>
-        <View style={styles.setupProgressTrack}>
-          <View style={[styles.setupProgressFill, { width: `${Math.max(8, progress * 100)}%` }]} />
-        </View>
+        <AnimatedProgressBar color={colors.sky} progress={progress} trackColor={colors.surface2} />
         <View style={styles.setupStepRow}>
           {setupSteps.map((step) => (
             <PressableScale

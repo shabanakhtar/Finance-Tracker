@@ -19,7 +19,7 @@ import { useAppTheme } from '@/contexts/theme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-function usePrefersReducedMotion() {
+export function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
@@ -66,11 +66,12 @@ export function AnimatedScreen({
     opacity.setValue(0);
     translateY.setValue(14);
 
-    Animated.parallel([
+    const animation = Animated.parallel([
       Animated.timing(opacity, {
         delay,
         duration: 240,
         easing: Easing.out(Easing.cubic),
+        isInteraction: false,
         toValue: 1,
         useNativeDriver: true,
       }),
@@ -78,10 +79,13 @@ export function AnimatedScreen({
         delay,
         duration: 240,
         easing: Easing.out(Easing.cubic),
+        isInteraction: false,
         toValue: 0,
         useNativeDriver: true,
       }),
-    ]).start();
+    ]);
+    animation.start();
+    return () => animation.stop();
   }, [delay, opacity, reduced, translateY]);
 
   return (
@@ -110,12 +114,15 @@ export function AnimatedCard({
 export function PressableScale({ children, onPress, style, ...props }: PressableProps & { style?: StyleProp<ViewStyle> }) {
   const reduced = usePrefersReducedMotion();
   const scale = useRef(new Animated.Value(1)).current;
+  const disabled = Boolean(props.disabled);
 
   return (
     <AnimatedPressable
       {...props}
       onPress={onPress}
       onPressIn={(event) => {
+        if (disabled) return;
+        scale.stopAnimation();
         Animated.timing(scale, {
           duration: 90,
           easing: Easing.out(Easing.quad),
@@ -125,15 +132,18 @@ export function PressableScale({ children, onPress, style, ...props }: Pressable
         props.onPressIn?.(event);
       }}
       onPressOut={(event) => {
+        if (disabled) return;
+        scale.stopAnimation();
         Animated.spring(scale, {
           damping: 16,
+          overshootClamping: true,
           stiffness: 260,
           toValue: 1,
           useNativeDriver: true,
         }).start();
         props.onPressOut?.(event);
       }}
-      style={[{ transform: [{ scale }] }, style]}>
+      style={[{ opacity: disabled ? 0.62 : 1, transform: [{ scale }] }, style]}>
       {children}
     </AnimatedPressable>
   );
@@ -154,12 +164,15 @@ export function AnimatedProgressBar({
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
-    Animated.timing(width, {
+    const animation = Animated.timing(width, {
       duration: reduced ? 0 : 420,
       easing: Easing.out(Easing.cubic),
+      isInteraction: false,
       toValue: Math.max(0, Math.min(progress, 1)),
       useNativeDriver: false,
-    }).start();
+    });
+    animation.start();
+    return () => animation.stop();
   }, [progress, reduced, width]);
 
   const animatedWidth = width.interpolate({
@@ -183,19 +196,22 @@ export function SuccessPulse({ label, visible }: { label?: string; visible: bool
 
   useEffect(() => {
     if (!visible) {
-      Animated.timing(opacity, {
+      const animation = Animated.timing(opacity, {
         duration: reduced ? 0 : 120,
+        isInteraction: false,
         toValue: 0,
         useNativeDriver: true,
-      }).start();
-      return;
+      });
+      animation.start();
+      return () => animation.stop();
     }
 
     opacity.setValue(0);
     scale.setValue(reduced ? 1 : 0.8);
-    Animated.parallel([
+    const animation = Animated.parallel([
       Animated.timing(opacity, {
         duration: reduced ? 0 : 160,
+        isInteraction: false,
         toValue: 1,
         useNativeDriver: true,
       }),
@@ -208,12 +224,15 @@ export function SuccessPulse({ label, visible }: { label?: string; visible: bool
         }),
         Animated.spring(scale, {
           damping: 12,
+          overshootClamping: true,
           stiffness: 220,
           toValue: 1,
           useNativeDriver: true,
         }),
       ]),
-    ]).start();
+    ]);
+    animation.start();
+    return () => animation.stop();
   }, [opacity, reduced, scale, visible]);
 
   if (!visible) return null;
