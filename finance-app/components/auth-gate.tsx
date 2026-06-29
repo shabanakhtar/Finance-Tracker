@@ -1,5 +1,5 @@
 import { ReactNode, useMemo, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Card, Divider, TextInput } from 'react-native-paper';
 
@@ -21,7 +21,9 @@ type AuthField = 'email' | 'firstName' | 'lastName' | 'password';
 export function AuthGate({ children }: { children: ReactNode }) {
   const { initialized, loading, resetPassword, session, signIn, signInWithGoogle, signUp, updateProfile } = useAuth();
   const { colors } = useAppTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { height } = useWindowDimensions();
+  const compactScreen = height < 720;
+  const styles = useMemo(() => createStyles(colors, compactScreen), [colors, compactScreen]);
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [firstName, setFirstName] = useState('');
@@ -58,6 +60,24 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const markTouched = (field: AuthField) => setTouched((current) => ({ ...current, [field]: true }));
   const shouldShow = (field: AuthField) => submitted || touched[field];
   const keyboardBehavior = Platform.OS === 'ios' ? 'padding' : 'height';
+  const resetInteractionState = () => {
+    setError(null);
+    setMessage(null);
+    setSubmitted(false);
+    setFocusedField(null);
+    setTouched({
+      email: false,
+      firstName: false,
+      lastName: false,
+      password: false,
+    });
+  };
+
+  const switchMode = (nextMode: 'login' | 'signup') => {
+    if (nextMode === mode) return;
+    resetInteractionState();
+    setMode(nextMode);
+  };
 
   const submit = async () => {
     try {
@@ -158,6 +178,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
               <Text style={styles.title}>What should we call you?</Text>
               <Text style={styles.subtitle}>Your dashboard will use your name instead of showing account details.</Text>
             </AnimatedScreen>
+            <AnimatedScreen delay={80}>
             <Card style={styles.card}>
               <Card.Content style={styles.cardContent}>
                 <View style={styles.nameRow}>
@@ -196,6 +217,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 </Button>
               </Card.Content>
             </Card>
+            </AnimatedScreen>
           </ScrollView>
         </KeyboardAvoidingView>
       );
@@ -207,12 +229,21 @@ export function AuthGate({ children }: { children: ReactNode }) {
     <KeyboardAvoidingView behavior={keyboardBehavior} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
         <AnimatedScreen style={styles.header}>
-          <View style={styles.brandMark}>
-            <MaterialCommunityIcons color={colors.sky} name="wallet-outline" size={24} />
+          <View style={styles.brandRow}>
+            <View style={styles.brandMark}>
+              <MaterialCommunityIcons color={colors.sky} name="wallet-outline" size={24} />
+            </View>
+            <View style={styles.brandTextWrap}>
+              <Text style={styles.brand}>Finance Tracker</Text>
+              <Text style={styles.brandCaption}>Private money clarity</Text>
+            </View>
           </View>
-          <Text style={styles.brand}>Finance Tracker</Text>
-          <Text style={styles.title}>{mode === 'login' ? 'Welcome back' : 'Build your money picture'}</Text>
-          <Text style={styles.subtitle}>Track income, spending, budgets, and AI insights in one private workspace.</Text>
+          <Text style={styles.title}>{mode === 'login' ? 'Welcome back' : 'Build your first money picture'}</Text>
+          <Text style={styles.subtitle}>
+            {mode === 'login'
+              ? 'Pick up where you left off with your balance, budgets, receipts, and AI insights.'
+              : 'Start with income, a first expense, and simple budgets. The app turns small entries into a clear snapshot.'}
+          </Text>
           <AuthMotionPreview />
         </AnimatedScreen>
 
@@ -224,7 +255,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 compact
                 labelStyle={mode === 'login' ? styles.activeLabel : undefined}
                 mode={mode === 'login' ? 'contained' : 'text'}
-                onPress={() => setMode('login')}
+                onPress={() => switchMode('login')}
                 style={mode === 'login' ? styles.modeActive : styles.modeButton}>
                 Sign in
               </Button>
@@ -232,11 +263,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 compact
                 labelStyle={mode === 'signup' ? styles.activeLabel : undefined}
                 mode={mode === 'signup' ? 'contained' : 'text'}
-                onPress={() => setMode('signup')}
+                onPress={() => switchMode('signup')}
                 style={mode === 'signup' ? styles.modeActive : styles.modeButton}>
                 Create
               </Button>
             </View>
+            <AuthModeHint mode={mode} />
             <FormField
               autoCapitalize="none"
               error={emailValidation.message}
@@ -332,28 +364,53 @@ export function AuthGate({ children }: { children: ReactNode }) {
   );
 }
 
+function AuthModeHint({ mode }: { mode: 'login' | 'signup' }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  return (
+    <View style={styles.modeHint}>
+      <MaterialCommunityIcons
+        color={mode === 'login' ? colors.sky : colors.emerald}
+        name={mode === 'login' ? 'lock-open-variant-outline' : 'map-marker-path'}
+        size={18}
+      />
+      <Text style={styles.modeHintText}>
+        {mode === 'login'
+          ? 'Your saved dashboard, offline queue, and AI limits load after sign-in.'
+          : 'Create your private workspace, then the setup flow helps you add the first useful numbers.'}
+      </Text>
+    </View>
+  );
+}
+
 function AuthMotionPreview() {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const items = [
-    { icon: 'cash-plus', label: 'Income', tone: colors.emerald },
-    { icon: 'receipt-text-outline', label: 'Spend', tone: colors.coral },
-    { icon: 'chart-line', label: 'Score', tone: colors.violet },
+    { detail: '+PKR 85k', icon: 'cash-plus', label: 'Income', tone: colors.emerald },
+    { detail: 'Food -18%', icon: 'receipt-text-outline', label: 'Spend', tone: colors.coral },
+    { detail: '74/100', icon: 'chart-line', label: 'Score', tone: colors.violet },
   ] as const;
 
   return (
     <View style={styles.motionPreview}>
       {items.map((item, index) => (
         <AnimatedScreen delay={120 + index * 70} key={item.label} style={styles.motionTile}>
-          <MaterialCommunityIcons color={item.tone} name={item.icon} size={18} />
-          <Text style={styles.motionTileText}>{item.label}</Text>
+          <View style={[styles.motionIcon, { backgroundColor: `${item.tone}22` }]}>
+            <MaterialCommunityIcons color={item.tone} name={item.icon} size={18} />
+          </View>
+          <View style={styles.motionTileCopy}>
+            <Text style={styles.motionTileText}>{item.label}</Text>
+            <Text style={styles.motionTileDetail}>{item.detail}</Text>
+          </View>
         </AnimatedScreen>
       ))}
     </View>
   );
 }
 
-function createStyles(colors: AppPalette) {
+function createStyles(colors: AppPalette, compactScreen = false) {
   return StyleSheet.create({
   activeLabel: {
     color: '#ffffff',
@@ -374,14 +431,20 @@ function createStyles(colors: AppPalette) {
     flexGrow: 1,
     justifyContent: 'center',
     minHeight: '100%',
-    padding: 20,
-    paddingBottom: 34,
-    paddingTop: 34,
+    padding: compactScreen ? 16 : 20,
+    paddingBottom: compactScreen ? 20 : 34,
+    paddingTop: compactScreen ? 20 : 34,
   },
   brand: {
     color: colors.sky,
     fontSize: 15,
     fontWeight: '800',
+  },
+  brandCaption: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
   },
   brandMark: {
     alignItems: 'center',
@@ -391,9 +454,17 @@ function createStyles(colors: AppPalette) {
     justifyContent: 'center',
     width: 46,
   },
+  brandRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  brandTextWrap: {
+    flex: 1,
+  },
   header: {
-    gap: 8,
-    marginBottom: 20,
+    gap: compactScreen ? 6 : 8,
+    marginBottom: compactScreen ? 14 : 20,
   },
   googleButton: {
     borderColor: colors.border,
@@ -401,20 +472,23 @@ function createStyles(colors: AppPalette) {
   },
   title: {
     color: colors.ink,
-    fontSize: 32,
+    fontSize: compactScreen ? 28 : 32,
     fontWeight: '800',
+    lineHeight: compactScreen ? 34 : 39,
   },
   subtitle: {
     color: colors.muted,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: compactScreen ? 14 : 15,
+    lineHeight: compactScreen ? 20 : 22,
   },
   card: {
     backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 8,
+    borderWidth: 1,
   },
   cardContent: {
-    gap: 14,
+    gap: compactScreen ? 11 : 14,
   },
   error: {
     color: colors.coral,
@@ -441,6 +515,23 @@ function createStyles(colors: AppPalette) {
     flexDirection: 'row',
     padding: 4,
   },
+  modeHint: {
+    alignItems: 'flex-start',
+    backgroundColor: colors.skySoft,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    padding: compactScreen ? 9 : 11,
+  },
+  modeHintText: {
+    color: colors.ink,
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
   nameInput: {
     flex: 1,
     minWidth: 148,
@@ -453,23 +544,36 @@ function createStyles(colors: AppPalette) {
   motionPreview: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 10,
+    marginTop: compactScreen ? 6 : 10,
+  },
+  motionIcon: {
+    alignItems: 'center',
+    borderRadius: 8,
+    height: 30,
+    justifyContent: 'center',
+    width: 30,
   },
   motionTile: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
     flex: 1,
-    flexDirection: 'row',
-    gap: 6,
-    minHeight: 42,
-    paddingHorizontal: 10,
+    gap: 7,
+    minHeight: compactScreen ? 76 : 82,
+    padding: compactScreen ? 9 : 10,
+  },
+  motionTileCopy: {
+    gap: 1,
+  },
+  motionTileDetail: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '800',
   },
   motionTileText: {
     color: colors.ink,
-    flexShrink: 1,
     fontSize: 12,
     fontWeight: '900',
   },

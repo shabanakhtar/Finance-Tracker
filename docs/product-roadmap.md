@@ -108,7 +108,7 @@ npm run lint
 
 ## Level 1: Authentication And First Impression
 
-Status: improved in latest batch, needs phone verification.
+Status: implementation batch started, needs phone verification after the next EAS preview build.
 
 The auth screen is the first real impression. If it feels cramped, dull, or broken, users will not trust the finance app.
 
@@ -134,12 +134,27 @@ Implemented in `dcb3ab7`:
 - Password checklist now appears only during signup while password is focused.
 - Supabase trust text reduced to tiny private sign-in language.
 
+Implemented in the Level 1 auth-first-impression batch:
+
+- Auth intro copy now changes between sign-in and account creation.
+- The create-account headline now frames signup as building the first money picture.
+- The sign-in headline now makes returning to saved budgets, receipts, and insights feel clearer.
+- Brand row now includes a small "Private money clarity" caption.
+- Finance preview tiles now show small example metrics instead of only labels.
+- Compact phone screens get tighter spacing and smaller headline sizing.
+- The auth card now has an explicit border so it reads better against the background.
+- Switching between Sign in and Create clears stale errors, success messages, submitted state, and touched fields.
+- Profile completion form now also enters with a subtle delayed animation.
+- Mode-specific helper copy was added below the sign-in/create toggle.
+
 Next quality pass:
 
 - Test on actual phone screen size.
 - Confirm first/last name fields are not cropped in signup.
 - Confirm password checklist appears only when useful.
 - Confirm keyboard does not hide password/name fields.
+- Confirm compact-screen auth spacing feels calm and not cramped.
+- Confirm mode switching does not leave stale validation messages behind.
 - Consider making auth more onboarding-like after the APK review:
   - One or two screen intro.
   - Gentle finance illustration or motion.
@@ -606,6 +621,7 @@ Not needed for first beta:
 Check:
 
 - Auth field cropping.
+- Auth first impression and mode-specific copy.
 - Password checklist behavior.
 - Keyboard overlap.
 - Floating nav overlap.
@@ -674,4 +690,3 @@ The app should feel:
 The big product idea:
 
 > The user should not feel like they are maintaining a spreadsheet. They should feel like they are building a clear picture of their money, one small action at a time.
-
