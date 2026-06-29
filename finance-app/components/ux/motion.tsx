@@ -1,14 +1,18 @@
 import * as Haptics from 'expo-haptics';
-import { ReactNode, useEffect, useMemo, useState } from 'react';
-import { AccessibilityInfo, Pressable, PressableProps, StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AccessibilityInfo,
+  Animated,
+  Easing,
+  Pressable,
+  PressableProps,
+  StyleProp,
+  StyleSheet,
+  Text,
+  TextStyle,
+  View,
+  ViewStyle,
+} from 'react-native';
 
 import { AppPalette, radii } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
@@ -19,7 +23,7 @@ function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReduced);
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduced).catch(() => {});
     const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
     return () => subscription?.remove?.();
   }, []);
@@ -49,20 +53,42 @@ export function AnimatedScreen({
   style?: StyleProp<ViewStyle>;
 }) {
   const reduced = usePrefersReducedMotion();
-  const opacity = useSharedValue(reduced ? 1 : 0);
-  const translateY = useSharedValue(reduced ? 0 : 14);
+  const opacity = useRef(new Animated.Value(reduced ? 1 : 0)).current;
+  const translateY = useRef(new Animated.Value(reduced ? 0 : 14)).current;
 
   useEffect(() => {
-    opacity.value = withDelay(delay, withTiming(1, { duration: reduced ? 0 : 240 }));
-    translateY.value = withDelay(delay, withTiming(0, { duration: reduced ? 0 : 240 }));
+    if (reduced) {
+      opacity.setValue(1);
+      translateY.setValue(0);
+      return;
+    }
+
+    opacity.setValue(0);
+    translateY.setValue(14);
+
+    Animated.parallel([
+      Animated.timing(opacity, {
+        delay,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        delay,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, [delay, opacity, reduced, translateY]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: translateY.value }],
-  }));
-
-  return <Animated.View style={[animatedStyle, style]}>{children}</Animated.View>;
+  return (
+    <Animated.View style={[{ opacity, transform: [{ translateY }] }, style]}>
+      {children}
+    </Animated.View>
+  );
 }
 
 export function AnimatedCard({
@@ -83,24 +109,31 @@ export function AnimatedCard({
 
 export function PressableScale({ children, onPress, style, ...props }: PressableProps & { style?: StyleProp<ViewStyle> }) {
   const reduced = usePrefersReducedMotion();
-  const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const scale = useRef(new Animated.Value(1)).current;
 
   return (
     <AnimatedPressable
       {...props}
       onPress={onPress}
       onPressIn={(event) => {
-        scale.value = withTiming(reduced ? 1 : 0.97, { duration: 90 });
+        Animated.timing(scale, {
+          duration: 90,
+          easing: Easing.out(Easing.quad),
+          toValue: reduced ? 1 : 0.97,
+          useNativeDriver: true,
+        }).start();
         props.onPressIn?.(event);
       }}
       onPressOut={(event) => {
-        scale.value = withSpring(1, { damping: 16, stiffness: 260 });
+        Animated.spring(scale, {
+          damping: 16,
+          stiffness: 260,
+          toValue: 1,
+          useNativeDriver: true,
+        }).start();
         props.onPressOut?.(event);
       }}
-      style={[animatedStyle, style]}>
+      style={[{ transform: [{ scale }] }, style]}>
       {children}
     </AnimatedPressable>
   );
@@ -117,20 +150,26 @@ export function AnimatedProgressBar({
 }) {
   const { colors } = useAppTheme();
   const reduced = usePrefersReducedMotion();
-  const width = useSharedValue(reduced ? progress : 0);
+  const width = useRef(new Animated.Value(reduced ? progress : 0)).current;
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
-    width.value = withTiming(Math.max(0, Math.min(progress, 1)), { duration: reduced ? 0 : 420 });
+    Animated.timing(width, {
+      duration: reduced ? 0 : 420,
+      easing: Easing.out(Easing.cubic),
+      toValue: Math.max(0, Math.min(progress, 1)),
+      useNativeDriver: false,
+    }).start();
   }, [progress, reduced, width]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    width: `${width.value * 100}%`,
-  }));
+  const animatedWidth = width.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
 
   return (
     <View style={[styles.progressTrack, trackColor ? { backgroundColor: trackColor } : null]}>
-      <Animated.View style={[styles.progressFill, { backgroundColor: color }, animatedStyle]} />
+      <Animated.View style={[styles.progressFill, { backgroundColor: color, width: animatedWidth }]} />
     </View>
   );
 }
@@ -138,28 +177,49 @@ export function AnimatedProgressBar({
 export function SuccessPulse({ label, visible }: { label?: string; visible: boolean }) {
   const { colors } = useAppTheme();
   const reduced = usePrefersReducedMotion();
-  const scale = useSharedValue(0.8);
-  const opacity = useSharedValue(0);
+  const scale = useRef(new Animated.Value(0.8)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     if (!visible) {
-      opacity.value = withTiming(0, { duration: reduced ? 0 : 120 });
+      Animated.timing(opacity, {
+        duration: reduced ? 0 : 120,
+        toValue: 0,
+        useNativeDriver: true,
+      }).start();
       return;
     }
-    opacity.value = withTiming(1, { duration: reduced ? 0 : 160 });
-    scale.value = reduced ? 1 : withSequence(withSpring(1.08, { damping: 9, stiffness: 260 }), withSpring(1));
-  }, [opacity, reduced, scale, visible]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ scale: scale.value }],
-  }));
+    opacity.setValue(0);
+    scale.setValue(reduced ? 1 : 0.8);
+    Animated.parallel([
+      Animated.timing(opacity, {
+        duration: reduced ? 0 : 160,
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+      Animated.sequence([
+        Animated.spring(scale, {
+          damping: 9,
+          stiffness: 260,
+          toValue: reduced ? 1 : 1.08,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scale, {
+          damping: 12,
+          stiffness: 220,
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, [opacity, reduced, scale, visible]);
 
   if (!visible) return null;
 
   return (
-    <Animated.View style={[styles.successPulse, animatedStyle]}>
+    <Animated.View style={[styles.successPulse, { opacity, transform: [{ scale }] }]}>
       <Text style={styles.successPulseIcon}>OK</Text>
       {label ? <Text style={styles.successPulseText}>{label}</Text> : null}
     </Animated.View>
@@ -223,7 +283,7 @@ function createStyles(colors: AppPalette) {
     },
     successPulseIcon: {
       color: colors.emerald,
-      fontSize: 16,
+      fontSize: 12,
       fontWeight: '900',
     },
     successPulseText: {
