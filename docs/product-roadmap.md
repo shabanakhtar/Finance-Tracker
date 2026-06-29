@@ -266,6 +266,7 @@ Implemented in the Level 3 dashboard clarity batch:
 - First-run setup now shows essentials progress instead of feeling like a static poster.
 - Setup progress tracks income, expense, and budget completion.
 - Setup steps show completed states with check icons.
+- Setup now stays visible until income, expense, and one budget exist, unless the user skips it.
 - Budget focus primes the budget form with a sensible default category.
 - Recent transactions are limited to a short preview on Home.
 - Recent transactions now include a small footer pointing users to Analysis for trends.

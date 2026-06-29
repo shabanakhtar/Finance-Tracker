@@ -165,8 +165,10 @@ export default function DashboardScreen() {
       .catch(() => {});
   }, []);
 
-  const isEmptyAccount = (dashboard?.transaction_count ?? 0) === 0;
   const netCashFlow = (dashboard?.summary.income ?? 0) - (dashboard?.summary.expense ?? 0);
+  const setupComplete = Boolean(
+    dashboard && dashboard.summary.income > 0 && dashboard.summary.expense > 0 && dashboard.budgets.length > 0,
+  );
   const homeFocus = useMemo(() => (dashboard ? getHomeFocus(dashboard, queuedCount) : null), [dashboard, queuedCount]);
   const recentPreview = useMemo(() => dashboard?.recent_transactions.slice(0, RECENT_PREVIEW_LIMIT) ?? [], [dashboard?.recent_transactions]);
   const budgetAmountValidation = useMemo(() => validateAmount(budgetAmount), [budgetAmount]);
@@ -438,7 +440,7 @@ export default function DashboardScreen() {
 
           {homeFocus ? <HomeFocusCard focus={homeFocus} onPress={actOnHomeFocus} /> : null}
 
-          {isEmptyAccount && !setupDismissed ? <GettingStartedCard dashboard={dashboard} onSkip={dismissSetup} /> : null}
+          {!setupComplete && !setupDismissed ? <GettingStartedCard dashboard={dashboard} onSkip={dismissSetup} /> : null}
 
           <Section title="Budgets" icon="target">
             <View style={styles.formGrid}>
