@@ -1,9 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Href, router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Button, Card, Chip, IconButton, SegmentedButtons } from 'react-native-paper';
+import { Button, Card, IconButton, SegmentedButtons } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppPalette } from '@/constants/theme';
 import {
@@ -33,8 +35,6 @@ import {
   API_BASE_URL,
   BudgetStatus,
   Dashboard,
-  Opportunity,
-  InsightCard,
   Transaction,
   deleteBudget,
   deleteTransaction,
@@ -69,6 +69,7 @@ type TransactionForm = {
 };
 type DashboardFormField = 'budgetAmount' | 'budgetCategory' | 'editAmount' | 'editCategory' | 'editDate' | 'editNotes';
 const NOTES_LIMIT = 500;
+const SETUP_DISMISSED_KEY = 'finance:first-snapshot-setup-dismissed';
 
 type DashboardTheme = {
   colors: AppPalette;
@@ -88,7 +89,8 @@ function useDashboardTheme() {
 export default function DashboardScreen() {
   const { session, signOut } = useAuth();
   const { colors } = useAppTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
   const [budgetAmount, setBudgetAmount] = useState('');
   const [budgetCategory, setBudgetCategory] = useState('');
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
@@ -103,6 +105,7 @@ export default function DashboardScreen() {
   const [queuedCount, setQueuedCount] = useState(0);
   const [syncHistory, setSyncHistory] = useState<SyncHistoryItem[]>([]);
   const [syncingQueue, setSyncingQueue] = useState(false);
+  const [setupDismissed, setSetupDismissed] = useState(false);
   const [pendingBudgetDelete, setPendingBudgetDelete] = useState<string | null>(null);
   const [pendingTransactionDelete, setPendingTransactionDelete] = useState<Transaction | null>(null);
   const [toastMessage, setToastMessage] = useState('');
@@ -147,22 +150,11 @@ export default function DashboardScreen() {
     loadDashboard();
   }, [loadDashboard]);
 
-  const scoreProgress = useMemo(() => Math.max(0, Math.min((dashboard?.financial_score ?? 0) / 100, 1)), [
-    dashboard?.financial_score,
-  ]);
-
-  const monthlyRows = useMemo(() => {
-    if (!dashboard) return [];
-    return Object.entries(dashboard.monthly)
-      .sort(([left], [right]) => right.localeCompare(left))
-      .slice(0, 6)
-      .reverse();
-  }, [dashboard]);
-
-  const maxMonthlyValue = useMemo(() => {
-    if (!dashboard) return 1;
-    return Math.max(1, ...Object.values(dashboard.monthly).flatMap((item) => [item.income, item.expense]));
-  }, [dashboard]);
+  useEffect(() => {
+    AsyncStorage.getItem(SETUP_DISMISSED_KEY)
+      .then((value) => setSetupDismissed(value === 'true'))
+      .catch(() => {});
+  }, []);
 
   const isEmptyAccount = (dashboard?.transaction_count ?? 0) === 0;
   const netCashFlow = (dashboard?.summary.income ?? 0) - (dashboard?.summary.expense ?? 0);
@@ -193,6 +185,10 @@ export default function DashboardScreen() {
     triggerSuccess();
     setToastMessage(message);
     setToastVisible(true);
+  };
+  const dismissSetup = async () => {
+    setSetupDismissed(true);
+    await AsyncStorage.setItem(SETUP_DISMISSED_KEY, 'true');
   };
   const markSubmitted = (...fields: DashboardFormField[]) => {
     setSubmittedFields((current) => {
@@ -402,51 +398,7 @@ export default function DashboardScreen() {
             </Card>
           </AnimatedCard>
 
-          {isEmptyAccount ? <GettingStartedCard dashboard={dashboard} /> : null}
-
-          <AnimatedCard index={1}>
-            <View style={styles.scoreCard}>
-              <View style={styles.scoreCircle}>
-                <Text style={styles.scoreValue}>{dashboard.financial_score}</Text>
-                <Text style={styles.scoreMax}>/100</Text>
-              </View>
-              <View style={styles.scoreText}>
-                <Text style={styles.cardTitle}>Financial score</Text>
-                <AnimatedProgressBar progress={scoreProgress} color={colors.emerald} />
-                <Text style={styles.muted}>{dashboard.transaction_count} transactions analyzed</Text>
-              </View>
-            </View>
-          </AnimatedCard>
-
-          <Section title="Opportunities" icon="creation-outline">
-            {dashboard.opportunities?.length ? (
-              <View style={styles.opportunityList}>
-                {dashboard.opportunities.map((item, index) => (
-                  <OpportunityRow item={item} key={`${item.kind}-${index}`} />
-                ))}
-              </View>
-            ) : (
-              <EmptyState icon="magnify-scan" text="Opportunities highlight recurring bills, unusual spending, and places where a cheaper choice may help. Add a few transactions to unlock them." />
-            )}
-          </Section>
-
-          <Section title="Monthly cash flow" icon="chart-bar">
-            {monthlyRows.length ? (
-              <View style={styles.chartPanel}>
-                {monthlyRows.map(([month, value]) => (
-                  <View key={month} style={styles.monthCol}>
-                    <View style={styles.barColumn}>
-                      <View style={[styles.incomeBar, { height: `${Math.max(8, (value.income / maxMonthlyValue) * 100)}%` }]} />
-                      <View style={[styles.expenseBar, { height: `${Math.max(8, (value.expense / maxMonthlyValue) * 100)}%` }]} />
-                    </View>
-                    <Text style={styles.monthLabel}>{month.slice(5)}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <EmptyState icon="chart-line" text="Monthly trends compare income and spending over time. Add income and expenses to see your cash-flow pattern." />
-            )}
-          </Section>
+          {isEmptyAccount && !setupDismissed ? <GettingStartedCard dashboard={dashboard} onSkip={dismissSetup} /> : null}
 
           <Section title="Budgets" icon="target">
             <View style={styles.formGrid}>
@@ -575,42 +527,6 @@ export default function DashboardScreen() {
             )}
           </Section>
 
-          <Section title="Spending mix" icon="chart-donut">
-            {Object.keys(dashboard.breakdown).length ? (
-              Object.entries(dashboard.breakdown).map(([category, percent]) => (
-                <View key={category} style={styles.breakdownRow}>
-                  <View style={styles.rowBetween}>
-                    <Text style={styles.listLabel}>{category}</Text>
-                    <Text style={styles.listValue}>{percent.toFixed(1)}%</Text>
-                  </View>
-                  <AnimatedProgressBar progress={Math.min(percent / 100, 1)} color={colors.sky} />
-                </View>
-              ))
-            ) : (
-              <EmptyState icon="chart-pie" text="Spending mix shows where your money goes by category. Expense categories will appear after your first spending entries." />
-            )}
-          </Section>
-
-          <Section title="Smart insights" icon="lightbulb-on-outline">
-            {dashboard.insight_cards?.length ? (
-              <View style={styles.insightCardList}>
-                {dashboard.insight_cards.map((item) => (
-                  <InsightCardRow item={item} key={`${item.kind}-${item.title}`} />
-                ))}
-              </View>
-            ) : null}
-            <View style={styles.chipWrap}>
-              {[...dashboard.warnings, ...dashboard.insights].slice(0, 8).map((item, index) => (
-                <Chip key={`${item}-${index}`} compact style={styles.chip} textStyle={styles.chipText}>
-                  {item}
-                </Chip>
-              ))}
-              {!dashboard.warnings.length && !dashboard.insights.length ? (
-                <EmptyState icon="creation-outline" text="AI insights become more useful once the app has income, expenses, and budgets to compare." />
-              ) : null}
-            </View>
-          </Section>
-
           <Text style={styles.apiHint}>
             {dashboardCachedAt ? `Showing saved snapshot from ${formatCachedAt(dashboardCachedAt)}` : `Connected to ${API_BASE_URL.replace('https://', '')}`}
           </Text>
@@ -648,7 +564,7 @@ export default function DashboardScreen() {
   );
 }
 
-function GettingStartedCard({ dashboard }: { dashboard: Dashboard }) {
+function GettingStartedCard({ dashboard, onSkip }: { dashboard: Dashboard; onSkip: () => void }) {
   const { colors, styles } = useDashboardTheme();
   const hasIncome = dashboard.summary.income > 0;
   const hasExpense = dashboard.summary.expense > 0;
@@ -666,7 +582,7 @@ function GettingStartedCard({ dashboard }: { dashboard: Dashboard }) {
       <Card.Content>
         <View style={styles.sectionHeader}>
           <MaterialCommunityIcons color={colors.sky} name="map-marker-path" size={20} />
-          <Text style={styles.cardTitle}>Build your first money snapshot</Text>
+          <Text style={styles.cardTitle}>Set up your first money snapshot</Text>
         </View>
         <Text style={styles.startText}>
           Complete these first steps and the dashboard, budgets, and AI assistant will start giving useful feedback.
@@ -701,32 +617,12 @@ function GettingStartedCard({ dashboard }: { dashboard: Dashboard }) {
           <StepBadge icon="creation-outline" onPress={() => router.push('/ai')} text="Ask AI" />
           <StepBadge icon="file-import-outline" onPress={() => router.push('/settings')} text="Import CSV" />
         </View>
+        <Button compact mode="text" onPress={onSkip} style={styles.skipSetupButton} textColor={colors.muted}>
+          Skip for now
+        </Button>
       </Card.Content>
     </Card>
     </AnimatedCard>
-  );
-}
-
-function InsightCardRow({ item }: { item: InsightCard }) {
-  const { colors, styles } = useDashboardTheme();
-  const tone =
-    item.severity === 'high'
-      ? { color: colors.coral, icon: 'alert-circle-outline' as const, surface: colors.coralSoft }
-      : item.severity === 'positive'
-        ? { color: colors.emerald, icon: 'check-decagram-outline' as const, surface: colors.emeraldSoft }
-        : item.severity === 'medium'
-          ? { color: colors.amber, icon: 'lightning-bolt-outline' as const, surface: colors.warningSoft }
-          : { color: colors.sky, icon: 'information-outline' as const, surface: colors.skySoft };
-
-  return (
-    <View style={[styles.insightCard, { backgroundColor: tone.surface }]}>
-      <View style={styles.insightHeader}>
-        <MaterialCommunityIcons color={tone.color} name={tone.icon} size={20} />
-        <Text style={styles.insightTitle}>{item.title}</Text>
-      </View>
-      <Text style={styles.insightDetail}>{item.detail}</Text>
-      <Text style={styles.insightAction}>{item.action}</Text>
-    </View>
   );
 }
 
@@ -797,26 +693,6 @@ function QuickAddStrip() {
             <Text style={styles.quickAddButtonText}>{item.label}</Text>
           </PressableScale>
         ))}
-      </View>
-    </View>
-  );
-}
-
-function OpportunityRow({ item }: { item: Opportunity }) {
-  const { colors, styles } = useDashboardTheme();
-  const icon =
-    item.kind === 'recurring' ? 'repeat' : item.kind === 'anomaly' ? 'alert-decagram-outline' : 'tag-search-outline';
-  const color = item.kind === 'anomaly' ? colors.coral : item.kind === 'recurring' ? colors.violet : colors.sky;
-
-  return (
-    <View style={styles.opportunityRow}>
-      <View style={[styles.opportunityIcon, { backgroundColor: item.kind === 'anomaly' ? colors.coralSoft : colors.skySoft }]}>
-        <MaterialCommunityIcons color={color} name={icon} size={20} />
-      </View>
-      <View style={styles.opportunityText}>
-        <Text style={styles.listLabel}>{item.title}</Text>
-        <Text style={styles.opportunityDetail}>{item.detail}</Text>
-        <Text style={styles.opportunityImpact}>{item.impact}</Text>
       </View>
     </View>
   );
@@ -1032,7 +908,7 @@ function OfflineQueueCard({
   );
 }
 
-function createStyles(colors: AppPalette) {
+function createStyles(colors: AppPalette, bottomInset = 0) {
   return StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
@@ -1131,7 +1007,7 @@ function createStyles(colors: AppPalette) {
     backgroundColor: colors.background,
     gap: 16,
     padding: 20,
-    paddingBottom: 36,
+    paddingBottom: Math.max(132, bottomInset + 120),
   },
   deleteText: {
     color: colors.coral,
@@ -1534,6 +1410,10 @@ function createStyles(colors: AppPalette) {
     flexDirection: 'row',
     gap: 8,
     marginBottom: 14,
+  },
+  skipSetupButton: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
   },
   startCard: {
     backgroundColor: colors.surface,

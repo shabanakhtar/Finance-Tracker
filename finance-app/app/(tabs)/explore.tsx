@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, SegmentedButtons, TextInput } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppPalette } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
@@ -33,7 +34,8 @@ const NOTES_LIMIT = 500;
 export default function AddTransactionScreen() {
   const params = useLocalSearchParams<{ category?: string; type?: 'income' | 'expense' }>();
   const { colors } = useAppTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(params.category ?? '');
   const [date, setDate] = useState(today);
@@ -220,8 +222,8 @@ export default function AddTransactionScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.container} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <View style={styles.iconBox}>
             <MaterialCommunityIcons color={colors.sky} name="plus-box-outline" size={24} />
@@ -428,7 +430,7 @@ export default function AddTransactionScreen() {
   );
 }
 
-function createStyles(colors: AppPalette) {
+function createStyles(colors: AppPalette, bottomInset = 0) {
   return StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
@@ -468,6 +470,7 @@ function createStyles(colors: AppPalette) {
   container: {
     gap: 16,
     padding: 20,
+    paddingBottom: Math.max(132, bottomInset + 120),
     paddingTop: 32,
   },
   header: {

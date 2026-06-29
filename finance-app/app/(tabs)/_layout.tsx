@@ -25,6 +25,15 @@ export default function Layout() {
         }}
       />
       <Tabs.Screen
+        name="analysis"
+        options={{
+          title: 'Analysis',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons color={color} name="chart-timeline-variant" size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="explore"
         options={{
           title: 'Add',

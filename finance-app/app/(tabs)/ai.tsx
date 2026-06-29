@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Chip, Text } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppPalette, radii, spacing } from '@/constants/theme';
 import { AnimatedCard, CharacterCounter, EmptyState, FormField, TypingText, triggerSuccess, validateAmount, validateMaxLength } from '@/components/ux';
@@ -54,7 +55,8 @@ function getAiUnavailableMessage(error: unknown, feature: 'chat' | 'market') {
 
 export default function AiScreen() {
   const { colors } = useAppTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -210,9 +212,9 @@ export default function AiScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.keyboard}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.container} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
           <View style={styles.iconShell}>
             <MaterialCommunityIcons color={colors.violet} name="creation-outline" size={28} />
@@ -437,7 +439,7 @@ export default function AiScreen() {
   );
 }
 
-function createStyles(colors: AppPalette) {
+function createStyles(colors: AppPalette, bottomInset = 0) {
   return StyleSheet.create({
     assistantBubble: {
       alignSelf: 'flex-start',
@@ -532,7 +534,7 @@ function createStyles(colors: AppPalette) {
       backgroundColor: colors.background,
       gap: spacing.lg,
       padding: spacing.lg,
-      paddingBottom: 96,
+      paddingBottom: Math.max(132, bottomInset + 120),
     },
     confidencePill: {
       backgroundColor: colors.violetSoft,

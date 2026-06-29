@@ -11,6 +11,7 @@ import { useAppTheme } from '@/contexts/theme';
 
 const routeIcons: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   ai: 'creation-outline',
+  analysis: 'chart-timeline-variant',
   explore: 'plus',
   index: 'view-dashboard-variant-outline',
   settings: 'cog-outline',
@@ -18,6 +19,7 @@ const routeIcons: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> =
 
 const routeLabels: Record<string, string> = {
   ai: 'AI',
+  analysis: 'Analysis',
   explore: 'Add',
   index: 'Home',
   settings: 'Settings',

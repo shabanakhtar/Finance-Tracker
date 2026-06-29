@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, SegmentedButtons } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppPalette, spacing } from '@/constants/theme';
 import {
@@ -43,7 +44,8 @@ const NOTES_LIMIT = 500;
 export default function QuickAddScreen() {
   const params = useLocalSearchParams<{ amount?: string; category?: string; type?: 'income' | 'expense' }>();
   const { colors } = useAppTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
   const [amount, setAmount] = useState(params.amount ?? '');
   const [category, setCategory] = useState(params.category ?? 'food');
   const [date, setDate] = useState(today);
@@ -133,8 +135,8 @@ export default function QuickAddScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.container} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <PressableScale onPress={() => router.back()} style={styles.closeButton}>
             <MaterialCommunityIcons color={colors.ink} name="close" size={22} />
@@ -271,7 +273,7 @@ export default function QuickAddScreen() {
   );
 }
 
-function createStyles(colors: AppPalette) {
+function createStyles(colors: AppPalette, bottomInset = 0) {
   return StyleSheet.create({
     actions: {
       flexDirection: 'row',
@@ -329,7 +331,7 @@ function createStyles(colors: AppPalette) {
     container: {
       gap: spacing.lg,
       padding: spacing.xl,
-      paddingBottom: spacing.xxl,
+      paddingBottom: Math.max(spacing.xxl, bottomInset + spacing.xxl),
     },
     eyebrow: {
       color: colors.sky,

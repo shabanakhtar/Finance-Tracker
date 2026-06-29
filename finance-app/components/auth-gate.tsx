@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/auth';
 import { AppPalette } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
 import {
+  AnimatedScreen,
   FormField,
   PasswordChecklist,
   SuccessBanner,
@@ -30,6 +31,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [password, setPassword] = useState('');
   const [secureEntry, setSecureEntry] = useState(true);
   const [submitted, setSubmitted] = useState(false);
+  const [focusedField, setFocusedField] = useState<AuthField | null>(null);
   const [touched, setTouched] = useState<Record<AuthField, boolean>>({
     email: false,
     firstName: false,
@@ -55,6 +57,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   const markTouched = (field: AuthField) => setTouched((current) => ({ ...current, [field]: true }));
   const shouldShow = (field: AuthField) => submitted || touched[field];
+  const keyboardBehavior = Platform.OS === 'ios' ? 'padding' : 'height';
 
   const submit = async () => {
     try {
@@ -145,24 +148,28 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (session) {
     if (needsProfile) {
       return (
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
-          <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-            <View style={styles.header}>
+        <KeyboardAvoidingView behavior={keyboardBehavior} style={styles.screen}>
+          <ScrollView contentContainerStyle={styles.container} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
+            <AnimatedScreen style={styles.header}>
               <View style={styles.brandMark}>
                 <MaterialCommunityIcons color={colors.sky} name="account-heart-outline" size={24} />
               </View>
               <Text style={styles.brand}>Finance Tracker</Text>
               <Text style={styles.title}>What should we call you?</Text>
               <Text style={styles.subtitle}>Your dashboard will use your name instead of showing account details.</Text>
-            </View>
+            </AnimatedScreen>
             <Card style={styles.card}>
               <Card.Content style={styles.cardContent}>
                 <View style={styles.nameRow}>
                   <FormField
                     error={firstNameValidation.message}
                     label="First name"
-                    onBlur={() => markTouched('firstName')}
+                    onBlur={() => {
+                      markTouched('firstName');
+                      setFocusedField(null);
+                    }}
                     onChangeText={setFirstName}
+                    onFocus={() => setFocusedField('firstName')}
                     required
                     style={styles.nameInput}
                     touched={shouldShow('firstName')}
@@ -171,8 +178,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
                   <FormField
                     error={lastNameValidation.message}
                     label="Last name"
-                    onBlur={() => markTouched('lastName')}
+                    onBlur={() => {
+                      markTouched('lastName');
+                      setFocusedField(null);
+                    }}
                     onChangeText={setLastName}
+                    onFocus={() => setFocusedField('lastName')}
                     required
                     style={styles.nameInput}
                     touched={shouldShow('lastName')}
@@ -193,17 +204,19 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
+    <KeyboardAvoidingView behavior={keyboardBehavior} style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.container} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
+        <AnimatedScreen style={styles.header}>
           <View style={styles.brandMark}>
             <MaterialCommunityIcons color={colors.sky} name="wallet-outline" size={24} />
           </View>
           <Text style={styles.brand}>Finance Tracker</Text>
           <Text style={styles.title}>{mode === 'login' ? 'Welcome back' : 'Build your money picture'}</Text>
           <Text style={styles.subtitle}>Track income, spending, budgets, and AI insights in one private workspace.</Text>
-        </View>
+          <AuthMotionPreview />
+        </AnimatedScreen>
 
+        <AnimatedScreen delay={80}>
         <Card style={styles.card}>
           <Card.Content style={styles.cardContent}>
             <View style={styles.modeSwitch}>
@@ -229,8 +242,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
               error={emailValidation.message}
               keyboardType="email-address"
               label="Email"
-              onBlur={() => markTouched('email')}
+              onBlur={() => {
+                markTouched('email');
+                setFocusedField(null);
+              }}
               onChangeText={setEmail}
+              onFocus={() => setFocusedField('email')}
               placeholder="you@example.com"
               required
               touched={shouldShow('email')}
@@ -239,8 +256,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
             <FormField
               error={passwordValidation.message}
               label="Password"
-              onBlur={() => markTouched('password')}
+              onBlur={() => {
+                markTouched('password');
+                setFocusedField(null);
+              }}
               onChangeText={setPassword}
+              onFocus={() => setFocusedField('password')}
               required
               right={
                 <TextInput.Icon
@@ -252,14 +273,18 @@ export function AuthGate({ children }: { children: ReactNode }) {
               touched={shouldShow('password')}
               value={password}
             />
-            {mode === 'signup' || password.length ? <PasswordChecklist password={password} /> : null}
+            {mode === 'signup' && focusedField === 'password' ? <PasswordChecklist password={password} /> : null}
             {mode === 'signup' ? (
               <View style={styles.nameRow}>
                 <FormField
                   error={firstNameValidation.message}
                   label="First name"
-                  onBlur={() => markTouched('firstName')}
+                  onBlur={() => {
+                    markTouched('firstName');
+                    setFocusedField(null);
+                  }}
                   onChangeText={setFirstName}
+                  onFocus={() => setFocusedField('firstName')}
                   required
                   style={styles.nameInput}
                   touched={shouldShow('firstName')}
@@ -268,8 +293,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 <FormField
                   error={lastNameValidation.message}
                   label="Last name"
-                  onBlur={() => markTouched('lastName')}
+                  onBlur={() => {
+                    markTouched('lastName');
+                    setFocusedField(null);
+                  }}
                   onChangeText={setLastName}
+                  onFocus={() => setFocusedField('lastName')}
                   required
                   style={styles.nameInput}
                   touched={shouldShow('lastName')}
@@ -293,12 +322,34 @@ export function AuthGate({ children }: { children: ReactNode }) {
             </Button>
             <View style={styles.trustRow}>
               <MaterialCommunityIcons color={colors.sky} name="shield-check-outline" size={18} />
-              <Text style={styles.trustText}>Protected by Supabase Auth and per-user data rules.</Text>
+              <Text style={styles.trustText}>Private sign-in by Supabase.</Text>
             </View>
           </Card.Content>
         </Card>
+        </AnimatedScreen>
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+function AuthMotionPreview() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const items = [
+    { icon: 'cash-plus', label: 'Income', tone: colors.emerald },
+    { icon: 'receipt-text-outline', label: 'Spend', tone: colors.coral },
+    { icon: 'chart-line', label: 'Score', tone: colors.violet },
+  ] as const;
+
+  return (
+    <View style={styles.motionPreview}>
+      {items.map((item, index) => (
+        <AnimatedScreen delay={120 + index * 70} key={item.label} style={styles.motionTile}>
+          <MaterialCommunityIcons color={item.tone} name={item.icon} size={18} />
+          <Text style={styles.motionTileText}>{item.label}</Text>
+        </AnimatedScreen>
+      ))}
+    </View>
   );
 }
 
@@ -322,7 +373,10 @@ function createStyles(colors: AppPalette) {
   container: {
     flexGrow: 1,
     justifyContent: 'center',
+    minHeight: '100%',
     padding: 20,
+    paddingBottom: 34,
+    paddingTop: 34,
   },
   brand: {
     color: colors.sky,
@@ -389,11 +443,35 @@ function createStyles(colors: AppPalette) {
   },
   nameInput: {
     flex: 1,
+    minWidth: 148,
   },
   nameRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  motionPreview: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  motionTile: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 42,
+    paddingHorizontal: 10,
+  },
+  motionTileText: {
+    color: colors.ink,
+    flexShrink: 1,
+    fontSize: 12,
+    fontWeight: '900',
   },
   muted: {
     color: colors.muted,
@@ -414,8 +492,8 @@ function createStyles(colors: AppPalette) {
   trustText: {
     color: colors.muted,
     flex: 1,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 10,
+    lineHeight: 14,
   },
   });
 }

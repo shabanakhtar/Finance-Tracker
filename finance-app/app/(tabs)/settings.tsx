@@ -5,6 +5,7 @@ import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, SegmentedButtons, Text } from 'react-native-paper';
 import { useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppPalette, AppThemeMode, radii, spacing } from '@/constants/theme';
 import { AppErrorState, EmptyState, SuccessBanner } from '@/components/ux';
@@ -21,7 +22,8 @@ const themeOptions = [
 export default function SettingsScreen() {
   const { session, signOut } = useAuth();
   const { colors, mode, resolvedTheme, setMode } = useAppTheme();
-  const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(colors, insets.bottom);
   const [csvText, setCsvText] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -201,7 +203,7 @@ export default function SettingsScreen() {
   );
 }
 
-function createStyles(colors: AppPalette) {
+function createStyles(colors: AppPalette, bottomInset = 0) {
   return StyleSheet.create({
     actionButton: {
       borderRadius: radii.card,
@@ -279,6 +281,7 @@ function createStyles(colors: AppPalette) {
       flexGrow: 1,
       gap: spacing.lg,
       padding: spacing.xl,
+      paddingBottom: Math.max(132, bottomInset + 120),
       paddingTop: 34,
     },
     sectionTitle: {
