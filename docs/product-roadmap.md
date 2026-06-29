@@ -1,579 +1,677 @@
-# Finance App Product Roadmap
+# Finance Tracker: Phases, Levels, And Implementation Agenda
 
-This roadmap captures the current state, the remaining agenda, and the order of work before a public mobile launch. The app should stay free for now, with AI limits added early enough to protect the backend and Gemini key. Paid AI/subscription work stays on the future agenda until the app has real demand and paid credits are available.
+This is the working build plan for the Finance Tracker mobile app. It keeps the original phased roadmap style, but updates it with the newest GitHub checkpoint and the current phone UX priorities.
 
-## Current State
+The goal is not just to make the app "work." The goal is to make it feel like a real personal finance companion: calm, useful, private, fast enough on phone, clear when something fails, and friendly enough that a normal user can start without reading instructions.
 
-- Expo React Native mobile app with tabs for dashboard, add transaction, AI, and settings.
-- FastAPI backend deployed through Vercel.
-- Supabase Auth and Postgres are integrated.
-- Email/password login is implemented.
-- Google OAuth app flow is implemented, pending dashboard/provider verification on device.
-- Per-user transactions and budgets are backed by Supabase.
-- Row Level Security exists for transactions and budgets.
-- Dashboard analytics, financial score, insight cards, opportunities, and budget status exist.
-- Add/edit/delete transactions exist.
-- Budget create/delete exists.
-- CSV import/export exists.
-- Receipt scanning exists through Gemini.
-- Local product alternative search exists through Gemini with Google Search grounding.
-- AI chat exists.
-- Offline add queue exists for transactions.
-- Dashboard snapshots are cached locally and can be shown when live backend loading fails.
-- Offline queue status and recent sync history are visible on the dashboard.
-- Quick add modal exists inside the app.
-- EAS Android preview build path exists.
+## Current Project Snapshot
 
-## Important Current Gaps
+### Project
 
-- The installed phone build may not include the latest commits until a new EAS preview build is created and installed.
-- Phone-build UX pass is needed after the first successful APK test:
-  - Auth form fields are cramped on smaller screens.
-  - Floating navigation can overlap lower screen content.
-  - Keyboard can cover active form inputs.
-  - Dashboard is too dense for first-time users.
-  - First-run guidance currently appears too much like normal dashboard content.
-- Google login needs real-device verification after Supabase and Google Cloud setup.
-- The app has useful empty states and a first-run checklist, but not a full animated onboarding story yet.
-- Offline support only covers adding transactions, not edit/delete.
-- Notification quick add and home screen widgets are not implemented.
-- Production CORS, non-AI API rate limiting, and observability need a hardening pass.
-- Release readiness needs a formal beta freeze, QA pass, rollback plan, and fresh EAS build.
-- Branding, Play Store listing assets, and final app identity are intentionally separate from this agenda.
+- Main repository: `https://github.com/shabanakhtar/Finance-Tracker`
+- Local project path: `C:\Users\User\OneDrive\Desktop\Finance Tracker Project`
+- Mobile app path: `finance-app/`
+- Backend: FastAPI on Vercel
+- Current API URL: `https://finance-tracker-shateam1.vercel.app`
+- Supabase project: `https://pmyysyovszlywljoajun.supabase.co`
 
-## Phase 1: UX Foundation
+### Important Security Rule
 
-Build reusable UX primitives before polishing individual screens.
+- Never put the Supabase service role key or backend secret keys inside the mobile app.
+- Mobile app should only use public Expo vars:
+  - `EXPO_PUBLIC_API_URL`
+  - `EXPO_PUBLIC_SUPABASE_URL`
+  - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
 
-- Add delayed loading behavior:
-  - Under 500ms: show no loader to avoid flicker.
-  - 500ms to 2s: show skeletons or soft placeholders.
-  - 2s and above: show spinner plus clear loading text.
-  - Long waits: show "Still working" with retry or cancel where possible.
-- Add reusable components:
-  - `DelayedLoader`
-  - `SkeletonCard`
-  - `SkeletonList`
-  - `AppErrorState`
-  - `EmptyState`
-  - `SuccessToast`
-  - `ConfirmDialog`
-  - `FormField`
-  - `PasswordChecklist`
-  - `CharacterCounter`
-- Create a consistent message system:
-  - Inline errors for form problems.
-  - Toasts for small success/failure events.
-  - Modals for destructive or blocking decisions.
-  - Full error states for page-level failures.
+### Latest GitHub Checkpoint
 
-## Phase 2: Forms And Validation
+- `dcb3ab7 Improve mobile onboarding and tab layout`
 
-Make forms feel production-grade and harder to misuse.
+Recent important commits:
 
-- Disable submit buttons until required fields are valid.
-- Show missing required fields after blur or submit attempt.
-- Validate formats in real time:
-  - Email
-  - Password
-  - Amount
-  - Date
-  - Category
-  - Notes length
-  - Product search length
-  - Receipt/CSV constraints
-- Add password requirement checklist:
-  - Minimum length.
-  - Letter and number requirements.
-  - Confirmation match if confirmation is added.
-  - Show the checklist only after the password field is focused or the user starts typing.
-- Add live character counters where fields have limits.
-- Replace most form alerts with inline errors and action-specific toasts.
-- Fix mobile auth layout:
-  - Stack first name and last name vertically on narrow screens.
-  - Keep form inputs full-width unless the screen is wide enough.
-  - Reduce oversized trust/provider copy on auth screens.
-  - Move "Protected by Supabase..." into small footer-level trust text, or remove it if it does not help the user.
-- Improve keyboard behavior:
-  - Ensure the active input remains visible when the keyboard opens.
-  - Add `KeyboardAvoidingView`/scroll behavior consistently across auth, add transaction, product search, receipt review, and CSV import screens.
-  - Add enough bottom padding so submit buttons are not hidden behind keyboard or navigation controls.
+- `dcb3ab7 Improve mobile onboarding and tab layout`
+- `fb6e868 Update mobile UX roadmap`
+- `3441b0f Add Supabase env to EAS builds`
+- `e8e186a Stabilize Android animation build`
+- `106266a Fix Android startup crash config`
 
-## Phase 3: Empty States And First-Run Guidance
+## Contribution Push Strategy
 
-Make the app useful before the user has data.
+We are intentionally using multiple meaningful GitHub checkpoints.
 
-- Add first-run onboarding checklist:
-  - Add income.
-  - Add first expense.
-  - Set first budget.
-  - Ask first AI question.
-  - Optional CSV import.
-- Turn first-run guidance into an intentional setup flow instead of a large static dashboard card:
-  - Show it the first time after signup/login when the user has little or no data.
-  - Make it skippable.
-  - Save skipped/completed state locally and infer completion from user data where possible.
-  - Use progress dots or a short checklist so the user knows it is a guided setup.
-  - Animate completed steps with check/success states.
-  - Move bulky setup instructions out of the main dashboard after completion or skip.
-- Dashboard empty state should guide the user toward a first useful setup.
-- Transactions empty state should offer:
-  - Add manually.
-  - Import CSV.
-  - Scan receipt.
-- Budgets empty state should explain budgets and suggest common categories.
-- AI empty state should show useful prompt chips.
-- Receipts/product search empty state should explain what the feature does and when to trust it.
-- Save checklist progress locally or infer it from existing user data.
-- Include quick-add personalization in onboarding or early settings:
-  - Start with sensible defaults such as Food, Ride, Shop, and Income.
-  - Let users choose which shortcuts appear.
-  - Allow each shortcut to define type, category, label, icon, and optional default amount.
-  - Add success feedback after a quick-add shortcut is used.
+This helps contributions grow while keeping the repo clean. The rule is: push after real chunks, not after every tiny edit.
 
-## Phase 4: Motion And Success States
+Good checkpoint size:
 
-Use animation to make the app feel smoother, not flashy.
+- A visible feature is added.
+- A UX batch is complete.
+- A validation pass succeeds.
+- A phone/APK issue is fixed.
+- A roadmap or release-prep doc is updated.
 
-Status: completed together with Phase 4A.
+Avoid:
 
-- Add an animated first-run intro:
-  - Track your money.
-  - Set simple budgets.
-  - Scan receipts.
-  - Ask AI for insights.
-- Use welcoming intro motion:
-  - Cards slide in gently from the bottom.
-  - Progress dots animate between steps.
-  - Icons use small motion such as chart rise, receipt scan, wallet open, or AI sparkle.
-  - Final intro step leads into adding the first transaction or importing CSV.
-- Evaluate navigation transitions between screens and tabs.
-- Add smooth page transitions using existing navigation behavior first.
-- Use `react-native-reanimated` only where the built-in navigation is not enough.
-- Add light microinteractions:
-  - Button press feedback.
-  - Card entrance fade/slide.
-  - Loading shimmer.
-  - Success checkmark.
-  - Subtle haptic feedback for save/delete/sync.
-- Add success states for:
-  - Account created.
-  - Login successful.
-  - Profile/name saved.
-  - Transaction added.
-  - Transaction edited.
-  - Transaction deleted.
-  - Budget saved.
-  - Budget deleted.
-  - CSV import completed.
-  - Receipt scanned.
-  - Quick-add shortcut saved.
-  - Quick-add transaction added.
-  - Offline transaction synced.
-  - AI insight generated.
-- Improve auth and onboarding entrance motion:
-  - Logo/brand fades in first.
-  - Heading slides in gently.
-  - Form card enters after a short delay instead of appearing abruptly.
-  - Mode switch and primary button use press feedback.
-  - Keep motion subtle enough for routine finance use.
-- Avoid large celebration animations for routine finance actions.
-- Respect reduced-motion settings before public release.
+- Empty commits.
+- Tiny noisy commits that make the history ugly.
+- Pushing broken TypeScript or lint failures.
+
+Current push plan:
+
+1. `UX batch 1`
+   - Auth, keyboard, floating nav, Analysis tab.
+   - Completed: `dcb3ab7`
+
+2. `UX batch 2`
+   - Real phone/APK review fixes.
+
+3. `Quick add personalization`
+   - Editable quick-add shortcuts and local persistence.
+
+4. `First-run setup polish`
+   - Better onboarding/setup progression.
+
+5. `Beta readiness`
+   - QA fixes, migrations, release prep, docs update.
+
+## Level 0: App Opens And Environment Is Correct
+
+Status: mostly complete.
+
+This level is about making sure the app launches on a real Android phone and talks to the right backend.
 
 Implemented:
 
-- Reusable motion primitives:
-  - `AnimatedScreen`
-  - `AnimatedCard`
-  - `PressableScale`
-  - `AnimatedProgressBar`
-  - `SuccessPulse`
-  - `TypingText`
-- Dashboard card entrance motion.
-- Animated score and budget progress bars.
-- First-run guidance tiles with gentle card entrance motion.
-- Quick-add button/chip press feedback.
-- Success haptics for save/delete/sync/AI completion moments.
-- Smooth newest AI assistant response typing.
-- Native stack transitions for tab screens and quick-add modal.
-- Reduced-motion awareness in reusable motion primitives.
+- Expo React Native app exists under `finance-app/`.
+- EAS Android preview build path exists.
+- Backend is deployed on Vercel.
+- Supabase Auth and Postgres are integrated.
+- EAS env now includes:
+  - `EXPO_PUBLIC_API_URL`
+  - `EXPO_PUBLIC_SUPABASE_URL`
+  - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- The app now opens on phone after the EAS env fix.
 
-## Phase 4A: Mobile Navigation And Safe Areas
+Still needed:
 
-Make the app feel more native and comfortable on modern phones.
+- Create a fresh EAS Android preview build after `dcb3ab7`.
+- Install that APK on the phone.
+- Confirm the latest UI changes are actually present on device.
+- Confirm the app is using production backend URL in the build.
 
-Status: completed together with Phase 4.
+Validation commands:
 
-- Redesign the bottom navigation into a floating safe-area-aware bar.
-- Add a raised center quick-add button because adding a transaction is the core daily action.
-- Keep bottom spacing clear of Android navigation controls and iPhone home indicators.
-- Use `react-native-safe-area-context` to calculate bottom padding.
-- Update the tab structure to reduce dashboard density and make analysis easier to find:
+```powershell
+cd "C:\Users\User\OneDrive\Desktop\Finance Tracker Project\finance-app"
+npx tsc --noEmit
+npm run lint
+```
+
+## Level 1: Authentication And First Impression
+
+Status: improved in latest batch, needs phone verification.
+
+The auth screen is the first real impression. If it feels cramped, dull, or broken, users will not trust the finance app.
+
+Previously visible issues:
+
+- First name and last name fields were cropped.
+- Password checklist showed too aggressively.
+- Page appeared abruptly.
+- Auth screen felt dull.
+- "Protected by Supabase..." text was too loud.
+- Keyboard could cover active fields.
+
+Implemented in `dcb3ab7`:
+
+- Auth name fields now wrap better with safer minimum width.
+- Android uses stronger keyboard avoiding behavior.
+- Scroll views use better keyboard tap/dismiss handling.
+- Auth heading and form now enter with existing animation primitives.
+- Added small finance preview tiles:
+  - Income
+  - Spend
+  - Score
+- Password checklist now appears only during signup while password is focused.
+- Supabase trust text reduced to tiny private sign-in language.
+
+Next quality pass:
+
+- Test on actual phone screen size.
+- Confirm first/last name fields are not cropped in signup.
+- Confirm password checklist appears only when useful.
+- Confirm keyboard does not hide password/name fields.
+- Consider making auth more onboarding-like after the APK review:
+  - One or two screen intro.
+  - Gentle finance illustration or motion.
+  - Smooth switch between login and create account.
+
+## Level 2: Navigation And Screen Structure
+
+Status: major batch completed, needs APK review.
+
+The app should feel like a real mobile finance tool, not a compressed web dashboard.
+
+Original issue:
+
+- Home was too dense.
+- Floating bottom nav overlapped Settings/content.
+- Add action needed to stay central.
+- Analysis/charts needed their own home.
+
+Implemented in `dcb3ab7`:
+
+- Navigation is now five sections:
   - Home
   - Analysis
-  - Center quick add
+  - Add
   - AI
   - Settings
-- Use a five-position floating bar with two items on the left of the add button and two on the right.
-- Make the active tab visually clear with color and icon emphasis.
-- Keep inactive tabs muted.
-- Center button should open the dedicated quick-add flow, not a slow full form.
-- Ensure every tab screen has enough bottom content padding so the floating bar never covers text, cards, import panels, or buttons.
-- Add subtle tab transition feedback:
-  - Active icon color shift.
-  - Center button press scale.
-  - Optional small haptic feedback.
-- Keep the UI warm and welcoming in light mode, and calm/premium in dark mode.
+- Add remains the raised center action.
+- Two tabs sit left of Add and two tabs sit right of Add.
+- New dedicated `Analysis` tab exists.
+- Analysis now contains:
+  - Financial score
+  - Monthly cash flow
+  - Top categories
+  - Opportunities
+  - Smart insights
+- Home is lighter and more focused:
+  - Balance
+  - Net cash flow
+  - Income/spent summary
+  - Quick add
+  - First-run setup prompt
+  - Budgets
+  - Recent transactions
+- Safe-area bottom padding was added across:
+  - Home
+  - Analysis
+  - Add
+  - AI
+  - Settings
+  - Quick Add
+
+Phone review checklist:
+
+- Does the floating nav overlap the bottom of Settings?
+- Does it overlap long dashboard cards?
+- Does it overlap Add form submit buttons?
+- Does Analysis appear correctly in the tab bar?
+- Is the center Add button still visually obvious?
+- Does the tab bar feel too crowded with five items?
+
+## Level 3: Dashboard Clarity
+
+Status: improved, still evolving.
+
+Home should answer one simple question:
+
+> "What is my money situation today, and what should I do next?"
+
+What Home should not be:
+
+- A giant analytics report.
+- A wall of charts.
+- A permanent onboarding poster.
+- A screen where the bottom nav hides the last action.
 
 Implemented:
 
-- Custom floating tab bar.
-- Safe-area-aware bottom padding.
-- Raised center quick-add action that opens the dedicated quick-add flow.
-- Active tab color and surface emphasis.
-- Muted inactive tabs.
-- Press scale and haptic feedback on tab/quick-add actions.
+- Heavy analysis moved out of Home.
+- Analysis got its own tab.
+- First-run snapshot prompt is now skippable.
+- Skip state is saved locally.
 
-Needs follow-up from phone APK review:
+Next improvements:
 
-- Fix screens where floating navigation still overlaps content, especially Settings and long dashboard cards.
-- Add or expose the Analysis tab so the dashboard is less crowded.
-- Re-check bottom padding on small Android screens with gesture navigation enabled.
+- Make first-run setup more like a guided flow instead of a card.
+- Add a clear progress model:
+  - Add income.
+  - Add expense.
+  - Set budget.
+  - Ask AI.
+  - Optional CSV import.
+  - Optional quick-add setup.
+- Hide setup once completed or skipped.
+- Infer completed steps from real user data.
+- Add a way to restart setup from Settings later.
 
-## Phase 5: Graceful Degradation
+## Level 4: First-Run Setup And Onboarding
+
+Status: started.
+
+This is where the app starts feeling personal.
+
+The first-run flow should not lecture the user. It should help them get to their first useful money snapshot quickly.
+
+Current implemented setup behavior:
+
+- First-run prompt appears when account has little/no data.
+- It includes steps for:
+  - Add income
+  - Add expense
+  - Set budget
+  - Ask AI
+  - Import CSV
+- Prompt can now be skipped.
+- Skip is persisted locally.
+
+Next implementation:
+
+- Convert the prompt into a clearer setup flow.
+- Add step state:
+  - Not started
+  - Active
+  - Completed
+  - Skipped
+- Add progress dots or a small stepper.
+- Add completed-step check animation.
+- Include quick-add personalization as an optional setup step.
+- Keep it light; no giant forced tutorial.
+
+Quality bar:
+
+- A new user should know what to do in under 10 seconds.
+- The user should not feel trapped.
+- The setup should disappear when it has done its job.
+
+## Level 5: Quick Add Personalization
+
+Status: next coding batch.
+
+Quick Add is the daily-use feature. It should become personal.
+
+Current state:
+
+- Quick add modal exists.
+- Home quick-add shortcuts exist.
+- Success states already exist for saving transactions in the quick-add flow.
+- Shortcuts are still fixed defaults.
+
+Desired editable shortcut fields:
+
+- Label
+- Category
+- Transaction type
+- Icon
+- Optional default amount
+
+Default shortcuts:
+
+- Food
+- Ride
+- Shop
+- Income
+
+Implementation plan:
+
+1. Create quick-add shortcut model.
+2. Store preferences locally first with AsyncStorage.
+3. Load shortcuts on Home and Quick Add.
+4. Add shortcut editor UI:
+   - Could live in Settings first.
+   - Later can support long-press edit on shortcut tile.
+5. Validate shortcut fields:
+   - Label required.
+   - Category required.
+   - Type must be income or expense.
+   - Default amount optional but must be positive if present.
+6. Add success feedback:
+   - Shortcut updated.
+   - Quick transaction added.
+   - Offline quick transaction queued.
+7. Push as its own GitHub checkpoint.
+
+Potential checkpoint name:
+
+```text
+Personalize quick add shortcuts
+```
+
+## Level 6: Forms, Keyboard, And Validation
+
+Status: mostly implemented, needs real-device testing.
+
+Forms should feel hard to misuse.
+
+Already implemented:
+
+- Reusable `FormField`.
+- Inline validation.
+- Required fields disabled until valid.
+- Character counters.
+- Password checklist.
+- Amount/category/date validations.
+- Product/search limits.
+- Notes length validation.
+- Better keyboard behavior in latest batch.
+
+Needs phone verification:
+
+- Keyboard should not cover:
+  - Auth fields
+  - Add amount/category/date/notes
+  - AI question field
+  - Market search fields
+  - Quick Add custom amount
+- Submit buttons should remain reachable.
+- Long forms should scroll naturally.
+
+Potential follow-up:
+
+- Add scroll-to-active-input behavior if normal `KeyboardAvoidingView` is not enough on Android.
+
+## Level 7: Motion, Microinteractions, And Success States
+
+Status: good foundation exists.
+
+The app should feel alive, but not silly. Finance apps need calm motion.
+
+Implemented reusable motion primitives:
+
+- `AnimatedScreen`
+- `AnimatedCard`
+- `PressableScale`
+- `AnimatedProgressBar`
+- `SuccessPulse`
+- `TypingText`
+
+Implemented interaction polish:
+
+- Card entrance motion.
+- Score/budget progress animation.
+- Button press scaling.
+- Haptic feedback for important actions.
+- AI response typing effect.
+- Quick-add success pulse/banner.
+- Auth entrance animation in latest batch.
+
+Quality rules:
+
+- Motion should make the app feel smooth, not distracting.
+- Avoid big celebration animations for routine finance actions.
+- Respect reduced-motion settings.
+- Use small success feedback for save/delete/sync.
+
+Still useful:
+
+- Better first-run setup completion animation.
+- Shortcut edit success toast.
+- Quick transaction added toast from Home shortcut.
+
+## Level 8: Graceful Degradation And Offline Use
+
+Status: strong foundation exists.
 
 The app should remain useful when services fail.
 
-Status: completed before Phase 4, with offline edit/delete intentionally left for a later offline expansion.
+Implemented:
 
-- Backend unavailable:
-  - API failures are classified as network, timeout, auth, rate-limit, backend, parse, or unknown.
-  - Dashboard retries are available from the error state.
-  - If a previous dashboard snapshot exists, the app shows cached data instead of a blank failure.
-  - Add transaction and quick add preserve useful input behavior and save offline on likely network/backend failures.
-- Gemini unavailable or rate-limited:
-  - AI chat explains that AI is temporarily unavailable and core tracking still works.
-  - Market search explains that no reliable recommendation can be made instead of guessing.
-  - Non-AI dashboard summaries, budgets, transactions, and CSV tools remain usable.
-- Supabase slow or temporarily unavailable:
-  - Dashboard cache is stored locally after successful loads.
-  - Cached dashboard mode clearly labels that it is showing a saved snapshot and offers retry.
-  - Add transaction remains recoverable through the offline queue when the API is unreachable.
-- Offline:
-  - Add transaction queue exists.
-  - Dashboard shows queue count.
-  - Dashboard shows recent sync history for success, partial sync, offline, and failed sync attempts.
-  - Offline edit/delete queue remains a future enhancement because conflict handling needs a separate design.
-- Receipt scan fails:
-  - The manual form stays available.
-  - Failure messages stay specific enough for users to retry with a better image or enter values themselves.
-- Product recommendation weak:
-  - Empty/weak market results say no reliable cheaper option was found.
-  - The app avoids inventing prices, stores, or sources when Gemini/search is unavailable.
+- API errors classified as:
+  - Network
+  - Timeout
+  - Auth
+  - Rate limit
+  - Backend
+  - Parse
+  - Unknown
+- Dashboard can show cached snapshot.
+- Add transaction can queue offline.
+- Quick Add can queue offline.
+- Offline queue count appears.
+- Recent sync history appears.
+- AI rate-limit messages are friendly.
+- Receipt/manual fallback exists.
+- Product search avoids guessing when unreliable.
 
-## Phase 6: AI Limits While Keeping The App Free
+Future:
 
-Do this before public release to protect costs.
+- Offline edit/delete queue.
+- Conflict handling.
+- More visible sync status.
 
-Status: completed for backend-enforced free daily limits. Paid subscription work remains future-only.
+## Level 9: AI Limits And Cost Protection
 
-- Keep all AI features free for now.
-- Add backend-enforced usage limits.
-- Track usage by user, feature, and time period.
-- Suggested initial free limits:
-  - AI chat: 10 requests/day.
-  - Receipt scan: 5 scans/day.
-  - Product recommendation: 5 searches/day.
-  - Dashboard insight regeneration: cached, not regenerated on every refresh.
-- Return friendly limit messages:
-  - "You have used today's AI limit. Core tracking still works."
-- Add cooldown/limit headers or response fields for the app.
-- Store cached AI insight results with timestamps.
-- Do not build paid subscription checkout yet.
+Status: implemented for free daily limits.
+
+The app stays free for now, but AI must be protected.
 
 Implemented:
 
 - Supabase-backed `ai_usage` table migration.
 - Backend-enforced daily limits:
-  - AI chat: 10/day.
-  - Receipt scan: 5/day.
-  - Product recommendation: 5/day.
-- Usage tracking by user, feature, and day.
-- Friendly HTTP 429 response before Gemini is called.
-- Limit metadata returned with successful AI responses and limit errors.
-- App-side friendly limit messages for AI chat, market search, and receipt scan.
-- Paid subscription, Play Billing, and higher-tier AI routing intentionally left for the future subscription agenda.
+  - AI chat: 10/day
+  - Receipt scan: 5/day
+  - Product recommendation: 5/day
+- Friendly HTTP 429 before Gemini is called.
+- App-side limit messages for:
+  - AI chat
+  - Market search
+  - Receipt scan
 
-## Future Subscription Agenda
+Future subscription agenda:
 
-Only start this if the app gets meaningful usage.
+- Do not build paid subscriptions yet.
+- Only start if the app gets meaningful usage.
+- Later:
+  - Play Billing
+  - Entitlements
+  - Higher AI limits
+  - Model routing
+  - Abuse prevention
 
-- Add subscription entitlement tables.
-- Add Play Billing integration.
-- Add backend verification of purchase status.
-- Add model routing:
-  - Free users use low-cost Gemini model.
-  - Paid users get higher limits and stronger model access.
-- Add subscription management UI.
-- Add abuse prevention before increasing paid limits.
-- Keep provider abstraction so Gemini, OpenAI, or Claude can be compared later.
+## Level 10: Security Hardening
 
-Recommended future AI direction:
+Status: before beta/public expansion.
 
-- Start with Gemini only because the app already uses it and needs receipt/image/product-search features.
-- Add provider abstraction before adding a second AI provider.
-- Benchmark Gemini, OpenAI, and Claude later with real finance prompts and cost data.
+Security matters extra because this is finance data.
 
-## Phase 7: Security Hardening
+Must do before wider beta:
 
-Security should be handled before public testing expands.
+- Verify RLS on every exposed user-data table.
+- Verify users can only read/write their own rows.
+- Keep `service_role` key backend-only.
+- Rotate keys that were ever pasted into chat before public release.
+- Keep `.env` and `.env.local` untracked.
+- Review production CORS.
+- Add non-AI rate limits for write-heavy endpoints.
+- Treat AI output, CSV content, receipt text, and product names as untrusted text.
+- Do not render arbitrary HTML.
 
-- XSS/content safety:
-  - Do not render arbitrary HTML.
-  - Treat AI output, CSV content, receipt text, and product names as untrusted text.
-  - Keep markdown rendering out unless sanitized.
-- Supabase RLS:
-  - Verify RLS is enabled on every exposed user-data table.
-  - Verify users can only read/write their own rows.
-  - Do not use editable `user_metadata` for authorization.
-  - Keep `service_role` only on backend/Vercel.
-- API rate limiting:
-  - Add limits to AI chat, receipt scan, market search, import/export, and write-heavy endpoints.
-  - Add stronger limits around expensive Gemini calls.
-- Secrets:
-  - Rotate exposed keys before public release.
-  - Keep backend secrets out of mobile app config.
-- CORS:
-  - Replace broad/local-only defaults with explicit production origins where relevant.
-- Input limits:
-  - Keep hard limits for CSV size, receipt size, prompt length, and product name length.
+## Level 11: Backend And Scaling Readiness
 
-## Phase 8: Backend And Scaling Readiness
+Status: future hardening.
 
-Prepare for real users without overbuilding too early.
+Expected first bottleneck:
 
-- Add structured backend logs.
-- Add request IDs.
-- Add `/health` monitoring and uptime alerts.
-- Add simple usage metrics for AI and import endpoints.
-- Add database indexes as queries grow.
-- Avoid recalculating expensive analytics unnecessarily.
-- Cache AI insight outputs.
-- Consider background jobs later for receipt scans and product recommendations.
+- Gemini quota/cost.
 
-Expected scaling pressure:
+Second likely bottleneck:
 
-- First likely bottleneck: Gemini quota/cost.
-- Second likely bottleneck: backend function limits and cold starts.
-- Third likely bottleneck: inefficient database queries as data grows.
-- Supabase is likely fine early if RLS and indexes are correct.
-- At high usage, the stack needs paid AI, quotas, caching, monitoring, and possibly queues.
+- Vercel function limits/cold starts.
 
-## Phase 9: Mobile Convenience
+Third likely bottleneck:
 
-These are useful, but should come after core UX and AI quota work.
+- Database query efficiency as data grows.
 
-- Notification quick add:
-  - Add notification permission flow.
-  - Add daily/weekly reminder option.
-  - Deep-link notification actions into quick add.
-  - Test on EAS preview build.
-- Home screen widget:
-  - Decide whether it should show balance, monthly spend, or quick add.
-  - Evaluate Expo-compatible widget approach versus native module.
-  - Build only after preview build workflow is stable.
-- Camera shortcut idea:
-  - Android hardware camera-button interception is limited and device-dependent.
-  - Better route is notification action, widget, or app shortcut deep-link.
+Planned:
 
-## Phase 9B: Quick Add Personalization
+- Structured logs.
+- Request IDs.
+- `/health` monitoring.
+- Uptime alerts.
+- AI usage metrics.
+- Index review.
+- Cached AI insight outputs.
+- Background jobs later if needed.
 
-Make quick add feel personal instead of fixed.
+## Level 12: Mobile Convenience
 
-- Add editable quick-add shortcuts:
-  - Category.
-  - Transaction type.
-  - Label.
-  - Icon.
-  - Optional default amount.
-- Let users edit shortcuts from settings and/or long-pressing a quick-add tile.
-- Include quick-add setup in first-run guidance as an optional step.
-- Store shortcut preferences per user locally first, then consider Supabase sync later.
-- Add success states:
-  - Shortcut updated.
-  - Quick transaction added.
-  - Offline quick transaction queued.
-- Keep the full add form available for non-routine transactions.
+Status: later.
 
-## Phase 9A: Bank Statements And Share-To-App Capture
+Useful, but not before beta core UX is stable.
 
-Add safer financial import paths before considering direct bank integrations.
+Future features:
 
-- Bank statement import:
-  - Add an import path for app/exported statements from Nayapay, JazzCash, and other local wallets.
-  - Support CSV first when available.
-  - Evaluate PDF statement parsing only after the CSV import/review flow is mature.
-  - Parse statement rows into a review screen before saving.
-  - Let users map columns such as date, description, amount, debit/credit, and category.
-  - Detect likely duplicates before import.
-  - Preserve the original file only if the user explicitly opts in; otherwise process and discard.
-- Provider templates:
-  - Create import templates for Nayapay and JazzCash statement formats.
-  - Keep a generic statement importer for unknown banks/wallets.
-  - Add a sample-file based test fixture for each supported provider.
-- Receipt and statement sharing:
-  - Add Android share-to-app support so users can share receipt images or statement files directly from WhatsApp, gallery, file manager, or email.
-  - Shared receipt image should open the receipt scan/review flow.
-  - Shared CSV/PDF statement should open the import preview flow.
-  - Never save imported rows without a review/confirm step.
-- Direct bank connections:
-  - Treat as future/high-risk work, not near-term scope.
-  - Requires bank/open-banking providers, compliance review, explicit user consent, token storage, revocation flows, and stronger security controls.
-  - Do not request bank credentials directly inside the app.
+- Notification quick add.
+- Home screen widget.
+- App shortcut/deep link into quick add.
+- Share-to-app receipt capture.
+- Share-to-app statement import.
 
-## Phase 10: Release Engineering
+Important:
 
-Ignore branding details here, but keep production mechanics ready.
+- Direct bank connections are not near-term.
+- Do not ask for bank credentials in the app.
+- Bank connections require compliance, token security, consent, revocation, and provider support.
 
-- Ensure app build uses production backend URL.
-- Create fresh EAS preview builds after meaningful app changes.
-- Add production Android build profile checks.
-- Manage version and Android version code.
-- Verify Play Store permissions and data-safety answers.
-- Keep privacy policy updated.
-- Use internal testing before public release.
+## Level 13: Bank Statements And Imports
 
-## Design And Animation Reference Sources
+Status: future.
 
-Use these for inspiration and implementation references, not direct copying.
+Safer import paths before direct integrations:
 
-- Figma Community:
-  - Full UI kits, onboarding references, dashboard layouts, and component ideas.
-  - Best format to share: Figma link plus screenshots of the exact frames.
-- LottieFiles:
-  - Free animated onboarding icons, success states, loaders, and empty states.
-  - Best format to share: animation link or downloaded JSON.
-- Mobbin:
-  - Real-world mobile app onboarding, auth, settings, and finance/productivity flows.
-  - Best format to share: screenshots or screen recordings.
-- Dribbble:
-  - Visual mood and polished microinteraction ideas.
-  - Use carefully because many shots are not production-ready UX.
-- Behance:
-  - Longer app case studies and complete visual systems.
-- Screenlane:
-  - Mobile UI inspiration for onboarding, empty states, and account flows.
-- Page Flows:
-  - User-flow videos for onboarding and payment/account flows.
-- IconScout:
-  - Icons, illustrations, and Lottie animations with free filters.
+- CSV statement import first.
+- Later evaluate PDF parsing.
+- Support templates for:
+  - Nayapay
+  - JazzCash
+  - Other local wallets/banks
+- Always show review screen before saving imported rows.
+- Detect duplicates.
+- Do not preserve original files unless user explicitly opts in.
 
-Preferred references to send into Codex:
+## Level 14: Beta Release Readiness
 
-- Screenshots for layout and visual direction.
-- Short screen recordings or GIFs for motion timing.
-- Lottie JSON/link for specific animation assets.
-- Figma links when inspecting multiple related frames matters.
+Status: upcoming after UX and quick-add personalization.
 
-## Phase 11: Beta Release Readiness Checklist
+Before beta:
 
-Use this before sharing the app beyond trusted testers. Treat beta release as a freeze-and-test process, not another feature sprint.
+- Fresh EAS preview build.
+- Test with at least two fresh accounts.
+- Full user flow:
+  - Sign up
+  - Login/logout
+  - Google login
+  - Add income
+  - Add expense
+  - Edit/delete transaction
+  - Create/delete budget
+  - CSV import/export
+  - Receipt scan
+  - Product recommendation
+  - AI chat limit behavior
+  - Offline add and later sync
+- Edge cases:
+  - Slow internet
+  - No internet
+  - Wrong password
+  - Invalid forms
+  - Empty dashboard
+  - Invalid CSV
+  - Unclear receipt
+  - Logout/access behavior
+- Run validation:
 
-Already present:
+```powershell
+python -m py_compile backend.py supabase_data.py ai_usage.py
+cd "C:\Users\User\OneDrive\Desktop\Finance Tracker Project\finance-app"
+npx tsc --noEmit
+npm run lint
+```
 
-- Core app screens exist: dashboard, add transaction, AI, settings, quick add.
-- Supabase Auth and per-user finance data are implemented.
-- Supabase RLS exists for transactions and budgets.
-- Environment examples exist for backend and Expo without real secrets.
-- `.env` is ignored by Git.
-- Privacy policy draft exists.
-- Friendly loading, empty, validation, success, and error states exist.
-- Offline add queue and graceful degradation exist.
-- AI daily limits are backend-enforced.
-- Vercel production deployment exists.
-- EAS preview build path exists.
-- Uptime monitoring has been set up.
+- Create GitHub release tag.
+- Keep previous working APK/build link for rollback.
+- Confirm latest Vercel deployment is green.
 
-Needed before beta:
+Not needed for first beta:
 
-- Freeze v1/beta scope and stop adding non-critical features until the beta is tested.
-- Run all pending Supabase migrations in production, especially `ai_usage`.
-- Verify the EAS build uses the correct production API URL.
-- Create and install a fresh EAS preview build after the latest commits.
-- Test with at least two fresh accounts, not only the developer account.
-- Test the full user flow:
-  - Sign up.
-  - Login/logout.
-  - Google login on real device.
-  - Add income.
-  - Add expense.
-  - Edit/delete transaction.
-  - Create/delete budget.
-  - CSV import/export.
-  - Receipt scan.
-  - Product recommendation.
-  - AI chat limit behavior.
-  - Offline add and later sync.
-- Test edge cases:
-  - Slow or unavailable internet.
-  - Wrong password.
-  - Incomplete forms.
-  - Empty dashboard.
-  - Invalid CSV.
-  - Invalid/unclear receipt image.
-  - User tries to access data after logout.
-- Security hardening:
-  - Rotate keys that were ever pasted into chat before public release.
-  - Keep `SUPABASE_SERVICE_ROLE_KEY` only in Vercel/backend env.
-  - Keep `ALLOW_DEMO_USER=false` in production.
-  - Verify no real `.env` or `.env.local` files are tracked.
-  - Review CORS for production origins.
-  - Add non-AI API rate limiting for write-heavy endpoints later.
-- Database readiness:
-  - Confirm production database is Supabase, not local CSV.
-  - Confirm required constraints and indexes exist.
-  - Remove dummy/test data before public launch, or clearly label beta accounts.
-  - Set a simple backup/export routine before public launch.
-- Monitoring and support:
-  - Confirm UptimeRobot points at `/health`.
-  - Add an error monitoring option such as Sentry before wider public launch.
-  - Add support/contact email in the app store listing and privacy policy.
-- Release mechanics:
-  - Run `python -m py_compile backend.py supabase_data.py ai_usage.py`.
-  - Run `npx tsc --noEmit`.
-  - Run `npm run lint`.
-  - Create a GitHub release tag for beta.
-  - Keep the previous working APK/build link for rollback.
-  - Verify Vercel latest deployment is green after every backend change.
-
-Not needed for the first beta:
-
-- Custom domain/DNS for the mobile app. The Vercel API domain is acceptable for beta if stable.
-- Full browser matrix testing. The app is mobile-first; web testing is useful but secondary.
-- Role-based student/teacher/admin permission testing. This app has normal users, not school roles.
-- Paid subscription, Play Billing, or premium AI routing.
+- Paid subscriptions.
 - Direct bank connections.
-- Home screen widget and notification quick add.
+- Home screen widget.
+- Notification quick add.
+- Marketing site.
 - Advanced analytics dashboards.
-- A polished marketing site.
 
-## Current Priority Order
+## Current Immediate Agenda
 
-1. Finish the current EAS APK verification and confirm the app opens with Supabase env included.
-2. Fix visible phone-build UX issues:
-   - Auth form layout.
-   - Password checklist behavior.
-   - Keyboard avoidance.
-   - Floating nav overlap.
-   - Dashboard density.
-3. Add five-section floating navigation: Home, Analysis, Add, AI, Settings.
-4. Convert first-run money snapshot guidance into a skippable animated setup flow.
-5. Add editable quick-add shortcuts and success states.
-6. Run Supabase production migrations and verify Vercel deployment.
-7. Beta freeze and full QA pass with fresh accounts.
-8. Security hardening: RLS review, non-AI rate limits, secret rotation, CORS.
-9. Monitoring/support polish: `/health`, UptimeRobot, Sentry or equivalent, support contact.
-10. Internal beta with a small tester group.
-11. Notification quick add.
-12. Widget feasibility.
-13. Future subscription infrastructure only if the app shows real usage.
+### Step 1: Build And Test APK
+
+- Create fresh EAS Android preview build.
+- Install on phone.
+- Confirm latest `dcb3ab7` UI is present.
+
+### Step 2: Phone UX Review
+
+Check:
+
+- Auth field cropping.
+- Password checklist behavior.
+- Keyboard overlap.
+- Floating nav overlap.
+- Analysis tab.
+- First-run setup skip.
+- Settings bottom content.
+- Add form submit button visibility.
+
+### Step 3: Push UX Batch 2
+
+If APK review finds issues:
+
+- Fix them.
+- Run validation.
+- Commit.
+- Push checkpoint.
+
+Potential commit:
+
+```text
+Polish phone UX after preview build
+```
+
+### Step 4: Quick Add Personalization
+
+- Implement shortcut editor.
+- Store locally.
+- Add success states.
+- Validate.
+- Push checkpoint.
+
+Potential commit:
+
+```text
+Personalize quick add shortcuts
+```
+
+### Step 5: First-Run Setup Polish
+
+- Better setup state.
+- Step progression.
+- Completed state.
+- Optional quick-add setup.
+- Push checkpoint.
+
+Potential commit:
+
+```text
+Polish first run setup flow
+```
+
+## Quality Bar
+
+The app should feel:
+
+- Private.
+- Fast enough.
+- Calm.
+- Friendly.
+- Useful with no data.
+- Useful with bad internet.
+- Clear when AI is unavailable.
+- Easy to start.
+- Easy to return to daily.
+
+The big product idea:
+
+> The user should not feel like they are maintaining a spreadsheet. They should feel like they are building a clear picture of their money, one small action at a time.
+
