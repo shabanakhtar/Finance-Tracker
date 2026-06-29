@@ -1,8 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Href, router } from 'expo-router';
-import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Keyboard, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PressableScale, triggerSelection } from '@/components/ux';
@@ -28,8 +28,27 @@ const routeLabels: Record<string, string> = {
 export function FloatingTabBar({ descriptors, navigation, state }: BottomTabBarProps) {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { width } = useWindowDimensions();
+  const compact = width < 380;
+  const styles = useMemo(() => createStyles(colors, compact), [colors, compact]);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const bottomPadding = Math.max(insets.bottom, 12);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSubscription = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  if (keyboardVisible) {
+    return null;
+  }
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: bottomPadding }]}>
@@ -39,6 +58,9 @@ export function FloatingTabBar({ descriptors, navigation, state }: BottomTabBarP
           const isQuickAdd = route.name === 'explore';
           const label = routeLabels[route.name] ?? descriptors[route.key].options.title ?? route.name;
           const icon = routeIcons[route.name] ?? 'circle-outline';
+          const accessibilityLabel =
+            descriptors[route.key].options.tabBarAccessibilityLabel ??
+            (isQuickAdd ? 'Add a transaction' : `${label} tab`);
 
           const onPress = () => {
             triggerSelection();
@@ -60,7 +82,7 @@ export function FloatingTabBar({ descriptors, navigation, state }: BottomTabBarP
           if (isQuickAdd) {
             return (
               <PressableScale
-                accessibilityLabel="Quick add transaction"
+                accessibilityLabel={accessibilityLabel}
                 accessibilityRole="button"
                 key={route.key}
                 onPress={onPress}
@@ -75,11 +97,13 @@ export function FloatingTabBar({ descriptors, navigation, state }: BottomTabBarP
 
           return (
             <PressableScale
+              accessibilityLabel={accessibilityLabel}
               accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : undefined}
               key={route.key}
               onPress={onPress}
               style={[styles.item, isFocused ? styles.itemActive : null]}>
-              <MaterialCommunityIcons color={isFocused ? colors.sky : colors.muted2} name={icon} size={24} />
+              <MaterialCommunityIcons color={isFocused ? colors.sky : colors.muted2} name={icon} size={compact ? 22 : 24} />
               <Text style={[styles.label, isFocused ? styles.labelActive : null]}>{label}</Text>
             </PressableScale>
           );
@@ -89,22 +113,25 @@ export function FloatingTabBar({ descriptors, navigation, state }: BottomTabBarP
   );
 }
 
-function createStyles(colors: AppPalette) {
+function createStyles(colors: AppPalette, compact = false) {
   return StyleSheet.create({
     bar: {
       alignItems: 'center',
+      alignSelf: 'center',
       backgroundColor: colors.surface,
       borderColor: colors.border,
-      borderRadius: 30,
+      borderRadius: compact ? 26 : 30,
       borderWidth: 1,
       flexDirection: 'row',
-      gap: 4,
-      minHeight: 76,
-      paddingHorizontal: 10,
+      gap: compact ? 2 : 4,
+      minHeight: compact ? 70 : 76,
+      maxWidth: 560,
+      paddingHorizontal: compact ? 7 : 10,
       shadowColor: '#000000',
       shadowOffset: { height: 10, width: 0 },
       shadowOpacity: 0.16,
       shadowRadius: 18,
+      width: '100%',
     },
     centerButton: {
       alignItems: 'center',
@@ -112,18 +139,18 @@ function createStyles(colors: AppPalette) {
       borderColor: colors.background,
       borderRadius: radii.pill,
       borderWidth: 4,
-      height: 64,
+      height: compact ? 58 : 64,
       justifyContent: 'center',
-      marginTop: -30,
+      marginTop: compact ? -27 : -30,
       shadowColor: colors.sky,
       shadowOffset: { height: 8, width: 0 },
       shadowOpacity: 0.28,
       shadowRadius: 12,
-      width: 64,
+      width: compact ? 58 : 64,
     },
     centerLabel: {
       color: colors.sky,
-      fontSize: 11,
+      fontSize: compact ? 10 : 11,
       fontWeight: '900',
       marginTop: 2,
     },
@@ -134,19 +161,19 @@ function createStyles(colors: AppPalette) {
     },
     item: {
       alignItems: 'center',
-      borderRadius: 22,
+      borderRadius: compact ? 19 : 22,
       flex: 1,
-      gap: 4,
+      gap: compact ? 3 : 4,
       justifyContent: 'center',
-      minHeight: 58,
-      paddingHorizontal: 4,
+      minHeight: compact ? 52 : 58,
+      paddingHorizontal: compact ? 2 : 4,
     },
     itemActive: {
       backgroundColor: colors.skySoft,
     },
     label: {
       color: colors.muted2,
-      fontSize: 11,
+      fontSize: compact ? 10 : 11,
       fontWeight: '800',
     },
     labelActive: {

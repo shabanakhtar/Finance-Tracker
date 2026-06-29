@@ -25,10 +25,13 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `dcb3ab7 Improve mobile onboarding and tab layout`
+- `Harden level two navigation`
 
 Recent important commits:
 
+- `Harden level two navigation`
+- `87ed019 Polish auth first impression`
+- `d8977a7 Update roadmap with phases and levels`
 - `dcb3ab7 Improve mobile onboarding and tab layout`
 - `fb6e868 Update mobile UX roadmap`
 - `3441b0f Add Supabase env to EAS builds`
@@ -162,7 +165,7 @@ Next quality pass:
 
 ## Level 2: Navigation And Screen Structure
 
-Status: major batch completed, needs APK review.
+Status: major batch completed, navigation hardening started, needs APK review.
 
 The app should feel like a real mobile finance tool, not a compressed web dashboard.
 
@@ -206,6 +209,15 @@ Implemented in `dcb3ab7`:
   - Settings
   - Quick Add
 
+Implemented in the Level 2 navigation hardening batch:
+
+- Floating tab bar now hides while the keyboard is open so it does not fight active inputs.
+- The tab bar now adapts on narrow phones with smaller icon, label, height, radius, and spacing values.
+- The floating bar has a max width on larger screens so it stays like a mobile control instead of stretching awkwardly.
+- Tab buttons now expose clearer accessibility labels.
+- Active non-center tabs now expose selected accessibility state.
+- Center Add remains visually raised and opens the dedicated quick-add flow.
+
 Phone review checklist:
 
 - Does the floating nav overlap the bottom of Settings?
@@ -214,6 +226,8 @@ Phone review checklist:
 - Does Analysis appear correctly in the tab bar?
 - Is the center Add button still visually obvious?
 - Does the tab bar feel too crowded with five items?
+- Does the floating nav disappear when the keyboard opens?
+- Does the compact tab bar still feel readable on smaller Android screens?
 
 ## Level 3: Dashboard Clarity
 
@@ -625,6 +639,7 @@ Check:
 - Password checklist behavior.
 - Keyboard overlap.
 - Floating nav overlap.
+- Floating nav keyboard-hide behavior.
 - Analysis tab.
 - First-run setup skip.
 - Settings bottom content.
