@@ -1,14 +1,14 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Chip, SegmentedButtons, Text } from 'react-native-paper';
 import { useEffect, useMemo, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppPalette, AppThemeMode, radii, spacing } from '@/constants/theme';
-import { AppErrorState, EmptyState, FormField, SuccessBanner, triggerSuccess } from '@/components/ux';
+import { AppErrorState, EmptyState, FormField, KeyboardAwareScrollView, SuccessBanner, triggerSuccess, triggerWarning } from '@/components/ux';
 import { useAuth } from '@/contexts/auth';
 import { useAppTheme } from '@/contexts/theme';
 import { CsvImportPreview, exportTransactionsCsv, importTransactionsCsv, previewTransactionsCsv } from '@/services/api';
@@ -50,7 +50,6 @@ export default function SettingsScreen() {
   const [shortcuts, setShortcuts] = useState<QuickAddShortcut[]>(defaultQuickAddShortcuts);
   const [setupFeedback, setSetupFeedback] = useState<string | null>(null);
   const shortcutValidation = useMemo(() => validateQuickAddShortcut(shortcutDraft), [shortcutDraft]);
-  const shortcutIsValid = Object.keys(shortcutValidation).length === 0;
   const profileName =
     session?.user.user_metadata?.full_name ??
     session?.user.user_metadata?.name ??
@@ -83,6 +82,7 @@ export default function SettingsScreen() {
     setShortcutError(null);
     const validation = validateQuickAddShortcut(shortcutDraft);
     if (Object.keys(validation).length > 0) {
+      triggerWarning();
       setShortcutError('Fix the highlighted shortcut fields before saving.');
       return;
     }
@@ -186,7 +186,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
+    <KeyboardAwareScrollView containerStyle={styles.keyboard} contentContainerStyle={styles.screen}>
       <View style={styles.header}>
         <View style={styles.iconBox}>
           <MaterialCommunityIcons color={colors.sky} name="cog-outline" size={24} />
@@ -307,7 +307,7 @@ export default function SettingsScreen() {
         {shortcutFeedback ? <SuccessBanner message={shortcutFeedback} title="Shortcut saved" /> : null}
         {shortcutError ? <AppErrorState message={shortcutError} title="Shortcut needs attention" /> : null}
         <View style={styles.actionRow}>
-          <Button disabled={!shortcutIsValid} icon="content-save-outline" mode="contained" onPress={saveShortcut} style={styles.actionButton}>
+          <Button icon="content-save-outline" mode="contained" onPress={saveShortcut} style={styles.actionButton}>
             Save Shortcut
           </Button>
           <Button icon="restore" mode="outlined" onPress={resetShortcuts} style={styles.actionButton}>
@@ -369,8 +369,7 @@ export default function SettingsScreen() {
           </View>
         ) : null}
       </View>
-
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -442,6 +441,10 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     importButton: {
       borderRadius: radii.card,
       marginTop: spacing.xs,
+    },
+    keyboard: {
+      backgroundColor: colors.background,
+      flex: 1,
     },
     row: {
       alignItems: 'center',

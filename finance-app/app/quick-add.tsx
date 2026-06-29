@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, SegmentedButtons } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,11 +9,13 @@ import { AppPalette, spacing } from '@/constants/theme';
 import {
   CharacterCounter,
   FormField,
+  KeyboardAwareScrollView,
   PressableScale,
   SuccessBanner,
   SuccessPulse,
   triggerSelection,
   triggerSuccess,
+  triggerWarning,
   validateAmount,
   validateCategory,
   validateDate,
@@ -104,6 +106,7 @@ export default function QuickAddScreen() {
     setSubmitted(true);
     setSaveMessage(null);
     if (!formIsValid) {
+      triggerWarning();
       return;
     }
 
@@ -147,8 +150,7 @@ export default function QuickAddScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.container} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView containerStyle={styles.screen} contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <PressableScale onPress={() => router.back()} style={styles.closeButton}>
             <MaterialCommunityIcons color={colors.ink} name="close" size={22} />
@@ -274,15 +276,14 @@ export default function QuickAddScreen() {
         ) : null}
 
         <View style={styles.actions}>
-          <Button disabled={saving || !formIsValid} mode="outlined" onPress={() => save(false)} style={styles.secondaryButton}>
+          <Button disabled={saving} mode="outlined" onPress={() => save(false)} style={styles.secondaryButton}>
             Save another
           </Button>
-          <Button disabled={saving || !formIsValid} loading={saving} mode="contained" onPress={() => save(true)} style={styles.primaryButton}>
+          <Button disabled={saving} loading={saving} mode="contained" onPress={() => save(true)} style={styles.primaryButton}>
             Save
           </Button>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 

@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, SegmentedButtons, TextInput } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,8 +11,11 @@ import { useAppTheme } from '@/contexts/theme';
 import {
   CharacterCounter,
   FormField,
+  KeyboardAwareScrollView,
   AppErrorState,
   SuccessBanner,
+  triggerSuccess,
+  triggerWarning,
   validateAmount,
   validateCategory,
   validateDate,
@@ -87,6 +90,7 @@ export default function AddTransactionScreen() {
     const parsedAmount = Number(amount);
 
     if (!formIsValid) {
+      triggerWarning();
       return;
     }
 
@@ -100,6 +104,7 @@ export default function AddTransactionScreen() {
         notes: notes.trim(),
       };
       await addTransaction(transaction);
+      triggerSuccess();
       setLastSaved(`${type === 'income' ? 'Income' : 'Expense'} saved: ${category.trim()} - ${money.format(parsedAmount)}`);
       resetForm();
     } catch (err) {
@@ -111,6 +116,7 @@ export default function AddTransactionScreen() {
           date,
           notes: notes.trim(),
         });
+        triggerSuccess();
         setLastSaved(`Saved offline: ${category.trim()} - ${money.format(parsedAmount)}. It will sync when the API is reachable.`);
         resetForm();
         return;
@@ -222,8 +228,7 @@ export default function AddTransactionScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.container} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView containerStyle={styles.screen} contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <View style={styles.iconBox}>
             <MaterialCommunityIcons color={colors.sky} name="plus-box-outline" size={24} />
@@ -416,7 +421,7 @@ export default function AddTransactionScreen() {
           ) : null}
 
           <Button
-            disabled={saving || scanning || !formIsValid}
+            disabled={saving || scanning}
             loading={saving}
             mode="contained"
             onPress={submit}
@@ -425,8 +430,7 @@ export default function AddTransactionScreen() {
             Save Transaction
           </Button>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 

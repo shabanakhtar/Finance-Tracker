@@ -21,6 +21,7 @@ import {
   SuccessToast,
   triggerSelection,
   triggerSuccess,
+  triggerWarning,
   validateAmount,
   validateCategory,
   validateDate,
@@ -315,6 +316,7 @@ export default function DashboardScreen() {
     const parsedAmount = Number(editing.amount);
 
     if (!editFormIsValid) {
+      triggerWarning();
       return;
     }
 
@@ -361,6 +363,7 @@ export default function DashboardScreen() {
     markSubmitted('budgetAmount', 'budgetCategory');
     const parsedAmount = Number(budgetAmount);
     if (!budgetFormIsValid) {
+      triggerWarning();
       return;
     }
 
@@ -491,7 +494,7 @@ export default function DashboardScreen() {
                 touched={submittedFields.budgetAmount}
                 value={budgetAmount}
               />
-              <Button disabled={savingBudget || !budgetFormIsValid} loading={savingBudget} mode="contained" onPress={submitBudget} style={styles.primaryButton}>
+              <Button disabled={savingBudget} loading={savingBudget} mode="contained" onPress={submitBudget} style={styles.primaryButton}>
                 Save Budget
               </Button>
             </View>
@@ -564,7 +567,7 @@ export default function DashboardScreen() {
                 <Button disabled={savingTransaction} mode="outlined" onPress={() => setEditing(null)}>
                   Cancel
                 </Button>
-                <Button disabled={savingTransaction || !editFormIsValid} loading={savingTransaction} mode="contained" onPress={submitEdit} style={styles.primaryButton}>
+                <Button disabled={savingTransaction} loading={savingTransaction} mode="contained" onPress={submitEdit} style={styles.primaryButton}>
                   Update
                 </Button>
               </View>

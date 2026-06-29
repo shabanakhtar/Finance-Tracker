@@ -1,11 +1,22 @@
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Chip, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppPalette, radii, spacing } from '@/constants/theme';
-import { AnimatedCard, CharacterCounter, EmptyState, FormField, TypingText, triggerSuccess, validateAmount, validateMaxLength } from '@/components/ux';
+import {
+  AnimatedCard,
+  CharacterCounter,
+  EmptyState,
+  FormField,
+  KeyboardAwareScrollView,
+  TypingText,
+  triggerSuccess,
+  triggerWarning,
+  validateAmount,
+  validateMaxLength,
+} from '@/components/ux';
 import { useAppTheme } from '@/contexts/theme';
 import { AppApiError, MarketSearchAnswer, askAi, searchMarket } from '@/services/api';
 
@@ -111,10 +122,12 @@ export default function AiScreen() {
     const isPreset = nextQuestion !== question;
     if (!cleaned) {
       markSubmitted('question');
+      triggerWarning();
       return;
     }
     if (!isPreset && !questionValidation.isValid) {
       markSubmitted('question');
+      triggerWarning();
       return;
     }
 
@@ -159,6 +172,7 @@ export default function AiScreen() {
 
     markSubmitted('marketProduct', 'marketPrice', 'marketCategory');
     if (!marketFormIsValid) {
+      triggerWarning();
       return;
     }
 
@@ -211,10 +225,7 @@ export default function AiScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.keyboard}>
-      <ScrollView contentContainerStyle={styles.container} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView containerStyle={styles.keyboard} contentContainerStyle={styles.container}>
         <View style={styles.hero}>
           <View style={styles.iconShell}>
             <MaterialCommunityIcons color={colors.violet} name="creation-outline" size={28} />
@@ -317,7 +328,7 @@ export default function AiScreen() {
           </View>
 
           <Button
-            disabled={marketLoading || loading || !marketFormIsValid}
+            disabled={marketLoading || loading}
             icon="magnify"
             loading={marketLoading}
             mode="contained"
@@ -422,7 +433,7 @@ export default function AiScreen() {
           />
 
           <Button
-            disabled={loading || !questionValidation.isValid}
+            disabled={loading}
             icon="send-outline"
             loading={loading}
             mode="contained"
@@ -434,8 +445,7 @@ export default function AiScreen() {
             Send
           </Button>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 

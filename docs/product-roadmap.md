@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Personalize quick add shortcuts`
+- `Harden forms and keyboard behavior`
 
 Recent important commits:
 
+- `Harden forms and keyboard behavior`
 - `Personalize quick add shortcuts`
 - `Polish first run setup flow`
 - `Document SQL-backed AI insight plan`
@@ -392,21 +393,25 @@ Personalize quick add shortcuts
 
 ## Level 6: Forms, Keyboard, And Validation
 
-Status: mostly implemented, needs real-device testing.
+Status: implemented for the current mobile app cycle. Needs phone APK review after the next preview build.
 
 Forms should feel hard to misuse.
 
 Already implemented:
 
 - Reusable `FormField`.
+- Reusable `KeyboardAwareScrollView`.
 - Inline validation.
-- Required fields disabled until valid.
+- Submit buttons reveal validation instead of silently staying disabled.
 - Character counters.
 - Password checklist.
 - Amount/category/date validations.
 - Product/search limits.
 - Notes length validation.
 - Better keyboard behavior in latest batch.
+- Add, Quick Add, AI, and Settings use the same keyboard-aware scroll wrapper.
+- Budget, edit transaction, add transaction, Quick Add, AI, and shortcut editor forms now provide a warning cue on invalid submit.
+- Transaction save/offline success has consistent success feedback.
 
 Needs phone verification:
 
@@ -421,7 +426,8 @@ Needs phone verification:
 
 Potential follow-up:
 
-- Add scroll-to-active-input behavior if normal `KeyboardAvoidingView` is not enough on Android.
+- Add field-level scroll-to-active-input if real-device Android testing still shows edge cases.
+- Add end-to-end real-device checks for smallest supported Android screens.
 
 ## Level 7: Motion, Microinteractions, And Success States
 
