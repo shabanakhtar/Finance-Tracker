@@ -21,7 +21,7 @@ function usePrefersReducedMotion() {
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduced);
     const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
-    return () => subscription.remove();
+    return () => subscription?.remove?.();
   }, []);
 
   return reduced;
@@ -160,7 +160,7 @@ export function SuccessPulse({ label, visible }: { label?: string; visible: bool
 
   return (
     <Animated.View style={[styles.successPulse, animatedStyle]}>
-      <Text style={styles.successPulseIcon}>✓</Text>
+      <Text style={styles.successPulseIcon}>OK</Text>
       {label ? <Text style={styles.successPulseText}>{label}</Text> : null}
     </Animated.View>
   );
