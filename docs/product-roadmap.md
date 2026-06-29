@@ -27,6 +27,12 @@ This roadmap captures the current state, the remaining agenda, and the order of 
 ## Important Current Gaps
 
 - The installed phone build may not include the latest commits until a new EAS preview build is created and installed.
+- Phone-build UX pass is needed after the first successful APK test:
+  - Auth form fields are cramped on smaller screens.
+  - Floating navigation can overlap lower screen content.
+  - Keyboard can cover active form inputs.
+  - Dashboard is too dense for first-time users.
+  - First-run guidance currently appears too much like normal dashboard content.
 - Google login needs real-device verification after Supabase and Google Cloud setup.
 - The app has useful empty states and a first-run checklist, but not a full animated onboarding story yet.
 - Offline support only covers adding transactions, not edit/delete.
@@ -80,8 +86,18 @@ Make forms feel production-grade and harder to misuse.
   - Minimum length.
   - Letter and number requirements.
   - Confirmation match if confirmation is added.
+  - Show the checklist only after the password field is focused or the user starts typing.
 - Add live character counters where fields have limits.
 - Replace most form alerts with inline errors and action-specific toasts.
+- Fix mobile auth layout:
+  - Stack first name and last name vertically on narrow screens.
+  - Keep form inputs full-width unless the screen is wide enough.
+  - Reduce oversized trust/provider copy on auth screens.
+  - Move "Protected by Supabase..." into small footer-level trust text, or remove it if it does not help the user.
+- Improve keyboard behavior:
+  - Ensure the active input remains visible when the keyboard opens.
+  - Add `KeyboardAvoidingView`/scroll behavior consistently across auth, add transaction, product search, receipt review, and CSV import screens.
+  - Add enough bottom padding so submit buttons are not hidden behind keyboard or navigation controls.
 
 ## Phase 3: Empty States And First-Run Guidance
 
@@ -93,6 +109,13 @@ Make the app useful before the user has data.
   - Set first budget.
   - Ask first AI question.
   - Optional CSV import.
+- Turn first-run guidance into an intentional setup flow instead of a large static dashboard card:
+  - Show it the first time after signup/login when the user has little or no data.
+  - Make it skippable.
+  - Save skipped/completed state locally and infer completion from user data where possible.
+  - Use progress dots or a short checklist so the user knows it is a guided setup.
+  - Animate completed steps with check/success states.
+  - Move bulky setup instructions out of the main dashboard after completion or skip.
 - Dashboard empty state should guide the user toward a first useful setup.
 - Transactions empty state should offer:
   - Add manually.
@@ -102,6 +125,11 @@ Make the app useful before the user has data.
 - AI empty state should show useful prompt chips.
 - Receipts/product search empty state should explain what the feature does and when to trust it.
 - Save checklist progress locally or infer it from existing user data.
+- Include quick-add personalization in onboarding or early settings:
+  - Start with sensible defaults such as Food, Ride, Shop, and Income.
+  - Let users choose which shortcuts appear.
+  - Allow each shortcut to define type, category, label, icon, and optional default amount.
+  - Add success feedback after a quick-add shortcut is used.
 
 ## Phase 4: Motion And Success States
 
@@ -131,6 +159,7 @@ Status: completed together with Phase 4A.
 - Add success states for:
   - Account created.
   - Login successful.
+  - Profile/name saved.
   - Transaction added.
   - Transaction edited.
   - Transaction deleted.
@@ -138,8 +167,16 @@ Status: completed together with Phase 4A.
   - Budget deleted.
   - CSV import completed.
   - Receipt scanned.
+  - Quick-add shortcut saved.
+  - Quick-add transaction added.
   - Offline transaction synced.
   - AI insight generated.
+- Improve auth and onboarding entrance motion:
+  - Logo/brand fades in first.
+  - Heading slides in gently.
+  - Form card enters after a short delay instead of appearing abruptly.
+  - Mode switch and primary button use press feedback.
+  - Keep motion subtle enough for routine finance use.
 - Avoid large celebration animations for routine finance actions.
 - Respect reduced-motion settings before public release.
 
@@ -171,15 +208,17 @@ Status: completed together with Phase 4.
 - Add a raised center quick-add button because adding a transaction is the core daily action.
 - Keep bottom spacing clear of Android navigation controls and iPhone home indicators.
 - Use `react-native-safe-area-context` to calculate bottom padding.
-- Recommended tab structure:
+- Update the tab structure to reduce dashboard density and make analysis easier to find:
   - Home
-  - Stats or Transactions
+  - Analysis
   - Center quick add
   - AI
   - Settings
+- Use a five-position floating bar with two items on the left of the add button and two on the right.
 - Make the active tab visually clear with color and icon emphasis.
 - Keep inactive tabs muted.
 - Center button should open the dedicated quick-add flow, not a slow full form.
+- Ensure every tab screen has enough bottom content padding so the floating bar never covers text, cards, import panels, or buttons.
 - Add subtle tab transition feedback:
   - Active icon color shift.
   - Center button press scale.
@@ -194,6 +233,12 @@ Implemented:
 - Active tab color and surface emphasis.
 - Muted inactive tabs.
 - Press scale and haptic feedback on tab/quick-add actions.
+
+Needs follow-up from phone APK review:
+
+- Fix screens where floating navigation still overlaps content, especially Settings and long dashboard cards.
+- Add or expose the Analysis tab so the dashboard is less crowded.
+- Re-check bottom padding on small Android screens with gesture navigation enabled.
 
 ## Phase 5: Graceful Degradation
 
@@ -341,6 +386,25 @@ These are useful, but should come after core UX and AI quota work.
   - Android hardware camera-button interception is limited and device-dependent.
   - Better route is notification action, widget, or app shortcut deep-link.
 
+## Phase 9B: Quick Add Personalization
+
+Make quick add feel personal instead of fixed.
+
+- Add editable quick-add shortcuts:
+  - Category.
+  - Transaction type.
+  - Label.
+  - Icon.
+  - Optional default amount.
+- Let users edit shortcuts from settings and/or long-pressing a quick-add tile.
+- Include quick-add setup in first-run guidance as an optional step.
+- Store shortcut preferences per user locally first, then consider Supabase sync later.
+- Add success states:
+  - Shortcut updated.
+  - Quick transaction added.
+  - Offline quick transaction queued.
+- Keep the full add form available for non-routine transactions.
+
 ## Phase 9A: Bank Statements And Share-To-App Capture
 
 Add safer financial import paths before considering direct bank integrations.
@@ -378,6 +442,38 @@ Ignore branding details here, but keep production mechanics ready.
 - Verify Play Store permissions and data-safety answers.
 - Keep privacy policy updated.
 - Use internal testing before public release.
+
+## Design And Animation Reference Sources
+
+Use these for inspiration and implementation references, not direct copying.
+
+- Figma Community:
+  - Full UI kits, onboarding references, dashboard layouts, and component ideas.
+  - Best format to share: Figma link plus screenshots of the exact frames.
+- LottieFiles:
+  - Free animated onboarding icons, success states, loaders, and empty states.
+  - Best format to share: animation link or downloaded JSON.
+- Mobbin:
+  - Real-world mobile app onboarding, auth, settings, and finance/productivity flows.
+  - Best format to share: screenshots or screen recordings.
+- Dribbble:
+  - Visual mood and polished microinteraction ideas.
+  - Use carefully because many shots are not production-ready UX.
+- Behance:
+  - Longer app case studies and complete visual systems.
+- Screenlane:
+  - Mobile UI inspiration for onboarding, empty states, and account flows.
+- Page Flows:
+  - User-flow videos for onboarding and payment/account flows.
+- IconScout:
+  - Icons, illustrations, and Lottie animations with free filters.
+
+Preferred references to send into Codex:
+
+- Screenshots for layout and visual direction.
+- Short screen recordings or GIFs for motion timing.
+- Lottie JSON/link for specific animation assets.
+- Figma links when inspecting multiple related frames matters.
 
 ## Phase 11: Beta Release Readiness Checklist
 
@@ -463,13 +559,21 @@ Not needed for the first beta:
 
 ## Current Priority Order
 
-1. Run Supabase production migrations and verify Vercel deployment.
-2. Fix release config: EAS production API URL, env hygiene, and beta versioning.
-3. Fresh EAS preview build and real-device verification.
-4. Beta freeze and full QA pass with fresh accounts.
-5. Security hardening: RLS review, non-AI rate limits, secret rotation, CORS.
-6. Monitoring/support polish: `/health`, UptimeRobot, Sentry or equivalent, support contact.
-7. Internal beta with a small tester group.
-8. Notification quick add.
-9. Widget feasibility.
-10. Future subscription infrastructure only if the app shows real usage.
+1. Finish the current EAS APK verification and confirm the app opens with Supabase env included.
+2. Fix visible phone-build UX issues:
+   - Auth form layout.
+   - Password checklist behavior.
+   - Keyboard avoidance.
+   - Floating nav overlap.
+   - Dashboard density.
+3. Add five-section floating navigation: Home, Analysis, Add, AI, Settings.
+4. Convert first-run money snapshot guidance into a skippable animated setup flow.
+5. Add editable quick-add shortcuts and success states.
+6. Run Supabase production migrations and verify Vercel deployment.
+7. Beta freeze and full QA pass with fresh accounts.
+8. Security hardening: RLS review, non-AI rate limits, secret rotation, CORS.
+9. Monitoring/support polish: `/health`, UptimeRobot, Sentry or equivalent, support contact.
+10. Internal beta with a small tester group.
+11. Notification quick add.
+12. Widget feasibility.
+13. Future subscription infrastructure only if the app shows real usage.
