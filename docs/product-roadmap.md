@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Harden level two navigation`
+- `Clarify home dashboard focus`
 
 Recent important commits:
 
+- `Clarify home dashboard focus`
 - `Harden level two navigation`
 - `87ed019 Polish auth first impression`
 - `d8977a7 Update roadmap with phases and levels`
@@ -231,7 +232,7 @@ Phone review checklist:
 
 ## Level 3: Dashboard Clarity
 
-Status: improved, still evolving.
+Status: production clarity pass started, needs APK review.
 
 Home should answer one simple question:
 
@@ -251,10 +252,27 @@ Implemented:
 - First-run snapshot prompt is now skippable.
 - Skip state is saved locally.
 
+Implemented in the Level 3 dashboard clarity batch:
+
+- Home now computes a single "Today" focus action from the user's current state.
+- The focus action prioritizes:
+  - Offline sync if entries are waiting.
+  - Add income if no income exists.
+  - Add expense if no spending exists.
+  - Set one budget if no budgets exist.
+  - Open Analysis when warnings, insights, or opportunities are ready.
+  - Quick add for normal daily use.
+- Added a compact focus card after the balance so Home answers "what should I do next?"
+- First-run setup now shows essentials progress instead of feeling like a static poster.
+- Setup progress tracks income, expense, and budget completion.
+- Setup steps show completed states with check icons.
+- Budget focus primes the budget form with a sensible default category.
+- Recent transactions are limited to a short preview on Home.
+- Recent transactions now include a small footer pointing users to Analysis for trends.
+
 Next improvements:
 
-- Make first-run setup more like a guided flow instead of a card.
-- Add a clear progress model:
+- Expand the setup progress model:
   - Add income.
   - Add expense.
   - Set budget.
@@ -264,6 +282,7 @@ Next improvements:
 - Hide setup once completed or skipped.
 - Infer completed steps from real user data.
 - Add a way to restart setup from Settings later.
+- Add a dedicated transactions/history screen later if users need full history outside Analysis.
 
 ## Level 4: First-Run Setup And Onboarding
 
@@ -641,6 +660,9 @@ Check:
 - Floating nav overlap.
 - Floating nav keyboard-hide behavior.
 - Analysis tab.
+- Home Today focus card.
+- First-run setup progress behavior.
+- Recent transaction preview length.
 - First-run setup skip.
 - Settings bottom content.
 - Add form submit button visibility.

@@ -67,9 +67,18 @@ type TransactionForm = {
   notes: string;
   type: 'income' | 'expense';
 };
+type HomeFocusKind = 'analysis' | 'budget' | 'expense' | 'income' | 'quickAdd' | 'sync';
+type HomeFocus = {
+  cta: string;
+  detail: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  kind: HomeFocusKind;
+  title: string;
+};
 type DashboardFormField = 'budgetAmount' | 'budgetCategory' | 'editAmount' | 'editCategory' | 'editDate' | 'editNotes';
 const NOTES_LIMIT = 500;
 const SETUP_DISMISSED_KEY = 'finance:first-snapshot-setup-dismissed';
+const RECENT_PREVIEW_LIMIT = 4;
 
 type DashboardTheme = {
   colors: AppPalette;
@@ -158,6 +167,8 @@ export default function DashboardScreen() {
 
   const isEmptyAccount = (dashboard?.transaction_count ?? 0) === 0;
   const netCashFlow = (dashboard?.summary.income ?? 0) - (dashboard?.summary.expense ?? 0);
+  const homeFocus = useMemo(() => (dashboard ? getHomeFocus(dashboard, queuedCount) : null), [dashboard, queuedCount]);
+  const recentPreview = useMemo(() => dashboard?.recent_transactions.slice(0, RECENT_PREVIEW_LIMIT) ?? [], [dashboard?.recent_transactions]);
   const budgetAmountValidation = useMemo(() => validateAmount(budgetAmount), [budgetAmount]);
   const budgetCategoryValidation = useMemo(() => validateCategory(budgetCategory), [budgetCategory]);
   const budgetFormIsValid = budgetAmountValidation.isValid && budgetCategoryValidation.isValid;
@@ -221,6 +232,33 @@ export default function DashboardScreen() {
     } finally {
       setSyncingQueue(false);
     }
+  };
+
+  const actOnHomeFocus = () => {
+    if (!homeFocus) return;
+    triggerSelection();
+    if (homeFocus.kind === 'sync') {
+      syncOfflineQueue();
+      return;
+    }
+    if (homeFocus.kind === 'income') {
+      router.push({ pathname: '/quick-add', params: { category: 'salary', type: 'income' } } as unknown as Href);
+      return;
+    }
+    if (homeFocus.kind === 'expense') {
+      router.push({ pathname: '/quick-add', params: { category: 'food', type: 'expense' } } as unknown as Href);
+      return;
+    }
+    if (homeFocus.kind === 'analysis') {
+      router.push('/analysis' as Href);
+      return;
+    }
+    if (homeFocus.kind === 'budget') {
+      setBudgetCategory((value) => value || 'food');
+      showToast('Budget form is ready below. Add a monthly limit.');
+      return;
+    }
+    router.push('/quick-add' as Href);
   };
 
   const startEdit = (item: Transaction) => {
@@ -398,6 +436,8 @@ export default function DashboardScreen() {
             </Card>
           </AnimatedCard>
 
+          {homeFocus ? <HomeFocusCard focus={homeFocus} onPress={actOnHomeFocus} /> : null}
+
           {isEmptyAccount && !setupDismissed ? <GettingStartedCard dashboard={dashboard} onSkip={dismissSetup} /> : null}
 
           <Section title="Budgets" icon="target">
@@ -505,15 +545,27 @@ export default function DashboardScreen() {
           ) : null}
 
           <Section title="Recent transactions" icon="receipt-text-outline">
-            {dashboard.recent_transactions.length ? (
-              dashboard.recent_transactions.map((item, index) => (
+            {recentPreview.length ? (
+              <>
+              {recentPreview.map((item, index) => (
                 <TransactionRow
                   key={item.id ?? `${item.date}-${item.category}-${index}`}
                   item={item}
                   onDelete={() => removeTransaction(item)}
                   onEdit={() => startEdit(item)}
                 />
-              ))
+              ))}
+              {dashboard.recent_transactions.length > RECENT_PREVIEW_LIMIT ? (
+                <View style={styles.recentFooter}>
+                  <Text style={styles.recentFooterText}>
+                    Showing {recentPreview.length} of {dashboard.recent_transactions.length} recent entries.
+                  </Text>
+                  <Button compact icon="chart-timeline-variant" mode="text" onPress={() => router.push('/analysis' as Href)} textColor={colors.sky}>
+                    Trends
+                  </Button>
+                </View>
+              ) : null}
+              </>
             ) : (
               <EmptyState
                 actions={[
@@ -564,17 +616,78 @@ export default function DashboardScreen() {
   );
 }
 
+function getHomeFocus(dashboard: Dashboard, queuedCount: number): HomeFocus {
+  if (queuedCount > 0) {
+    return {
+      cta: 'Sync now',
+      detail: `${queuedCount} offline transaction${queuedCount === 1 ? '' : 's'} waiting to upload.`,
+      icon: 'cloud-sync-outline',
+      kind: 'sync',
+      title: 'Finish syncing your latest entries',
+    };
+  }
+
+  if (dashboard.summary.income <= 0) {
+    return {
+      cta: 'Add income',
+      detail: 'Start with your salary, allowance, transfer, or any money that came in.',
+      icon: 'cash-plus',
+      kind: 'income',
+      title: 'Add income to anchor your snapshot',
+    };
+  }
+
+  if (dashboard.summary.expense <= 0) {
+    return {
+      cta: 'Add expense',
+      detail: 'Log one real spend so your balance and budget picture starts becoming useful.',
+      icon: 'receipt-text-plus-outline',
+      kind: 'expense',
+      title: 'Add your first expense',
+    };
+  }
+
+  if (!dashboard.budgets.length) {
+    return {
+      cta: 'Set below',
+      detail: 'A simple food, transport, or shopping limit is enough to unlock better warnings.',
+      icon: 'target',
+      kind: 'budget',
+      title: 'Set one budget guardrail',
+    };
+  }
+
+  if (dashboard.warnings.length || dashboard.opportunities.length || dashboard.insight_cards.length) {
+    return {
+      cta: 'Open analysis',
+      detail: 'Your score, trends, warnings, and opportunities are ready in the Analysis tab.',
+      icon: 'chart-timeline-variant',
+      kind: 'analysis',
+      title: 'Review what changed',
+    };
+  }
+
+  return {
+    cta: 'Quick add',
+    detail: 'Keep the snapshot fresh with one small entry whenever money moves.',
+    icon: 'plus-circle-outline',
+    kind: 'quickAdd',
+    title: 'Log today before you forget',
+  };
+}
+
 function GettingStartedCard({ dashboard, onSkip }: { dashboard: Dashboard; onSkip: () => void }) {
   const { colors, styles } = useDashboardTheme();
   const hasIncome = dashboard.summary.income > 0;
   const hasExpense = dashboard.summary.expense > 0;
   const hasBudget = dashboard.budgets.length > 0;
-  const introSteps = [
-    { icon: 'chart-line', label: 'Track money' },
-    { icon: 'target', label: 'Set budgets' },
-    { icon: 'receipt-text-outline', label: 'Scan receipts' },
-    { icon: 'creation-outline', label: 'Ask AI' },
+  const setupSteps = [
+    { complete: hasIncome, icon: 'cash-plus', label: 'Income' },
+    { complete: hasExpense, icon: 'receipt-text-plus-outline', label: 'Expense' },
+    { complete: hasBudget, icon: 'target', label: 'Budget' },
   ] as const;
+  const completedSteps = setupSteps.filter((step) => step.complete).length;
+  const progress = completedSteps / setupSteps.length;
 
   return (
     <AnimatedCard index={2}>
@@ -585,19 +698,21 @@ function GettingStartedCard({ dashboard, onSkip }: { dashboard: Dashboard; onSki
           <Text style={styles.cardTitle}>Set up your first money snapshot</Text>
         </View>
         <Text style={styles.startText}>
-          Complete these first steps and the dashboard, budgets, and AI assistant will start giving useful feedback.
+          Complete the first three essentials. After that, Home will stay focused on today instead of setup.
         </Text>
-        <View style={styles.introMotionGrid}>
-          {introSteps.map((step, index) => (
-            <AnimatedCard index={index} key={step.label} style={styles.introTile}>
-              <MaterialCommunityIcons color={colors.sky} name={step.icon} size={20} />
-              <Text style={styles.introTileText}>{step.label}</Text>
-            </AnimatedCard>
-          ))}
+        <View style={styles.setupProgressHeader}>
+          <Text style={styles.setupProgressText}>{completedSteps} of {setupSteps.length} essentials done</Text>
+          <Text style={styles.setupProgressText}>{Math.round(progress * 100)}%</Text>
         </View>
-        <View style={styles.introDots}>
-          {introSteps.map((step, index) => (
-            <View key={`${step.label}-dot`} style={[styles.introDot, index === 0 ? styles.introDotActive : null]} />
+        <View style={styles.setupProgressTrack}>
+          <View style={[styles.setupProgressFill, { width: `${Math.max(8, progress * 100)}%` }]} />
+        </View>
+        <View style={styles.setupStepRow}>
+          {setupSteps.map((step) => (
+            <View key={step.label} style={[styles.setupStepTile, step.complete ? styles.setupStepTileDone : null]}>
+              <MaterialCommunityIcons color={step.complete ? colors.emerald : colors.sky} name={step.complete ? 'check-circle-outline' : step.icon} size={18} />
+              <Text style={styles.setupStepLabel}>{step.label}</Text>
+            </View>
           ))}
         </View>
         <View style={styles.startSteps}>
@@ -622,6 +737,29 @@ function GettingStartedCard({ dashboard, onSkip }: { dashboard: Dashboard; onSki
         </Button>
       </Card.Content>
     </Card>
+    </AnimatedCard>
+  );
+}
+
+function HomeFocusCard({ focus, onPress }: { focus: HomeFocus; onPress: () => void }) {
+  const { colors, styles } = useDashboardTheme();
+
+  return (
+    <AnimatedCard index={1}>
+      <PressableScale accessibilityRole="button" onPress={onPress} style={styles.focusCard}>
+        <View style={styles.focusIcon}>
+          <MaterialCommunityIcons color={colors.sky} name={focus.icon} size={22} />
+        </View>
+        <View style={styles.focusText}>
+          <Text style={styles.focusEyebrow}>Today</Text>
+          <Text style={styles.focusTitle}>{focus.title}</Text>
+          <Text style={styles.focusDetail}>{focus.detail}</Text>
+        </View>
+        <View style={styles.focusCta}>
+          <Text style={styles.focusCtaText}>{focus.cta}</Text>
+          <MaterialCommunityIcons color={colors.sky} name="chevron-right" size={18} />
+        </View>
+      </PressableScale>
     </AnimatedCard>
   );
 }
@@ -1087,6 +1225,57 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
   formGrid: {
     gap: 10,
   },
+  focusCard: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 14,
+  },
+  focusCta: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 2,
+  },
+  focusCtaText: {
+    color: colors.sky,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  focusDetail: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  focusEyebrow: {
+    color: colors.sky,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  focusIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.skySoft,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  focusText: {
+    flex: 1,
+  },
+  focusTitle: {
+    color: colors.ink,
+    fontSize: 16,
+    fontWeight: '900',
+    lineHeight: 21,
+  },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -1306,6 +1495,18 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     fontSize: 14,
     fontWeight: '900',
   },
+  recentFooter: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+  },
+  recentFooterText: {
+    color: colors.muted,
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+  },
   opportunityDetail: {
     color: colors.muted,
     fontSize: 13,
@@ -1414,6 +1615,54 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
   skipSetupButton: {
     alignSelf: 'flex-start',
     marginTop: 8,
+  },
+  setupProgressFill: {
+    backgroundColor: colors.sky,
+    borderRadius: 999,
+    height: '100%',
+  },
+  setupProgressHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  setupProgressText: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  setupProgressTrack: {
+    backgroundColor: colors.surface2,
+    borderRadius: 999,
+    height: 9,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  setupStepLabel: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  setupStepRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  setupStepTile: {
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flex: 1,
+    gap: 5,
+    minHeight: 62,
+    justifyContent: 'center',
+    padding: 8,
+  },
+  setupStepTileDone: {
+    backgroundColor: colors.emeraldSoft,
   },
   startCard: {
     backgroundColor: colors.surface,
