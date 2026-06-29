@@ -509,6 +509,84 @@ Future subscription agenda:
   - Model routing
   - Abuse prevention
 
+## Level 9B: SQL-Backed AI Insight Architecture
+
+Status: planned before AI insights become more advanced.
+
+The AI should not need to read every transaction row for every question. That will become slow, expensive, and noisy as users add more history.
+
+Preferred production direction:
+
+- Keep Gemini involved in interpreting finance context and deciding what insight is useful.
+- Keep the backend in control of database access.
+- Use SQL/Postgres/Supabase queries for efficient filtering and aggregation.
+- Send Gemini compact query results, not the entire raw database.
+- Prefer approved backend query tools over freeform AI-generated SQL.
+
+Recommended AI insight flow:
+
+```text
+User asks finance question
+-> backend authenticates user
+-> backend prepares allowed analytics tools
+-> Gemini identifies what information is needed
+-> backend runs safe SQL-backed helper queries
+-> backend returns compact results to Gemini
+-> Gemini explains the insight clearly
+```
+
+Approved SQL-backed tools should include:
+
+- `get_summary(user_id, date_range)`
+- `get_monthly_cashflow(user_id, months)`
+- `get_top_expense_categories(user_id, start_date, end_date)`
+- `get_budget_status(user_id)`
+- `get_recent_large_transactions(user_id, threshold, date_range)`
+- `get_category_trend(user_id, category, months)`
+- `get_recurring_candidates(user_id)`
+- `get_spending_change(user_id, current_period, comparison_period)`
+
+If AI-generated SQL is ever used, it must be heavily restricted:
+
+- Only allow `SELECT`.
+- Always require or inject `user_id`.
+- Only allow known tables and columns.
+- Block `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `CREATE`, and RPC calls that mutate data.
+- Block access to auth/system tables.
+- Add row limits and query timeouts.
+- Validate SQL before execution.
+- Never expose the Supabase service role key to Gemini or the mobile app.
+
+Schema context is required if Gemini helps generate or choose queries:
+
+```text
+transactions(
+  id uuid,
+  user_id uuid,
+  amount numeric,
+  category text,
+  type text,
+  date date,
+  notes text,
+  created_at timestamptz
+)
+
+budgets(
+  id uuid,
+  user_id uuid,
+  category text,
+  limit_amount numeric
+)
+```
+
+Near-term implementation:
+
+- Keep the current safe approach where backend loads user data and sends structured summaries to Gemini.
+- Move expensive analytics toward SQL-backed helper functions.
+- Add date-range limits so AI prompts do not grow forever.
+- Feed Gemini a structured finance context with query results, warnings, and budget status.
+- Do not give Gemini unrestricted database access.
+
 ## Level 10: Security Hardening
 
 Status: before beta/public expansion.
