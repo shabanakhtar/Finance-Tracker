@@ -134,7 +134,7 @@ Implemented in `dcb3ab7`:
   - Income
   - Spend
   - Score
-- Password checklist now appears only during signup while password is focused.
+- Password checklist now appears only during signup while the password field is focused or has typed input.
 - Supabase trust text reduced to tiny private sign-in language.
 
 Implemented in the Level 1 auth-first-impression batch:
@@ -154,7 +154,7 @@ Next quality pass:
 
 - Test on actual phone screen size.
 - Confirm first/last name fields are not cropped in signup.
-- Confirm password checklist appears only when useful.
+- Confirm password checklist appears only when the password field is focused or has typed input.
 - Confirm keyboard does not hide password/name fields.
 - Confirm compact-screen auth spacing feels calm and not cramped.
 - Confirm mode switching does not leave stale validation messages behind.

@@ -305,7 +305,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
               touched={shouldShow('password')}
               value={password}
             />
-            {mode === 'signup' && focusedField === 'password' ? <PasswordChecklist password={password} /> : null}
+            {mode === 'signup' && (focusedField === 'password' || password.length > 0) ? <PasswordChecklist password={password} /> : null}
             {mode === 'signup' ? (
               <View style={styles.nameRow}>
                 <FormField
