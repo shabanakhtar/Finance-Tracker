@@ -29,10 +29,10 @@ This roadmap captures the current state, the remaining agenda, and the order of 
 - The installed phone build may not include the latest commits until a new EAS preview build is created and installed.
 - Google login needs real-device verification after Supabase and Google Cloud setup.
 - The app has useful empty states and a first-run checklist, but not a full animated onboarding story yet.
-- AI usage has no backend quota yet.
 - Offline support only covers adding transactions, not edit/delete.
 - Notification quick add and home screen widgets are not implemented.
-- Production CORS, rate limiting, and observability need a hardening pass.
+- Production CORS, non-AI API rate limiting, and observability need a hardening pass.
+- Release readiness needs a formal beta freeze, QA pass, rollback plan, and fresh EAS build.
 - Branding, Play Store listing assets, and final app identity are intentionally separate from this agenda.
 
 ## Phase 1: UX Foundation
@@ -379,15 +379,97 @@ Ignore branding details here, but keep production mechanics ready.
 - Keep privacy policy updated.
 - Use internal testing before public release.
 
+## Phase 11: Beta Release Readiness Checklist
+
+Use this before sharing the app beyond trusted testers. Treat beta release as a freeze-and-test process, not another feature sprint.
+
+Already present:
+
+- Core app screens exist: dashboard, add transaction, AI, settings, quick add.
+- Supabase Auth and per-user finance data are implemented.
+- Supabase RLS exists for transactions and budgets.
+- Environment examples exist for backend and Expo without real secrets.
+- `.env` is ignored by Git.
+- Privacy policy draft exists.
+- Friendly loading, empty, validation, success, and error states exist.
+- Offline add queue and graceful degradation exist.
+- AI daily limits are backend-enforced.
+- Vercel production deployment exists.
+- EAS preview build path exists.
+- Uptime monitoring has been set up.
+
+Needed before beta:
+
+- Freeze v1/beta scope and stop adding non-critical features until the beta is tested.
+- Run all pending Supabase migrations in production, especially `ai_usage`.
+- Verify the EAS build uses the correct production API URL.
+- Create and install a fresh EAS preview build after the latest commits.
+- Test with at least two fresh accounts, not only the developer account.
+- Test the full user flow:
+  - Sign up.
+  - Login/logout.
+  - Google login on real device.
+  - Add income.
+  - Add expense.
+  - Edit/delete transaction.
+  - Create/delete budget.
+  - CSV import/export.
+  - Receipt scan.
+  - Product recommendation.
+  - AI chat limit behavior.
+  - Offline add and later sync.
+- Test edge cases:
+  - Slow or unavailable internet.
+  - Wrong password.
+  - Incomplete forms.
+  - Empty dashboard.
+  - Invalid CSV.
+  - Invalid/unclear receipt image.
+  - User tries to access data after logout.
+- Security hardening:
+  - Rotate keys that were ever pasted into chat before public release.
+  - Keep `SUPABASE_SERVICE_ROLE_KEY` only in Vercel/backend env.
+  - Keep `ALLOW_DEMO_USER=false` in production.
+  - Verify no real `.env` or `.env.local` files are tracked.
+  - Review CORS for production origins.
+  - Add non-AI API rate limiting for write-heavy endpoints later.
+- Database readiness:
+  - Confirm production database is Supabase, not local CSV.
+  - Confirm required constraints and indexes exist.
+  - Remove dummy/test data before public launch, or clearly label beta accounts.
+  - Set a simple backup/export routine before public launch.
+- Monitoring and support:
+  - Confirm UptimeRobot points at `/health`.
+  - Add an error monitoring option such as Sentry before wider public launch.
+  - Add support/contact email in the app store listing and privacy policy.
+- Release mechanics:
+  - Run `python -m py_compile backend.py supabase_data.py ai_usage.py`.
+  - Run `npx tsc --noEmit`.
+  - Run `npm run lint`.
+  - Create a GitHub release tag for beta.
+  - Keep the previous working APK/build link for rollback.
+  - Verify Vercel latest deployment is green after every backend change.
+
+Not needed for the first beta:
+
+- Custom domain/DNS for the mobile app. The Vercel API domain is acceptable for beta if stable.
+- Full browser matrix testing. The app is mobile-first; web testing is useful but secondary.
+- Role-based student/teacher/admin permission testing. This app has normal users, not school roles.
+- Paid subscription, Play Billing, or premium AI routing.
+- Direct bank connections.
+- Home screen widget and notification quick add.
+- Advanced analytics dashboards.
+- A polished marketing site.
+
 ## Current Priority Order
 
-1. UX foundation components.
-2. Forms and validation.
-3. Empty states and first-run guidance.
-4. AI usage limits while keeping all features free.
-5. Graceful degradation and success states.
-6. Security hardening: RLS review, rate limits, secrets, CORS.
-7. Fresh EAS preview build and real-device verification.
+1. Run Supabase production migrations and verify Vercel deployment.
+2. Fix release config: EAS production API URL, env hygiene, and beta versioning.
+3. Fresh EAS preview build and real-device verification.
+4. Beta freeze and full QA pass with fresh accounts.
+5. Security hardening: RLS review, non-AI rate limits, secret rotation, CORS.
+6. Monitoring/support polish: `/health`, UptimeRobot, Sentry or equivalent, support contact.
+7. Internal beta with a small tester group.
 8. Notification quick add.
 9. Widget feasibility.
 10. Future subscription infrastructure only if the app shows real usage.
