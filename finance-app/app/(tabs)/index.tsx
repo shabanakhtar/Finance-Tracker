@@ -1,5 +1,4 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Href, router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
@@ -31,6 +30,7 @@ import { useAuth } from '@/contexts/auth';
 import { useAppTheme } from '@/contexts/theme';
 import { getQueuedTransactions, getSyncHistory, SyncHistoryItem, syncQueuedTransactions } from '@/services/offlineQueue';
 import { cacheDashboard, formatCachedAt, getCachedDashboard } from '@/services/resilience';
+import { getSetupDismissed, setSetupDismissed as persistSetupDismissed } from '@/services/setupProgress';
 import {
   API_BASE_URL,
   BudgetStatus,
@@ -77,7 +77,6 @@ type HomeFocus = {
 };
 type DashboardFormField = 'budgetAmount' | 'budgetCategory' | 'editAmount' | 'editCategory' | 'editDate' | 'editNotes';
 const NOTES_LIMIT = 500;
-const SETUP_DISMISSED_KEY = 'finance:first-snapshot-setup-dismissed';
 const RECENT_PREVIEW_LIMIT = 4;
 
 type DashboardTheme = {
@@ -160,8 +159,8 @@ export default function DashboardScreen() {
   }, [loadDashboard]);
 
   useEffect(() => {
-    AsyncStorage.getItem(SETUP_DISMISSED_KEY)
-      .then((value) => setSetupDismissed(value === 'true'))
+    getSetupDismissed()
+      .then(setSetupDismissed)
       .catch(() => {});
   }, []);
 
@@ -201,7 +200,12 @@ export default function DashboardScreen() {
   };
   const dismissSetup = async () => {
     setSetupDismissed(true);
-    await AsyncStorage.setItem(SETUP_DISMISSED_KEY, 'true');
+    await persistSetupDismissed(true);
+  };
+  const primeBudgetSetup = () => {
+    triggerSelection();
+    setBudgetCategory((value) => value || 'food');
+    showToast('Budget form is ready below. Add a monthly limit.');
   };
   const markSubmitted = (...fields: DashboardFormField[]) => {
     setSubmittedFields((current) => {
@@ -440,7 +444,9 @@ export default function DashboardScreen() {
 
           {homeFocus ? <HomeFocusCard focus={homeFocus} onPress={actOnHomeFocus} /> : null}
 
-          {!setupComplete && !setupDismissed ? <GettingStartedCard dashboard={dashboard} onSkip={dismissSetup} /> : null}
+          {!setupComplete && !setupDismissed ? (
+            <GettingStartedCard dashboard={dashboard} onPrimeBudget={primeBudgetSetup} onSkip={dismissSetup} />
+          ) : null}
 
           <Section title="Budgets" icon="target">
             <View style={styles.formGrid}>
@@ -678,18 +684,94 @@ function getHomeFocus(dashboard: Dashboard, queuedCount: number): HomeFocus {
   };
 }
 
-function GettingStartedCard({ dashboard, onSkip }: { dashboard: Dashboard; onSkip: () => void }) {
+type SetupStepState = 'active' | 'complete' | 'optional' | 'upcoming';
+
+type SetupAction = {
+  complete?: boolean;
+  detail: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  key: string;
+  label: string;
+  onPress: () => void;
+  state: SetupStepState;
+};
+
+function GettingStartedCard({
+  dashboard,
+  onPrimeBudget,
+  onSkip,
+}: {
+  dashboard: Dashboard;
+  onPrimeBudget: () => void;
+  onSkip: () => void;
+}) {
   const { colors, styles } = useDashboardTheme();
   const hasIncome = dashboard.summary.income > 0;
   const hasExpense = dashboard.summary.expense > 0;
   const hasBudget = dashboard.budgets.length > 0;
-  const setupSteps = [
-    { complete: hasIncome, icon: 'cash-plus', label: 'Income' },
-    { complete: hasExpense, icon: 'receipt-text-plus-outline', label: 'Expense' },
-    { complete: hasBudget, icon: 'target', label: 'Budget' },
-  ] as const;
+  const essentialSteps: SetupAction[] = [
+    {
+      complete: hasIncome,
+      detail: 'Log your first paycheck, allowance, freelance payment, or transfer in.',
+      icon: 'cash-plus',
+      key: 'income',
+      label: 'Add income',
+      onPress: () => router.push({ pathname: '/quick-add', params: { category: 'salary', type: 'income' } } as unknown as Href),
+      state: 'upcoming',
+    },
+    {
+      complete: hasExpense,
+      detail: 'Add one real spend so the app can start comparing money in and out.',
+      icon: 'receipt-text-plus-outline',
+      key: 'expense',
+      label: 'Add expense',
+      onPress: () => router.push({ pathname: '/quick-add', params: { category: 'food', type: 'expense' } } as unknown as Href),
+      state: 'upcoming',
+    },
+    {
+      complete: hasBudget,
+      detail: 'Create one soft limit for a category you care about this month.',
+      icon: 'target',
+      key: 'budget',
+      label: 'Set budget',
+      onPress: onPrimeBudget,
+      state: 'upcoming',
+    },
+  ];
+  const activeIndex = essentialSteps.findIndex((step) => !step.complete);
+  const setupSteps = essentialSteps.map((step, index) => ({
+    ...step,
+    state: step.complete ? 'complete' : index === activeIndex ? 'active' : 'upcoming',
+  }));
   const completedSteps = setupSteps.filter((step) => step.complete).length;
   const progress = completedSteps / setupSteps.length;
+  const nextStep = setupSteps.find((step) => step.state === 'active') ?? setupSteps[0];
+  const optionalSteps: SetupAction[] = [
+    {
+      detail: 'Ask for a first read once the essentials are in.',
+      icon: 'creation-outline',
+      key: 'ai',
+      label: 'Ask AI',
+      onPress: () => router.push('/ai'),
+      state: 'optional',
+    },
+    {
+      detail: 'Bring existing history from a CSV backup.',
+      icon: 'file-import-outline',
+      key: 'csv',
+      label: 'Import CSV',
+      onPress: () => router.push('/settings'),
+      state: 'optional',
+    },
+    {
+      detail: 'Quick Add personalization starts in Level 5.',
+      icon: 'tune-variant',
+      key: 'quick-add',
+      label: 'Plan shortcuts',
+      onPress: () => router.push('/quick-add' as Href),
+      state: 'optional',
+    },
+  ];
 
   return (
     <AnimatedCard index={2}>
@@ -700,8 +782,19 @@ function GettingStartedCard({ dashboard, onSkip }: { dashboard: Dashboard; onSki
           <Text style={styles.cardTitle}>Set up your first money snapshot</Text>
         </View>
         <Text style={styles.startText}>
-          Complete the first three essentials. After that, Home will stay focused on today instead of setup.
+          Complete the first three essentials. Home will switch back to daily focus once your snapshot is useful.
         </Text>
+        <PressableScale accessibilityRole="button" onPress={nextStep.onPress} style={styles.setupNextStep}>
+          <View style={styles.setupNextIcon}>
+            <MaterialCommunityIcons color={colors.sky} name={nextStep.icon} size={22} />
+          </View>
+          <View style={styles.setupNextText}>
+            <Text style={styles.setupNextEyebrow}>Active step</Text>
+            <Text style={styles.setupNextTitle}>{nextStep.label}</Text>
+            <Text style={styles.setupNextDetail}>{nextStep.detail}</Text>
+          </View>
+          <MaterialCommunityIcons color={colors.sky} name="chevron-right" size={22} />
+        </PressableScale>
         <View style={styles.setupProgressHeader}>
           <Text style={styles.setupProgressText}>{completedSteps} of {setupSteps.length} essentials done</Text>
           <Text style={styles.setupProgressText}>{Math.round(progress * 100)}%</Text>
@@ -711,28 +804,30 @@ function GettingStartedCard({ dashboard, onSkip }: { dashboard: Dashboard; onSki
         </View>
         <View style={styles.setupStepRow}>
           {setupSteps.map((step) => (
-            <View key={step.label} style={[styles.setupStepTile, step.complete ? styles.setupStepTileDone : null]}>
-              <MaterialCommunityIcons color={step.complete ? colors.emerald : colors.sky} name={step.complete ? 'check-circle-outline' : step.icon} size={18} />
+            <PressableScale
+              key={step.key}
+              accessibilityRole="button"
+              onPress={step.onPress}
+              style={[
+                styles.setupStepTile,
+                step.state === 'active' ? styles.setupStepTileActive : null,
+                step.state === 'complete' ? styles.setupStepTileDone : null,
+              ]}>
+              <MaterialCommunityIcons
+                color={step.state === 'complete' ? colors.emerald : step.state === 'active' ? colors.sky : colors.muted}
+                name={step.state === 'complete' ? 'check-circle-outline' : step.icon}
+                size={18}
+              />
               <Text style={styles.setupStepLabel}>{step.label}</Text>
-            </View>
+              <Text style={styles.setupStepState}>{step.state === 'complete' ? 'Done' : step.state === 'active' ? 'Now' : 'Next'}</Text>
+            </PressableScale>
           ))}
         </View>
+        <Text style={styles.setupOptionalTitle}>Optional setup</Text>
         <View style={styles.startSteps}>
-          <StepBadge
-            complete={hasIncome}
-            icon="cash-plus"
-            onPress={() => router.push({ pathname: '/quick-add', params: { category: 'salary', type: 'income' } } as unknown as Href)}
-            text="Add income"
-          />
-          <StepBadge
-            complete={hasExpense}
-            icon="receipt-text-plus-outline"
-            onPress={() => router.push({ pathname: '/quick-add', params: { category: 'food', type: 'expense' } } as unknown as Href)}
-            text="Add expense"
-          />
-          <StepBadge complete={hasBudget} icon="target" text="Set budget below" />
-          <StepBadge icon="creation-outline" onPress={() => router.push('/ai')} text="Ask AI" />
-          <StepBadge icon="file-import-outline" onPress={() => router.push('/settings')} text="Import CSV" />
+          {optionalSteps.map((step) => (
+            <StepBadge key={step.key} icon={step.icon} onPress={step.onPress} state={step.state} text={step.label} />
+          ))}
         </View>
         <Button compact mode="text" onPress={onSkip} style={styles.skipSetupButton} textColor={colors.muted}>
           Skip for now
@@ -767,34 +862,35 @@ function HomeFocusCard({ focus, onPress }: { focus: HomeFocus; onPress: () => vo
 }
 
 function StepBadge({
-  complete = false,
   icon,
   onPress,
+  state = 'upcoming',
   text,
 }: {
-  complete?: boolean;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   onPress?: () => void;
+  state?: SetupStepState;
   text: string;
 }) {
   const { colors, styles } = useDashboardTheme();
+  const complete = state === 'complete';
   const content = (
     <>
-      <MaterialCommunityIcons color={complete ? colors.emerald : colors.sky} name={complete ? 'check-circle-outline' : icon} size={16} />
+      <MaterialCommunityIcons color={complete ? colors.emerald : state === 'optional' ? colors.violet : colors.sky} name={complete ? 'check-circle-outline' : icon} size={16} />
       <Text style={styles.stepText}>{text}</Text>
     </>
   );
 
   if (onPress) {
     return (
-      <PressableScale onPress={onPress} style={[styles.stepBadge, complete ? styles.stepBadgeComplete : null]}>
+      <PressableScale onPress={onPress} style={[styles.stepBadge, complete ? styles.stepBadgeComplete : null, state === 'optional' ? styles.stepBadgeOptional : null]}>
         {content}
       </PressableScale>
     );
   }
 
   return (
-    <View style={[styles.stepBadge, complete ? styles.stepBadgeComplete : null]}>
+    <View style={[styles.stepBadge, complete ? styles.stepBadgeComplete : null, state === 'optional' ? styles.stepBadgeOptional : null]}>
       {content}
     </View>
   );
@@ -1641,6 +1737,55 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     marginBottom: 12,
     overflow: 'hidden',
   },
+  setupNextDetail: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+  setupNextEyebrow: {
+    color: colors.sky,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  setupNextIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.skySoft,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  setupNextStep: {
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderColor: colors.sky,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 14,
+    padding: 12,
+  },
+  setupNextText: {
+    flex: 1,
+    gap: 3,
+  },
+  setupNextTitle: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  setupOptionalTitle: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
   setupStepLabel: {
     color: colors.ink,
     fontSize: 12,
@@ -1663,8 +1808,17 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     justifyContent: 'center',
     padding: 8,
   },
+  setupStepTileActive: {
+    backgroundColor: colors.skySoft,
+    borderColor: colors.sky,
+  },
   setupStepTileDone: {
     backgroundColor: colors.emeraldSoft,
+  },
+  setupStepState: {
+    color: colors.muted,
+    fontSize: 10,
+    fontWeight: '900',
   },
   startCard: {
     backgroundColor: colors.surface,
@@ -1696,6 +1850,9 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
   },
   stepBadgeComplete: {
     backgroundColor: colors.emeraldSoft,
+  },
+  stepBadgeOptional: {
+    backgroundColor: colors.surface2,
   },
   stepText: {
     color: colors.ink,

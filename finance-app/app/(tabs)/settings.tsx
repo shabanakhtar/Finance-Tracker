@@ -12,6 +12,7 @@ import { AppErrorState, EmptyState, SuccessBanner } from '@/components/ux';
 import { useAuth } from '@/contexts/auth';
 import { useAppTheme } from '@/contexts/theme';
 import { CsvImportPreview, exportTransactionsCsv, importTransactionsCsv, previewTransactionsCsv } from '@/services/api';
+import { setSetupDismissed as persistSetupDismissed } from '@/services/setupProgress';
 
 const themeOptions = [
   { value: 'dark', label: 'Dark', icon: 'weather-night' },
@@ -30,6 +31,7 @@ export default function SettingsScreen() {
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [preview, setPreview] = useState<CsvImportPreview | null>(null);
+  const [setupFeedback, setSetupFeedback] = useState<string | null>(null);
   const profileName =
     session?.user.user_metadata?.full_name ??
     session?.user.user_metadata?.name ??
@@ -111,6 +113,11 @@ export default function SettingsScreen() {
     }
   };
 
+  const restoreSetup = async () => {
+    await persistSetupDismissed(false);
+    setSetupFeedback('Setup will appear on Home while income, expense, or budget essentials are unfinished.');
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <View style={styles.header}>
@@ -143,6 +150,20 @@ export default function SettingsScreen() {
         <Button icon="logout" mode="outlined" onPress={signOut} style={styles.signOut}>
           Sign Out
         </Button>
+      </View>
+
+      <View style={styles.panel}>
+        <View style={styles.row}>
+          <View style={styles.rowText}>
+            <Text style={styles.sectionTitle}>First-run setup</Text>
+            <Text style={styles.muted}>Bring back the guided Home setup if you skipped it before finishing the essentials.</Text>
+          </View>
+          <MaterialCommunityIcons color={colors.sky} name="map-marker-path" size={24} />
+        </View>
+        <Button icon="map-marker-path" mode="outlined" onPress={restoreSetup} style={styles.restoreSetupButton}>
+          Show Setup On Home
+        </Button>
+        {setupFeedback ? <SuccessBanner message={setupFeedback} title="Setup restored" /> : null}
       </View>
 
       <View style={styles.panel}>
@@ -275,6 +296,10 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     },
     rowText: {
       flex: 1,
+    },
+    restoreSetupButton: {
+      borderColor: colors.border,
+      borderRadius: radii.card,
     },
     screen: {
       backgroundColor: colors.background,

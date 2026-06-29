@@ -25,10 +25,13 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Clarify home dashboard focus`
+- `Polish first run setup flow`
 
 Recent important commits:
 
+- `Polish first run setup flow`
+- `Document SQL-backed AI insight plan`
+- `Keep setup visible until essentials complete`
 - `Clarify home dashboard focus`
 - `Harden level two navigation`
 - `87ed019 Polish auth first impression`
@@ -287,7 +290,7 @@ Next improvements:
 
 ## Level 4: First-Run Setup And Onboarding
 
-Status: started.
+Status: implemented for the current mobile app cycle. Needs phone APK review after the next preview build.
 
 This is where the app starts feeling personal.
 
@@ -295,28 +298,31 @@ The first-run flow should not lecture the user. It should help them get to their
 
 Current implemented setup behavior:
 
-- First-run prompt appears when account has little/no data.
-- It includes steps for:
-  - Add income
-  - Add expense
-  - Set budget
-  - Ask AI
-  - Import CSV
-- Prompt can now be skipped.
-- Skip is persisted locally.
+- First-run setup appears while the essentials are incomplete:
+  - Add income.
+  - Add expense.
+  - Set one budget.
+- Setup hides once those essentials exist.
+- Setup can be skipped and the skip state is persisted locally.
+- Setup can be restored from Settings if the user skipped too early.
+- The setup card now has a clear active step instead of a static poster.
+- Essential steps now show state:
+  - Active.
+  - Completed.
+  - Upcoming.
+- Completed steps use check icons and progress percentage.
+- Optional setup actions are separated from essentials:
+  - Ask AI.
+  - Import CSV.
+  - Plan quick-add shortcuts.
+- Budget setup primes the Home budget form with a sensible default category.
+- Setup persistence is centralized in `finance-app/services/setupProgress.ts`.
 
-Next implementation:
+Still pending after Level 4:
 
-- Convert the prompt into a clearer setup flow.
-- Add step state:
-  - Not started
-  - Active
-  - Completed
-  - Skipped
-- Add progress dots or a small stepper.
-- Add completed-step check animation.
-- Include quick-add personalization as an optional setup step.
-- Keep it light; no giant forced tutorial.
+- Phone APK review of spacing, tap targets, and visual motion.
+- Quick Add personalization itself, handled in Level 5.
+- Stronger animation pass once the main flows are stable.
 
 Quality bar:
 
@@ -726,7 +732,7 @@ Not needed for first beta:
 
 - Create fresh EAS Android preview build.
 - Install on phone.
-- Confirm latest `dcb3ab7` UI is present.
+- Confirm latest Level 1 through Level 4 UI is present.
 
 ### Step 2: Phone UX Review
 
@@ -743,6 +749,7 @@ Check:
 - First-run setup progress behavior.
 - Recent transaction preview length.
 - First-run setup skip.
+- Settings setup restore action.
 - Settings bottom content.
 - Add form submit button visibility.
 
@@ -761,7 +768,22 @@ Potential commit:
 Polish phone UX after preview build
 ```
 
-### Step 4: Quick Add Personalization
+### Step 4: Level 4 First-Run Setup Polish
+
+- Guided active step.
+- Essential setup states.
+- Optional setup actions.
+- Settings restore action.
+- Validate.
+- Push checkpoint.
+
+Potential commit:
+
+```text
+Polish first run setup flow
+```
+
+### Step 5: Quick Add Personalization
 
 - Implement shortcut editor.
 - Store locally.
@@ -773,20 +795,6 @@ Potential commit:
 
 ```text
 Personalize quick add shortcuts
-```
-
-### Step 5: First-Run Setup Polish
-
-- Better setup state.
-- Step progression.
-- Completed state.
-- Optional quick-add setup.
-- Push checkpoint.
-
-Potential commit:
-
-```text
-Polish first run setup flow
 ```
 
 ## Quality Bar
