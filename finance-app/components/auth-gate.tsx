@@ -11,6 +11,7 @@ import {
   FormField,
   PasswordChecklist,
   SuccessBanner,
+  TypingText,
   validateEmail,
   validateName,
   validatePassword,
@@ -239,8 +240,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return (
       <KeyboardAvoidingView behavior={keyboardBehavior} style={styles.screen}>
         <ScrollView contentContainerStyle={[styles.container, styles.welcomeContainer]} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
-          <AnimatedScreen style={styles.welcomeHero}>
-            <View style={styles.brandRow}>
+          <View style={styles.welcomeHero}>
+            <AnimatedScreen delay={40} style={styles.brandRow}>
               <View style={styles.brandMark}>
                 <MaterialCommunityIcons color={colors.sky} name="wallet-outline" size={24} />
               </View>
@@ -248,16 +249,22 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 <Text style={styles.brand}>Finance Tracker</Text>
                 <Text style={styles.brandCaption}>Private money clarity</Text>
               </View>
-            </View>
-            <Text style={styles.helloTitle}>Hello.</Text>
-            <Text style={styles.welcomeTitle}>Ready to check in on your money?</Text>
-            <Text style={styles.welcomeSubtitle}>
+            </AnimatedScreen>
+            <AnimatedScreen delay={120}>
+              <TypingText speed={42} style={styles.helloTitle} text="Hello." />
+            </AnimatedScreen>
+            <AnimatedScreen delay={280}>
+              <Text style={styles.welcomeTitle}>Ready to check in on your money?</Text>
+            </AnimatedScreen>
+            <AnimatedScreen delay={360}>
+              <Text style={styles.welcomeSubtitle}>
               Sign in to continue your snapshot, or create a private workspace and build your first view in a few taps.
-            </Text>
+              </Text>
+            </AnimatedScreen>
             <AuthMotionPreview />
-          </AnimatedScreen>
+          </View>
 
-          <AnimatedScreen delay={120}>
+          <AnimatedScreen delay={520}>
             <Card style={styles.welcomeCard}>
               <Card.Content style={styles.welcomeActions}>
                 <Button labelStyle={styles.primaryLabel} mode="contained" onPress={() => beginAuth('login')} style={styles.primary}>

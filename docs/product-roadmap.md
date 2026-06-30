@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Harden Supabase advisor warnings`
+- `Polish post-login setup guide`
 
 Recent important commits:
 
+- `Polish post-login setup guide`
 - `Harden Supabase advisor warnings`
 - `Add SQL-backed AI context`
 - `Add auth welcome step`
@@ -83,7 +84,7 @@ Current push plan:
 3. `Quick add personalization`
    - Editable quick-add shortcuts and local persistence.
 
-4. `First-run setup polish`
+4. `Setup guide polish`
    - Better onboarding/setup progression.
 
 5. `Beta readiness`
@@ -165,6 +166,8 @@ Implemented in the Level 1 auth-first-impression batch:
 - Auth now opens with a calm welcome step instead of dropping users straight into fields.
 - The welcome step uses a large "Hello." moment, short decision copy, animated finance preview tiles, and clear Sign in/Create account actions.
 - Existing sign-in/create forms remain behind that choice, with a Back action to return to the welcome step.
+- The welcome step now staggers brand, greeting, headline, supporting copy, preview metrics, and actions so the first screen does not appear abruptly.
+- The "Hello." greeting now uses a light typing reveal while respecting reduced-motion settings.
 
 Next quality pass:
 
@@ -174,7 +177,8 @@ Next quality pass:
 - Confirm keyboard does not hide password/name fields.
 - Confirm compact-screen auth spacing feels calm and not cramped.
 - Confirm mode switching does not leave stale validation messages behind.
-- Confirm the welcome step feels smooth on device and does not add friction for returning users.
+- Confirm the welcome step feels smooth on emulator and phone, with text visibly appearing instead of popping in.
+- Confirm the color direction feels premium; current direction is warm cream, charcoal, amber, green, coral, and violet instead of a single orange-heavy UI.
 
 ## Level 2: Navigation And Screen Structure
 
@@ -211,7 +215,7 @@ Implemented in `dcb3ab7`:
   - Net cash flow
   - Income/spent summary
   - Quick add
-  - First-run setup prompt
+  - Setup guide prompt
   - Budgets
   - Recent transactions
 - Safe-area bottom padding was added across:
@@ -261,7 +265,7 @@ Implemented:
 
 - Heavy analysis moved out of Home.
 - Analysis got its own tab.
-- First-run snapshot prompt is now skippable.
+- Money snapshot setup prompt is now skippable.
 - Skip state is saved locally.
 
 Implemented in the Level 3 dashboard clarity batch:
@@ -275,10 +279,10 @@ Implemented in the Level 3 dashboard clarity batch:
   - Open Analysis when warnings, insights, or opportunities are ready.
   - Quick add for normal daily use.
 - Added a compact focus card after the balance so Home answers "what should I do next?"
-- First-run setup now shows essentials progress instead of feeling like a static poster.
+- Money snapshot setup now shows essentials progress instead of feeling like a static poster.
 - Setup progress tracks income, expense, and budget completion.
 - Setup steps show completed states with check icons.
-- Setup now stays visible until income, expense, and one budget exist, unless the user skips it.
+- Setup now stays visible at the top of Home after login until income, expense, and one budget exist, unless the user skips it.
 - Budget focus primes the budget form with a sensible default category.
 - Recent transactions are limited to a short preview on Home.
 - Recent transactions now include a small footer pointing users to Analysis for trends.
@@ -297,23 +301,24 @@ Next improvements:
 - Add a way to restart setup from Settings later.
 - Add a dedicated transactions/history screen later if users need full history outside Analysis.
 
-## Level 4: First-Run Setup And Onboarding
+## Level 4: Setup Guide And Onboarding
 
 Status: implemented for the current mobile app cycle. Needs phone APK review after the next preview build.
 
 This is where the app starts feeling personal.
 
-The first-run flow should not lecture the user. It should help them get to their first useful money snapshot quickly.
+The setup flow should not lecture the user. It should help them get to their first useful money snapshot quickly.
 
 Current implemented setup behavior:
 
-- First-run setup appears while the essentials are incomplete:
+- The setup guide appears first on Home after login while the essentials are incomplete:
   - Add income.
   - Add expense.
   - Set one budget.
 - Setup hides once those essentials exist.
 - Setup can be skipped and the skip state is persisted locally.
 - Setup can be restored from Settings if the user skipped too early.
+- Settings calls this the "Setup guide" instead of "First-run setup" so the label makes sense to normal users.
 - The setup card now has a clear active step instead of a static poster.
 - Essential steps now show state:
   - Active.

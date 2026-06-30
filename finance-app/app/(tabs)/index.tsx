@@ -195,6 +195,7 @@ export default function DashboardScreen() {
   const setupComplete = Boolean(
     dashboard && dashboard.summary.income > 0 && dashboard.summary.expense > 0 && dashboard.budgets.length > 0,
   );
+  const showSetupGuide = Boolean(dashboard && !setupComplete && !setupDismissed);
   const homeFocus = useMemo(() => (dashboard ? getHomeFocus(dashboard, queuedCount) : null), [dashboard, queuedCount]);
   const recentPreview = useMemo(() => dashboard?.recent_transactions.slice(0, RECENT_PREVIEW_LIMIT) ?? [], [dashboard?.recent_transactions]);
   const budgetAmountValidation = useMemo(() => validateAmount(budgetAmount), [budgetAmount]);
@@ -441,7 +442,7 @@ export default function DashboardScreen() {
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.sky} onRefresh={onRefresh} />}>
       <View style={styles.header}>
-        <AnimatedScreen>
+        <AnimatedScreen style={styles.headerCopy}>
           <Text style={styles.brand}>Finance Tracker</Text>
           <Text style={styles.title}>Welcome, {profileName}</Text>
         </AnimatedScreen>
@@ -459,7 +460,11 @@ export default function DashboardScreen() {
 
       {dashboard ? (
         <>
-          <AnimatedCard>
+          {showSetupGuide ? (
+            <GettingStartedCard dashboard={dashboard} onPrimeBudget={primeBudgetSetup} onSkip={dismissSetup} />
+          ) : null}
+
+          <AnimatedCard index={showSetupGuide ? 1 : 0}>
             <Card style={styles.balanceCard}>
               <Card.Content>
                 <View style={styles.rowBetween}>
@@ -483,11 +488,7 @@ export default function DashboardScreen() {
             </Card>
           </AnimatedCard>
 
-          {homeFocus ? <HomeFocusCard focus={homeFocus} onPress={actOnHomeFocus} /> : null}
-
-          {!setupComplete && !setupDismissed ? (
-            <GettingStartedCard dashboard={dashboard} onPrimeBudget={primeBudgetSetup} onSkip={dismissSetup} />
-          ) : null}
+          {!showSetupGuide && homeFocus ? <HomeFocusCard focus={homeFocus} onPress={actOnHomeFocus} /> : null}
 
           <Section title="Budgets" icon="target">
             <View style={styles.formGrid}>
@@ -820,10 +821,10 @@ function GettingStartedCard({
       <Card.Content>
         <View style={styles.sectionHeader}>
           <MaterialCommunityIcons color={colors.sky} name="map-marker-path" size={20} />
-          <Text style={styles.cardTitle}>Set up your first money snapshot</Text>
+          <Text style={styles.cardTitle}>Set up your money snapshot</Text>
         </View>
         <Text style={styles.startText}>
-          Complete the first three essentials. Home will switch back to daily focus once your snapshot is useful.
+          Add the three essentials once. After that, Home becomes your daily dashboard with balance, trends, and quick actions.
         </Text>
         <PressableScale accessibilityRole="button" onPress={nextStep.onPress} style={styles.setupNextStep}>
           <View style={styles.setupNextIcon}>
@@ -1425,6 +1426,10 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     justifyContent: 'space-between',
     paddingTop: 12,
   },
+  headerCopy: {
+    flex: 1,
+    paddingRight: 10,
+  },
   income: {
     color: colors.emerald,
     fontSize: 14,
@@ -1946,6 +1951,7 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     color: colors.ink,
     fontSize: 32,
     fontWeight: '900',
+    lineHeight: 38,
   },
   transactionIcon: {
     alignItems: 'center',

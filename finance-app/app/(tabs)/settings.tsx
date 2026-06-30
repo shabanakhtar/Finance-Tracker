@@ -191,7 +191,7 @@ export default function SettingsScreen() {
 
   const restoreSetup = async () => {
     await persistSetupDismissed(false);
-    setSetupFeedback('Setup will appear on Home while income, expense, or budget essentials are unfinished.');
+    setSetupFeedback('The setup guide will appear at the top of Home until income, expense, and budget essentials are finished.');
   };
 
   return (
@@ -231,15 +231,15 @@ export default function SettingsScreen() {
       <View style={styles.panel}>
         <View style={styles.row}>
           <View style={styles.rowText}>
-            <Text style={styles.sectionTitle}>First-run setup</Text>
-            <Text style={styles.muted}>Bring back the guided Home setup if you skipped it before finishing the essentials.</Text>
+            <Text style={styles.sectionTitle}>Setup guide</Text>
+            <Text style={styles.muted}>Bring back the money snapshot guide if you skipped it before finishing the essentials.</Text>
           </View>
           <MaterialCommunityIcons color={colors.sky} name="map-marker-path" size={24} />
         </View>
         <Button icon="map-marker-path" mode="outlined" onPress={restoreSetup} style={styles.restoreSetupButton}>
-          Show Setup On Home
+          Show setup guide
         </Button>
-        {setupFeedback ? <SuccessBanner message={setupFeedback} title="Setup restored" /> : null}
+        {setupFeedback ? <SuccessBanner message={setupFeedback} title="Setup guide restored" /> : null}
       </View>
 
       <View style={styles.panel}>
