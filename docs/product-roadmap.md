@@ -300,6 +300,9 @@ Next improvements:
 - Infer completed steps from real user data.
 - Add a way to restart setup from Settings later.
 - Add a dedicated transactions/history screen later if users need full history outside Analysis.
+- Add a compact Home balance sparkline with range controls such as 7D and 30D.
+- Add period-over-period deltas on Home summary cards, for example income up/down versus the previous 7 days.
+- Keep deeper chart controls in Analysis, but allow Home to show one glanceable trend when it helps daily decisions.
 
 ## Level 4: Setup Guide And Onboarding
 
