@@ -520,6 +520,8 @@ Future:
 - Offline edit/delete queue.
 - Conflict handling.
 - Background sync scheduling if production usage justifies it.
+- Investigate why local market/product search currently returns "AI/search service unavailable" in the emulator.
+- Improve product-search empty/error states so users know whether the issue is missing configuration, temporary provider failure, or no trustworthy match.
 
 ## Level 9: AI Limits And Cost Protection
 
@@ -543,6 +545,11 @@ Implemented:
   - AI chat
   - Market search
   - Receipt scan
+
+Future product-search UX fixes:
+
+- Product field examples should use realistic names such as "sea salt hair spray" or "hair spray" instead of vague product copy.
+- Product-search troubleshooting should verify the backend route, provider keys, Vercel environment variables, and deployed error logs before changing UI behavior.
 
 Future subscription agenda:
 
@@ -771,6 +778,7 @@ Before beta:
   - CSV import/export
   - Receipt scan
   - Product recommendation
+  - Product search with a realistic example such as sea salt hair spray
   - AI chat limit behavior
   - Offline add and later sync
 - Edge cases:
