@@ -210,6 +210,12 @@ Implemented in `dcb3ab7`:
   - Top categories
   - Opportunities
   - Smart insights
+- Future Analysis clarity work:
+  - Explain what the financial score means and what it does not mean.
+  - Make the score card tappable, opening a short breakdown of spending ratio, consistency, data confidence, and budget impact.
+  - Avoid presenting the score like a credit score or full net-worth health score until the formula is expanded.
+  - Add a compact category-spending donut or bar chart if it improves scanning more than the current list.
+  - Keep Smart Insights as readable cards; use charts only for data that benefits from visual comparison.
 - Home is lighter and more focused:
   - Balance
   - Net cash flow
@@ -782,6 +788,7 @@ Before beta:
   - Receipt scan
   - Product recommendation
   - Product search with a realistic example such as sea salt hair spray
+  - Financial score explanation and score-breakdown behavior
   - AI chat limit behavior
   - Offline add and later sync
 - Edge cases:
