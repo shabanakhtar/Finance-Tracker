@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Add auth welcome step`
+- `Add SQL-backed AI context`
 
 Recent important commits:
 
+- `Add SQL-backed AI context`
 - `Add auth welcome step`
 - `Harden backend security controls`
 - `Surface AI usage limits`
@@ -550,7 +551,7 @@ Future subscription agenda:
 
 ## Level 9B: SQL-Backed AI Insight Architecture
 
-Status: planned before AI insights become more advanced.
+Status: implemented as a backend-owned SQL/RPC context layer. Needs Supabase migration applied before the deployed backend uses the new AI chat path.
 
 The AI should not need to read every transaction row for every question. That will become slow, expensive, and noisy as users add more history.
 
@@ -576,14 +577,27 @@ User asks finance question
 
 Approved SQL-backed tools should include:
 
-- `get_summary(user_id, date_range)`
-- `get_monthly_cashflow(user_id, months)`
-- `get_top_expense_categories(user_id, start_date, end_date)`
-- `get_budget_status(user_id)`
-- `get_recent_large_transactions(user_id, threshold, date_range)`
-- `get_category_trend(user_id, category, months)`
-- `get_recurring_candidates(user_id)`
-- `get_spending_change(user_id, current_period, comparison_period)`
+- `finance_monthly_rollup(user_id, months)`
+- `finance_category_rollup(user_id, days, limit)`
+- `finance_budget_snapshot(user_id)`
+- `finance_recent_transactions(user_id, limit)`
+
+Implemented in the SQL-backed context batch:
+
+- Added migration `20260630110000_add_ai_insight_sql_helpers.sql`.
+- Added backend-only Supabase RPC helpers:
+  - `finance_monthly_rollup`
+  - `finance_category_rollup`
+  - `finance_budget_snapshot`
+  - `finance_recent_transactions`
+- RPC helpers are `security invoker`.
+- RPC helpers clamp date/window limits so prompts cannot grow forever.
+- RPC helper execution is revoked from `public`, `anon`, and `authenticated`.
+- RPC helper execution is granted only to `service_role`.
+- Added `load_ai_insight_context(user_id)` in `supabase_data.py`.
+- `/ask-ai` now uses SQL-derived context in Supabase mode.
+- `/ai-context` exposes the same structured context for signed-in verification without spending Gemini quota.
+- Gemini receives an explicit schema and compact query results, and is told it has no database access.
 
 If AI-generated SQL is ever used, it must be heavily restricted:
 
@@ -620,11 +634,10 @@ budgets(
 
 Near-term implementation:
 
-- Keep the current safe approach where backend loads user data and sends structured summaries to Gemini.
-- Move expensive analytics toward SQL-backed helper functions.
-- Add date-range limits so AI prompts do not grow forever.
-- Feed Gemini a structured finance context with query results, warnings, and budget status.
-- Do not give Gemini unrestricted database access.
+- Apply the migration to Supabase before deploying this backend path.
+- Verify `/ai-context` with a signed-in mobile session.
+- Keep future AI tools as approved backend helpers, not arbitrary generated SQL.
+- Add more SQL helpers only when a real insight needs them.
 
 ## Level 10: Security Hardening
 

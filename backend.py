@@ -35,7 +35,7 @@ from ai_usage import AiLimitExceeded, ensure_ai_limit, get_usage_status, record_
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from settings import env, env_list, use_supabase
-from supabase_data import resolve_user_id
+from supabase_data import load_ai_insight_context, resolve_user_id
 
 DEFAULT_CORS_ORIGINS = [
     "http://localhost:8081",
@@ -639,6 +639,32 @@ def get_ai_limits(request: Request):
         )
 
 
+@app.get("/ai-context")
+def get_ai_context(request: Request):
+    try:
+        user_id = current_user_id(request)
+        if not use_supabase():
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "status": "error",
+                    "message": "SQL-backed AI context is available only in Supabase mode."
+                }
+            )
+        return {
+            "status": "success",
+            "data": load_ai_insight_context(user_id),
+        }
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "error",
+                "message": str(e)
+            }
+        )
+
+
 class AIRequest(BaseModel):
     question: str
 
@@ -711,9 +737,12 @@ def ask_ai_endpoint(request: AIRequest, http_request: Request):
     try:
         user_id = current_user_id(http_request)
         ensure_ai_limit(user_id, AI_FEATURES["chat"])
-        data = load_data(user_id)
-        budgets = load_budget_settings(user_id)
-        response = ask_ai(request.question, data, budgets)
+        if use_supabase():
+            response = ask_ai(request.question, finance_context=load_ai_insight_context(user_id))
+        else:
+            data = load_data(user_id)
+            budgets = load_budget_settings(user_id)
+            response = ask_ai(request.question, data, budgets)
         usage_status = record_ai_usage(user_id, AI_FEATURES["chat"])
 
         return ai_success({"response": response}, usage_status)

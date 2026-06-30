@@ -59,6 +59,14 @@ def _normalize_budget(row):
     }
 
 
+def _money_value(value):
+    return round(float(value or 0), 2)
+
+
+def _rpc(name, payload):
+    return _request("POST", f"/rest/v1/rpc/{name}", payload)
+
+
 def _validate_transaction(amount, category, type_, date):
     if not category or type_ not in {"income", "expense"}:
         raise ValueError("Invalid transaction data")
@@ -255,3 +263,79 @@ def upsert_ai_usage(user_id, feature, period, count, last_used_at, cached_respon
             raise RuntimeError("AI usage table is not set up yet. Run the add_ai_usage_limits migration in Supabase.") from exc
         raise
     return {"message": "AI usage recorded"}
+
+
+def load_ai_insight_context(user_id):
+    user_id = require_user_id(user_id)
+
+    try:
+        monthly = _rpc("finance_monthly_rollup", {"p_user_id": user_id, "p_months": 6}) or []
+        categories = _rpc("finance_category_rollup", {"p_user_id": user_id, "p_days": 90, "p_limit": 8}) or []
+        budgets = _rpc("finance_budget_snapshot", {"p_user_id": user_id}) or []
+        recent = _rpc("finance_recent_transactions", {"p_user_id": user_id, "p_limit": 12}) or []
+    except RuntimeError as exc:
+        if "finance_" in str(exc) and ("PGRST" in str(exc) or "schema cache" in str(exc)):
+            raise RuntimeError("AI insight SQL helpers are not set up yet. Run the add_ai_insight_sql_helpers migration in Supabase.") from exc
+        raise
+
+    totals = {
+        "income": _money_value(sum(_money_value(item.get("income")) for item in monthly)),
+        "expense": _money_value(sum(_money_value(item.get("expense")) for item in monthly)),
+    }
+    totals["balance"] = _money_value(totals["income"] - totals["expense"])
+
+    return {
+        "source": "supabase_rpc",
+        "schema": {
+            "monthly": ["month", "income", "expense", "balance", "transaction_count"],
+            "categories": ["category", "income", "expense", "net", "transaction_count"],
+            "budgets": ["category", "limit_amount", "spent", "remaining", "progress", "is_over"],
+            "recent_transactions": ["date", "type", "category", "amount", "notes"],
+        },
+        "summary": {
+            **totals,
+            "transaction_count": sum(int(item.get("transaction_count") or 0) for item in monthly),
+            "months_returned": len(monthly),
+        },
+        "monthly": [
+            {
+                "month": item.get("month"),
+                "income": _money_value(item.get("income")),
+                "expense": _money_value(item.get("expense")),
+                "balance": _money_value(item.get("balance")),
+                "transaction_count": int(item.get("transaction_count") or 0),
+            }
+            for item in monthly
+        ],
+        "categories": [
+            {
+                "category": item.get("category"),
+                "income": _money_value(item.get("income")),
+                "expense": _money_value(item.get("expense")),
+                "net": _money_value(item.get("net")),
+                "transaction_count": int(item.get("transaction_count") or 0),
+            }
+            for item in categories
+        ],
+        "budgets": [
+            {
+                "category": item.get("category"),
+                "limit_amount": _money_value(item.get("limit_amount")),
+                "spent": _money_value(item.get("spent")),
+                "remaining": _money_value(item.get("remaining")),
+                "progress": round(float(item.get("progress") or 0), 4),
+                "is_over": bool(item.get("is_over")),
+            }
+            for item in budgets
+        ],
+        "recent_transactions": [
+            {
+                "date": item.get("date"),
+                "type": item.get("type"),
+                "category": item.get("category"),
+                "amount": _money_value(item.get("amount")),
+                "notes": item.get("notes") or "",
+            }
+            for item in recent
+        ],
+    }

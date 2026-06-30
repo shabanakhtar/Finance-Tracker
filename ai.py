@@ -380,10 +380,73 @@ Rules:
     }
 
 
-def ask_ai(user_input, data, budgets=None):
+def _format_context_rows(rows):
+    if not rows:
+        return "None."
+    return json.dumps(rows, ensure_ascii=True, indent=2)
+
+
+def _ask_ai_with_sql_context(user_input, context):
+    summary = context.get("summary", {})
+    prompt = f"""
+You are a personal finance assistant helping a student improve their financial habits.
+
+The backend has already queried Supabase using approved SQL helper functions.
+You do not have database access. Do not invent SQL, tables, rows, prices, or hidden data.
+Use only the structured context below.
+
+### SQL Helper Schema
+{json.dumps(context.get("schema", {}), ensure_ascii=True, indent=2)}
+
+### Six-Month Summary
+- Income: {summary.get("income", 0)}
+- Expense: {summary.get("expense", 0)}
+- Balance: {summary.get("balance", 0)}
+- Transaction count: {summary.get("transaction_count", 0)}
+
+### Monthly Rollup
+{_format_context_rows(context.get("monthly"))}
+
+### Top Categories
+{_format_context_rows(context.get("categories"))}
+
+### Budget Snapshot
+{_format_context_rows(context.get("budgets"))}
+
+### Recent Transactions
+{_format_context_rows(context.get("recent_transactions"))}
+
+### User Question
+{user_input}
+
+---
+
+### Instructions
+- Base your response only on the SQL-derived context provided.
+- Identify the main financial issue clearly.
+- Explain the data point that supports it.
+- Suggest 2-3 specific actions the user can take.
+- If context is thin, say what data is missing.
+- Do not provide legal, tax, or investment advice.
+- Keep the response concise and practical.
+"""
+
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+    )
+
+    return response.text
+
+
+def ask_ai(user_input, data=None, budgets=None, finance_context=None):
     if not client:
         raise RuntimeError("AI is not configured. Add GEMINI_API_KEY to the backend environment.")
 
+    if finance_context:
+        return _ask_ai_with_sql_context(user_input, finance_context)
+
+    data = data or []
     summary = calculate_balance(data)
     insights = generate_insights(data, summary)
     personality = detect_spending_personality(summary)
