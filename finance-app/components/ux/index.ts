@@ -1,3 +1,4 @@
+export * from './connection';
 export * from './forms';
 export * from './keyboard';
 export * from './motion';

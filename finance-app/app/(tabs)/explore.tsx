@@ -10,6 +10,7 @@ import { AppPalette } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
 import {
   CharacterCounter,
+  ConnectionNotice,
   FormField,
   KeyboardAwareScrollView,
   AppErrorState,
@@ -20,6 +21,7 @@ import {
   validateCategory,
   validateDate,
   validateMaxLength,
+  useConnectionStatus,
 } from '@/components/ux';
 import { AppApiError, MarketSearchAnswer, ReceiptScanResult, addTransaction, scanReceipt, searchMarket } from '@/services/api';
 import { isLikelyNetworkError, queueTransaction } from '@/services/offlineQueue';
@@ -37,6 +39,7 @@ const NOTES_LIMIT = 500;
 export default function AddTransactionScreen() {
   const params = useLocalSearchParams<{ category?: string; type?: 'income' | 'expense' }>();
   const { colors } = useAppTheme();
+  const connection = useConnectionStatus();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
   const [amount, setAmount] = useState('');
@@ -242,6 +245,10 @@ export default function AddTransactionScreen() {
             <MaterialCommunityIcons color={colors.violet} name="lightning-bolt-outline" size={18} />
             <Text style={styles.tipText}>Scan a receipt, review what AI found, then save only when it looks right.</Text>
           </View>
+
+          {connection.isOffline ? (
+            <ConnectionNotice message="Offline mode is on. Manual transactions can still be saved here and synced later; receipt scans need internet." />
+          ) : null}
 
           <View style={styles.scanActions}>
             <Button

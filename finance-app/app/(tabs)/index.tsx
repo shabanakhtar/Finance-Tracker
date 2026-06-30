@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Href, router, useFocusEffect } from 'expo-router';
 import type { ReactNode } from 'react';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Button, Card, IconButton, SegmentedButtons } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import {
   AnimatedProgressBar,
   AnimatedScreen,
   CharacterCounter,
+  ConnectionNotice,
   ConfirmDialog,
   DelayedLoader,
   FormField,
@@ -26,6 +27,7 @@ import {
   validateCategory,
   validateDate,
   validateMaxLength,
+  useConnectionStatus,
 } from '@/components/ux';
 import { useAuth } from '@/contexts/auth';
 import { useAppTheme } from '@/contexts/theme';
@@ -99,6 +101,7 @@ function useDashboardTheme() {
 export default function DashboardScreen() {
   const { session, signOut } = useAuth();
   const { colors } = useAppTheme();
+  const connection = useConnectionStatus();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
   const [budgetAmount, setBudgetAmount] = useState('');
@@ -121,6 +124,7 @@ export default function DashboardScreen() {
   const [pendingTransactionDelete, setPendingTransactionDelete] = useState<Transaction | null>(null);
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
+  const lastAutoSyncCount = useRef(0);
   const [submittedFields, setSubmittedFields] = useState<Record<DashboardFormField, boolean>>({
     budgetAmount: false,
     budgetCategory: false,
@@ -170,9 +174,12 @@ export default function DashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      getQuickAddShortcuts()
-        .then((shortcuts) => {
-          if (active) setQuickAddShortcuts(shortcuts);
+      Promise.all([getQuickAddShortcuts(), getQueuedTransactions(), getSyncHistory()])
+        .then(([shortcuts, queued, history]) => {
+          if (!active) return;
+          setQuickAddShortcuts(shortcuts);
+          setQueuedCount(queued.length);
+          setSyncHistory(history);
         })
         .catch(() => {
           if (active) setQuickAddShortcuts(defaultQuickAddShortcuts);
@@ -237,7 +244,7 @@ export default function DashboardScreen() {
     });
   };
 
-  const syncOfflineQueue = async () => {
+  const syncOfflineQueue = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     try {
       setSyncingQueue(true);
       const result = await syncQueuedTransactions();
@@ -247,18 +254,29 @@ export default function DashboardScreen() {
         await loadDashboard();
       }
       if (!result.online) {
-        Alert.alert('Still offline', 'Queued transactions will sync when your connection is back.');
+        if (!silent) Alert.alert('Still offline', 'Queued transactions will sync when your connection is back.');
       } else if (result.remaining.length) {
-        Alert.alert('Partial sync', `${result.synced} synced, ${result.remaining.length} still waiting.`);
+        if (!silent) Alert.alert('Partial sync', `${result.synced} synced, ${result.remaining.length} still waiting.`);
       } else if (result.synced > 0) {
         showToast(`${result.synced} offline transaction${result.synced === 1 ? '' : 's'} synced.`);
       }
     } catch (err) {
-      Alert.alert('Sync failed', err instanceof Error ? err.message : 'Could not sync queued transactions.');
+      if (!silent) Alert.alert('Sync failed', err instanceof Error ? err.message : 'Could not sync queued transactions.');
     } finally {
       setSyncingQueue(false);
     }
-  };
+  }, [loadDashboard]);
+
+  useEffect(() => {
+    if (connection.isOffline) {
+      lastAutoSyncCount.current = 0;
+      return;
+    }
+    if (connection.isChecking || connection.isOffline || queuedCount <= 0 || syncingQueue) return;
+    if (lastAutoSyncCount.current === queuedCount) return;
+    lastAutoSyncCount.current = queuedCount;
+    syncOfflineQueue({ silent: true });
+  }, [connection.isChecking, connection.isOffline, queuedCount, syncOfflineQueue, syncingQueue]);
 
   const actOnHomeFocus = () => {
     if (!homeFocus) return;
@@ -432,10 +450,11 @@ export default function DashboardScreen() {
 
       <Text style={styles.subtitle}>Here is your money snapshot for today.</Text>
 
+      {connection.isOffline ? <ConnectionNotice message="Offline mode is on. You can keep adding transactions; they will queue on this device." /> : null}
       {error ? <ErrorState error={error} onRetry={loadDashboard} /> : null}
       {degradedMessage ? <CachedDashboardNotice cachedAt={dashboardCachedAt} message={degradedMessage} onRetry={loadDashboard} /> : null}
       {queuedCount > 0 || syncHistory.length ? (
-        <OfflineQueueCard count={queuedCount} history={syncHistory} syncing={syncingQueue} onSync={syncOfflineQueue} />
+        <OfflineQueueCard count={queuedCount} history={syncHistory} isOffline={connection.isOffline} syncing={syncingQueue} onSync={syncOfflineQueue} />
       ) : null}
 
       {dashboard ? (
@@ -1114,11 +1133,13 @@ function CachedDashboardNotice({
 function OfflineQueueCard({
   count,
   history,
+  isOffline,
   onSync,
   syncing,
 }: {
   count: number;
   history: SyncHistoryItem[];
+  isOffline: boolean;
   onSync: () => void;
   syncing: boolean;
 }) {
@@ -1136,7 +1157,9 @@ function OfflineQueueCard({
         </View>
         <Text style={styles.muted}>
           {count > 0
-            ? 'These were saved on this device and will be uploaded once the API is reachable.'
+            ? isOffline
+              ? 'These are safe on this device. Sync will resume when internet is reachable.'
+              : 'These were saved on this device and will be uploaded once the API is reachable.'
             : 'Recent offline sync activity is shown here so you know what happened.'}
         </Text>
         {latestHistory.length ? (
@@ -1157,8 +1180,8 @@ function OfflineQueueCard({
           </View>
         ) : null}
         {count > 0 ? (
-          <Button loading={syncing} mode="contained" onPress={onSync} style={styles.offlineButton}>
-            Sync now
+          <Button disabled={isOffline || syncing} loading={syncing} mode="contained" onPress={() => onSync()} style={styles.offlineButton}>
+            {isOffline ? 'Waiting for internet' : 'Sync now'}
           </Button>
         ) : null}
       </Card.Content>

@@ -78,6 +78,11 @@ export async function queueTransaction(transaction: Transaction) {
     queuedAt: new Date().toISOString(),
   };
   await saveQueue([...current, item]);
+  await recordSyncHistory({
+    at: item.queuedAt,
+    message: `${transaction.type === 'income' ? 'Income' : 'Expense'} queued: ${transaction.category}.`,
+    status: 'offline',
+  });
   return item;
 }
 

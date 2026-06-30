@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Smooth motion and success feedback`
+- `Strengthen offline resilience`
 
 Recent important commits:
 
+- `Strengthen offline resilience`
 - `Smooth motion and success feedback`
 - `Harden forms and keyboard behavior`
 - `Personalize quick add shortcuts`
@@ -475,7 +476,7 @@ Still useful:
 
 ## Level 8: Graceful Degradation And Offline Use
 
-Status: strong foundation exists.
+Status: implemented for the current mobile app cycle. Needs phone APK review after the next preview build.
 
 The app should remain useful when services fail.
 
@@ -494,6 +495,12 @@ Implemented:
 - Quick Add can queue offline.
 - Offline queue count appears.
 - Recent sync history appears.
+- Offline saves now create visible sync-history entries.
+- Home refreshes queue/history when the tab regains focus.
+- Home shows a visible offline-mode notice before a queue exists.
+- Add and Quick Add show offline notices before save.
+- Home attempts a silent sync when connection returns.
+- Manual queue sync is disabled while internet is unreachable.
 - AI rate-limit messages are friendly.
 - Receipt/manual fallback exists.
 - Product search avoids guessing when unreliable.
@@ -502,7 +509,7 @@ Future:
 
 - Offline edit/delete queue.
 - Conflict handling.
-- More visible sync status.
+- Background sync scheduling if production usage justifies it.
 
 ## Level 9: AI Limits And Cost Protection
 

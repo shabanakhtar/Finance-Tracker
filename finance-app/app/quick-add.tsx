@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppPalette, spacing } from '@/constants/theme';
 import {
   CharacterCounter,
+  ConnectionNotice,
   FormField,
   KeyboardAwareScrollView,
   PressableScale,
@@ -20,6 +21,7 @@ import {
   validateCategory,
   validateDate,
   validateMaxLength,
+  useConnectionStatus,
 } from '@/components/ux';
 import { useAppTheme } from '@/contexts/theme';
 import { addTransaction } from '@/services/api';
@@ -40,6 +42,7 @@ const NOTES_LIMIT = 500;
 export default function QuickAddScreen() {
   const params = useLocalSearchParams<{ amount?: string; category?: string; type?: 'income' | 'expense' }>();
   const { colors } = useAppTheme();
+  const connection = useConnectionStatus();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
   const [amount, setAmount] = useState(params.amount ?? '');
@@ -171,6 +174,8 @@ export default function QuickAddScreen() {
             <Text style={styles.summaryMeta}>{category || 'category'} - {date}</Text>
           </View>
         </View>
+
+        {connection.isOffline ? <ConnectionNotice /> : null}
 
         <SegmentedButtons
           buttons={[
