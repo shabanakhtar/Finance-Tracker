@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Strengthen offline resilience`
+- `Surface AI usage limits`
 
 Recent important commits:
 
+- `Surface AI usage limits`
 - `Strengthen offline resilience`
 - `Smooth motion and success feedback`
 - `Harden forms and keyboard behavior`
@@ -513,7 +514,7 @@ Future:
 
 ## Level 9: AI Limits And Cost Protection
 
-Status: implemented for free daily limits.
+Status: implemented and hardened for free daily limits.
 
 The app stays free for now, but AI must be protected.
 
@@ -525,6 +526,10 @@ Implemented:
   - Receipt scan: 5/day
   - Product recommendation: 5/day
 - Friendly HTTP 429 before Gemini is called.
+- Backend now fails closed if the `ai_usage` table is missing, so Gemini is not called before usage can be checked.
+- `/ai-limits` endpoint exposes current daily usage status for the signed-in user.
+- AI screen shows remaining chat, market, and receipt limits before the user spends a request.
+- AI screen refreshes limit status after successful chat and market calls.
 - App-side limit messages for:
   - AI chat
   - Market search

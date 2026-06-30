@@ -227,7 +227,7 @@ def get_ai_usage(user_id, feature, period):
         rows = _request("GET", query)
     except RuntimeError as exc:
         if "ai_usage" in str(exc) and ("PGRST" in str(exc) or "schema cache" in str(exc)):
-            return None
+            raise RuntimeError("AI usage table is not set up yet. Run the add_ai_usage_limits migration in Supabase.") from exc
         raise
     return rows[0] if rows else None
 

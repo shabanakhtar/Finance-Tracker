@@ -155,6 +155,12 @@ export type AiLimitStatus = {
   used: number;
 };
 
+export type AiLimits = {
+  chat: AiLimitStatus;
+  market: AiLimitStatus;
+  receipt: AiLimitStatus;
+};
+
 export type ApiErrorKind = 'network' | 'timeout' | 'auth' | 'rate_limit' | 'backend' | 'parse' | 'unknown';
 
 export class AppApiError extends Error {
@@ -326,6 +332,10 @@ export function askAi(question: string) {
     method: 'POST',
     body: JSON.stringify({ question }),
   });
+}
+
+export function getAiLimits() {
+  return request<AiLimits>('/ai-limits');
 }
 
 export function searchMarket(payload: { product_name: string; current_price?: number; category?: string; location?: string }) {

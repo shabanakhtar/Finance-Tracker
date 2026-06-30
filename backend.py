@@ -29,7 +29,7 @@ from analytics import (
     top_categories,
 )
 from ai import ask_ai, scan_receipt_image, search_local_market
-from ai_usage import AiLimitExceeded, ensure_ai_limit, record_ai_usage
+from ai_usage import AiLimitExceeded, ensure_ai_limit, get_usage_status, record_ai_usage
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from settings import env_list, use_supabase
@@ -544,6 +544,27 @@ def get_breakdown(request: Request):
         "status": "success",
         "data": expense_breakdown(data)
     }
+
+
+@app.get("/ai-limits")
+def get_ai_limits(request: Request):
+    try:
+        user_id = current_user_id(request)
+        return {
+            "status": "success",
+            "data": {
+                name: get_usage_status(user_id, feature).as_dict()
+                for name, feature in AI_FEATURES.items()
+            },
+        }
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "error",
+                "message": str(e)
+            }
+        )
 
 
 class AIRequest(BaseModel):

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Chip, Text } from 'react-native-paper';
@@ -18,7 +18,7 @@ import {
   validateMaxLength,
 } from '@/components/ux';
 import { useAppTheme } from '@/contexts/theme';
-import { AppApiError, MarketSearchAnswer, askAi, searchMarket } from '@/services/api';
+import { AiLimitStatus, AiLimits, AppApiError, MarketSearchAnswer, askAi, getAiLimits, searchMarket } from '@/services/api';
 
 type ChatMessage = {
   id: string;
@@ -80,6 +80,8 @@ export default function AiScreen() {
   const [marketPrice, setMarketPrice] = useState('');
   const [marketProduct, setMarketProduct] = useState('');
   const [question, setQuestion] = useState('');
+  const [aiLimitError, setAiLimitError] = useState<string | null>(null);
+  const [aiLimits, setAiLimits] = useState<AiLimits | null>(null);
   const [loading, setLoading] = useState(false);
   const [marketLoading, setMarketLoading] = useState(false);
   const [submitted, setSubmitted] = useState<Record<AiField, boolean>>({
@@ -107,6 +109,19 @@ export default function AiScreen() {
   }, [marketPrice]);
   const marketCategoryValidation = useMemo(() => validateMaxLength(marketCategory, CATEGORY_LIMIT, 'Category'), [marketCategory]);
   const marketFormIsValid = productValidation.isValid && marketPriceValidation.isValid && marketCategoryValidation.isValid;
+  const loadAiLimits = async () => {
+    try {
+      setAiLimitError(null);
+      setAiLimits(await getAiLimits());
+    } catch (err) {
+      setAiLimitError(err instanceof Error ? err.message : 'Could not load AI limits.');
+    }
+  };
+
+  useEffect(() => {
+    loadAiLimits();
+  }, []);
+
   const markSubmitted = (...fields: AiField[]) => {
     setSubmitted((current) => {
       const next = { ...current };
@@ -144,6 +159,7 @@ export default function AiScreen() {
     try {
       const result = await askAi(cleaned);
       triggerSuccess();
+      loadAiLimits();
       setMessages((current) => [
         ...current,
         {
@@ -193,6 +209,7 @@ export default function AiScreen() {
         location: 'Pakistan',
       });
       triggerSuccess();
+      loadAiLimits();
       setMarketResult(result);
 
       setMessages((current) => [
@@ -235,6 +252,24 @@ export default function AiScreen() {
           <Text style={styles.subtitle}>
             The assistant reads your transactions, budgets, warnings, and score before answering.
           </Text>
+        </View>
+
+        <View style={styles.limitPanel}>
+          <View style={styles.promptHeader}>
+            <Text style={styles.sectionTitle}>Daily AI limits</Text>
+            <Button compact mode="text" onPress={loadAiLimits} textColor={colors.sky}>
+              Refresh
+            </Button>
+          </View>
+          {aiLimits ? (
+            <View style={styles.limitGrid}>
+              <LimitCard label="Chat" status={aiLimits.chat} />
+              <LimitCard label="Market" status={aiLimits.market} />
+              <LimitCard label="Receipts" status={aiLimits.receipt} />
+            </View>
+          ) : (
+            <Text style={styles.panelHint}>{aiLimitError ?? "Loading today's AI usage..."}</Text>
+          )}
         </View>
 
         <View style={styles.chatPanel}>
@@ -449,6 +484,28 @@ export default function AiScreen() {
   );
 }
 
+function LimitCard({ label, status }: { label: string; status: AiLimitStatus }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const usedRatio = status.limit > 0 ? Math.min(status.used / status.limit, 1) : 0;
+  const isEmpty = status.remaining <= 0;
+
+  return (
+    <View style={[styles.limitCard, isEmpty ? styles.limitCardEmpty : null]}>
+      <View style={styles.limitRow}>
+        <Text style={styles.limitLabel}>{label}</Text>
+        <Text style={[styles.limitCount, isEmpty ? styles.limitCountEmpty : null]}>
+          {status.remaining}/{status.limit}
+        </Text>
+      </View>
+      <View style={styles.limitTrack}>
+        <View style={[styles.limitFill, { backgroundColor: isEmpty ? colors.coral : colors.sky, width: `${usedRatio * 100}%` }]} />
+      </View>
+      <Text style={styles.limitMeta}>Used {status.used} today</Text>
+    </View>
+  );
+}
+
 function createStyles(colors: AppPalette, bottomInset = 0) {
   return StyleSheet.create({
     assistantBubble: {
@@ -579,6 +636,64 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
       justifyContent: 'center',
       marginBottom: spacing.lg,
       width: 48,
+    },
+    limitCard: {
+      backgroundColor: colors.background,
+      borderColor: colors.border,
+      borderRadius: radii.card,
+      borderWidth: 1,
+      flex: 1,
+      gap: spacing.xs,
+      minWidth: 96,
+      padding: spacing.md,
+    },
+    limitCardEmpty: {
+      backgroundColor: colors.coralSoft,
+    },
+    limitCount: {
+      color: colors.sky,
+      fontSize: 13,
+      fontWeight: '900',
+    },
+    limitCountEmpty: {
+      color: colors.coral,
+    },
+    limitFill: {
+      borderRadius: radii.pill,
+      height: '100%',
+    },
+    limitGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    limitLabel: {
+      color: colors.ink,
+      fontSize: 13,
+      fontWeight: '900',
+    },
+    limitMeta: {
+      color: colors.muted,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    limitPanel: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: radii.card,
+      borderWidth: 1,
+      padding: spacing.lg,
+    },
+    limitRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    limitTrack: {
+      backgroundColor: colors.surface2,
+      borderRadius: radii.pill,
+      height: 6,
+      overflow: 'hidden',
     },
     input: {
       backgroundColor: colors.surface,
