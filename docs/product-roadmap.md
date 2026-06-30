@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Harden backend security controls`
+- `Add auth welcome step`
 
 Recent important commits:
 
+- `Add auth welcome step`
 - `Harden backend security controls`
 - `Surface AI usage limits`
 - `Strengthen offline resilience`
@@ -159,6 +160,9 @@ Implemented in the Level 1 auth-first-impression batch:
 - Switching between Sign in and Create clears stale errors, success messages, submitted state, and touched fields.
 - Profile completion form now also enters with a subtle delayed animation.
 - Mode-specific helper copy was added below the sign-in/create toggle.
+- Auth now opens with a calm welcome step instead of dropping users straight into fields.
+- The welcome step uses a large "Hello." moment, short decision copy, animated finance preview tiles, and clear Sign in/Create account actions.
+- Existing sign-in/create forms remain behind that choice, with a Back action to return to the welcome step.
 
 Next quality pass:
 
@@ -168,10 +172,7 @@ Next quality pass:
 - Confirm keyboard does not hide password/name fields.
 - Confirm compact-screen auth spacing feels calm and not cramped.
 - Confirm mode switching does not leave stale validation messages behind.
-- Consider making auth more onboarding-like after the APK review:
-  - One or two screen intro.
-  - Gentle finance illustration or motion.
-  - Smooth switch between login and create account.
+- Confirm the welcome step feels smooth on device and does not add friction for returning users.
 
 ## Level 2: Navigation And Screen Structure
 

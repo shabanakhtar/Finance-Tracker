@@ -30,6 +30,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [lastName, setLastName] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [authStep, setAuthStep] = useState<'welcome' | 'form'>('welcome');
   const [password, setPassword] = useState('');
   const [secureEntry, setSecureEntry] = useState(true);
   const [submitted, setSubmitted] = useState(false);
@@ -77,6 +78,15 @@ export function AuthGate({ children }: { children: ReactNode }) {
     if (nextMode === mode) return;
     resetInteractionState();
     setMode(nextMode);
+  };
+  const beginAuth = (nextMode: 'login' | 'signup') => {
+    resetInteractionState();
+    setMode(nextMode);
+    setAuthStep('form');
+  };
+  const returnToWelcome = () => {
+    resetInteractionState();
+    setAuthStep('welcome');
   };
 
   const submit = async () => {
@@ -225,10 +235,56 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
+  if (authStep === 'welcome') {
+    return (
+      <KeyboardAvoidingView behavior={keyboardBehavior} style={styles.screen}>
+        <ScrollView contentContainerStyle={[styles.container, styles.welcomeContainer]} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
+          <AnimatedScreen style={styles.welcomeHero}>
+            <View style={styles.brandRow}>
+              <View style={styles.brandMark}>
+                <MaterialCommunityIcons color={colors.sky} name="wallet-outline" size={24} />
+              </View>
+              <View style={styles.brandTextWrap}>
+                <Text style={styles.brand}>Finance Tracker</Text>
+                <Text style={styles.brandCaption}>Private money clarity</Text>
+              </View>
+            </View>
+            <Text style={styles.helloTitle}>Hello.</Text>
+            <Text style={styles.welcomeTitle}>Ready to check in on your money?</Text>
+            <Text style={styles.welcomeSubtitle}>
+              Sign in to continue your snapshot, or create a private workspace and build your first view in a few taps.
+            </Text>
+            <AuthMotionPreview />
+          </AnimatedScreen>
+
+          <AnimatedScreen delay={120}>
+            <Card style={styles.welcomeCard}>
+              <Card.Content style={styles.welcomeActions}>
+                <Button labelStyle={styles.primaryLabel} mode="contained" onPress={() => beginAuth('login')} style={styles.primary}>
+                  Sign In
+                </Button>
+                <Button mode="outlined" onPress={() => beginAuth('signup')} style={styles.googleButton}>
+                  Create Account
+                </Button>
+                <View style={styles.trustRow}>
+                  <MaterialCommunityIcons color={colors.sky} name="shield-check-outline" size={18} />
+                  <Text style={styles.trustText}>Your data stays tied to your private Supabase account.</Text>
+                </View>
+              </Card.Content>
+            </Card>
+          </AnimatedScreen>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
   return (
     <KeyboardAvoidingView behavior={keyboardBehavior} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
         <AnimatedScreen style={styles.header}>
+          <Button compact icon="chevron-left" mode="text" onPress={returnToWelcome} style={styles.backButton} textColor={colors.muted}>
+            Back
+          </Button>
           <View style={styles.brandRow}>
             <View style={styles.brandMark}>
               <MaterialCommunityIcons color={colors.sky} name="wallet-outline" size={24} />
@@ -415,6 +471,11 @@ function createStyles(colors: AppPalette, compactScreen = false) {
   activeLabel: {
     color: '#ffffff',
   },
+  backButton: {
+    alignSelf: 'flex-start',
+    marginBottom: compactScreen ? 2 : 4,
+    marginLeft: -8,
+  },
   centered: {
     alignItems: 'center',
     backgroundColor: colors.background,
@@ -469,6 +530,14 @@ function createStyles(colors: AppPalette, compactScreen = false) {
   googleButton: {
     borderColor: colors.border,
     borderRadius: 8,
+  },
+  helloTitle: {
+    color: colors.ink,
+    fontSize: compactScreen ? 58 : 72,
+    fontWeight: '900',
+    letterSpacing: 0,
+    lineHeight: compactScreen ? 64 : 78,
+    marginTop: compactScreen ? 14 : 22,
   },
   title: {
     color: colors.ink,
@@ -598,6 +667,32 @@ function createStyles(colors: AppPalette, compactScreen = false) {
     flex: 1,
     fontSize: 10,
     lineHeight: 14,
+  },
+  welcomeActions: {
+    gap: compactScreen ? 10 : 12,
+  },
+  welcomeCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  welcomeContainer: {
+    gap: compactScreen ? 14 : 18,
+  },
+  welcomeHero: {
+    gap: compactScreen ? 8 : 10,
+  },
+  welcomeSubtitle: {
+    color: colors.muted,
+    fontSize: compactScreen ? 15 : 16,
+    lineHeight: compactScreen ? 22 : 24,
+  },
+  welcomeTitle: {
+    color: colors.ink,
+    fontSize: compactScreen ? 24 : 28,
+    fontWeight: '800',
+    lineHeight: compactScreen ? 30 : 34,
   },
   });
 }
