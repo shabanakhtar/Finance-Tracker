@@ -8,3 +8,4 @@ data.csv
 venv/
 finance-app/node_modules/
 finance-app/.expo/
+supabase/.temp/

@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Add SQL-backed AI context`
+- `Harden Supabase advisor warnings`
 
 Recent important commits:
 
+- `Harden Supabase advisor warnings`
 - `Add SQL-backed AI context`
 - `Add auth welcome step`
 - `Harden backend security controls`
@@ -668,6 +669,10 @@ Must do before wider beta:
   - Delete transaction
   - Budget save/delete
   - CSV import commit
+- Supabase advisor cleanup migration added:
+  - `set_updated_at()` now pins `search_path = public`.
+  - Direct table privileges are revoked from `public`, `anon`, and `authenticated`.
+  - Finance tables remain backend-owned through the `service_role` path.
 - Treat AI output, CSV content, receipt text, and product names as untrusted text.
 - Do not render arbitrary HTML.
 
@@ -676,7 +681,8 @@ Still required before public release:
 - Rotate any key that was ever shared outside secure deployment settings.
 - Review Vercel production `CORS_ORIGINS`.
 - Consider distributed rate limiting if traffic grows beyond one Vercel instance.
-- Run Supabase advisors against the live project before beta.
+- Re-run Supabase advisors after the cleanup migration is applied.
+- Enable leaked password protection in Supabase Auth settings.
 
 ## Level 11: Backend And Scaling Readiness
 
