@@ -682,7 +682,7 @@ Still required before public release:
 - Review Vercel production `CORS_ORIGINS`.
 - Consider distributed rate limiting if traffic grows beyond one Vercel instance.
 - Re-run Supabase advisors after the cleanup migration is applied.
-- Enable leaked password protection in Supabase Auth settings.
+- Leaked password protection is recommended but blocked on the current Supabase Free plan because HaveIBeenPwned checks require Pro and up.
 
 ## Level 11: Backend And Scaling Readiness
 
