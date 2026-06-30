@@ -1,5 +1,7 @@
 import csv
 import io
+import time
+from collections import defaultdict, deque
 
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, field_validator
@@ -32,7 +34,7 @@ from ai import ask_ai, scan_receipt_image, search_local_market
 from ai_usage import AiLimitExceeded, ensure_ai_limit, get_usage_status, record_ai_usage
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
-from settings import env_list, use_supabase
+from settings import env, env_list, use_supabase
 from supabase_data import resolve_user_id
 
 DEFAULT_CORS_ORIGINS = [
@@ -42,14 +44,43 @@ DEFAULT_CORS_ORIGINS = [
     "http://127.0.0.1:19006",
 ]
 
+WRITE_RATE_LIMITS = {
+    "budget_write": (30, 60),
+    "csv_import": (6, 300),
+    "transaction_delete": (40, 60),
+    "transaction_update": (60, 60),
+    "transaction_write": (60, 60),
+}
+_RATE_LIMIT_BUCKETS = defaultdict(deque)
+
+
+def configured_cors_origins():
+    origins = env_list("CORS_ORIGINS", DEFAULT_CORS_ORIGINS)
+    if "*" not in origins:
+        return origins
+    if env("ALLOW_WILDCARD_CORS", "false").lower() == "true":
+        return origins
+    return [origin for origin in origins if origin != "*"] or DEFAULT_CORS_ORIGINS
+
+
 app = FastAPI(title="AI Finance Tracker API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=env_list("CORS_ORIGINS", DEFAULT_CORS_ORIGINS),
+    allow_origins=configured_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("Cache-Control", "no-store")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    return response
 
 DEFAULT_BUDGETS = {
     "food": 15000,
@@ -167,6 +198,38 @@ def current_user_id(request: Request):
             }
         )
     return user_id
+
+
+def rate_limit_subject(request: Request, user_id):
+    if user_id:
+        return f"user:{user_id}"
+    host = request.client.host if request.client else "unknown"
+    return f"ip:{host}"
+
+
+def enforce_write_rate_limit(request: Request, user_id, scope):
+    limit, window_seconds = WRITE_RATE_LIMITS[scope]
+    bucket_key = f"{scope}:{rate_limit_subject(request, user_id)}"
+    now = time.monotonic()
+    bucket = _RATE_LIMIT_BUCKETS[bucket_key]
+
+    while bucket and now - bucket[0] > window_seconds:
+        bucket.popleft()
+
+    if len(bucket) >= limit:
+        retry_after = max(1, int(window_seconds - (now - bucket[0])))
+        raise HTTPException(
+            status_code=429,
+            headers={"Retry-After": str(retry_after)},
+            detail={
+                "status": "error",
+                "code": "WRITE_RATE_LIMIT_REACHED",
+                "message": "Too many changes in a short time. Wait a moment, then try again.",
+                "retry_after_seconds": retry_after,
+            },
+        )
+
+    bucket.append(now)
 
 
 def ai_limit_error(status):
@@ -347,6 +410,7 @@ def preview_transactions_import(request: CsvImportRequest, http_request: Request
 @app.post("/transactions/import")
 def import_transactions(request: CsvImportRequest, http_request: Request):
     user_id = current_user_id(http_request)
+    enforce_write_rate_limit(http_request, user_id, "csv_import")
     try:
         parsed = parse_csv_import(request.csv_text)
         if parsed["error_count"]:
@@ -376,6 +440,8 @@ def import_transactions(request: CsvImportRequest, http_request: Request):
 
 @app.put("/transactions/{transaction_id}")
 def update_transaction(transaction_id: str, request: TransactionRequest, http_request: Request):
+    user_id = current_user_id(http_request)
+    enforce_write_rate_limit(http_request, user_id, "transaction_update")
     try:
         result = update_transaction_api(
             transaction_id,
@@ -383,7 +449,7 @@ def update_transaction(transaction_id: str, request: TransactionRequest, http_re
             request.category,
             request.type,
             request.date,
-            current_user_id(http_request),
+            user_id,
             request.notes,
         )
 
@@ -404,8 +470,10 @@ def update_transaction(transaction_id: str, request: TransactionRequest, http_re
 
 @app.delete("/transactions/{transaction_id}")
 def delete_transaction(transaction_id: str, request: Request):
+    user_id = current_user_id(request)
+    enforce_write_rate_limit(request, user_id, "transaction_delete")
     try:
-        result = delete_transaction_api(transaction_id, current_user_id(request))
+        result = delete_transaction_api(transaction_id, user_id)
 
         return {
             "status": "success",
@@ -478,8 +546,10 @@ def get_budgets(request: Request):
 
 @app.post("/budgets")
 def save_budget(request: BudgetRequest, http_request: Request):
+    user_id = current_user_id(http_request)
+    enforce_write_rate_limit(http_request, user_id, "budget_write")
     try:
-        result = save_budget_api(request.category, request.limit_amount, current_user_id(http_request))
+        result = save_budget_api(request.category, request.limit_amount, user_id)
         return {
             "status": "success",
             "data": result
@@ -496,8 +566,10 @@ def save_budget(request: BudgetRequest, http_request: Request):
 
 @app.delete("/budgets/{category}")
 def delete_budget(category: str, request: Request):
+    user_id = current_user_id(request)
+    enforce_write_rate_limit(request, user_id, "budget_write")
     try:
-        result = delete_budget_api(category, current_user_id(request))
+        result = delete_budget_api(category, user_id)
         return {
             "status": "success",
             "data": result
@@ -740,13 +812,15 @@ def scan_receipt_endpoint(request: ReceiptScanRequest, http_request: Request):
 
 @app.post("/add-transaction")
 def add_transaction(request: TransactionRequest, http_request: Request):
+    user_id = current_user_id(http_request)
+    enforce_write_rate_limit(http_request, user_id, "transaction_write")
     try:
         result = add_transaction_api(
             request.amount,
             request.category,
             request.type,
             request.date,
-            current_user_id(http_request),
+            user_id,
             request.notes,
         )
 

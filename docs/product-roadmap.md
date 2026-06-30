@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Surface AI usage limits`
+- `Harden backend security controls`
 
 Recent important commits:
 
+- `Harden backend security controls`
 - `Surface AI usage limits`
 - `Strengthen offline resilience`
 - `Smooth motion and success feedback`
@@ -626,21 +627,42 @@ Near-term implementation:
 
 ## Level 10: Security Hardening
 
-Status: before beta/public expansion.
+Status: implemented for the current backend/mobile cycle. Needs production environment review before wider beta.
 
 Security matters extra because this is finance data.
 
 Must do before wider beta:
 
-- Verify RLS on every exposed user-data table.
-- Verify users can only read/write their own rows.
-- Keep `service_role` key backend-only.
+- RLS verified in migrations for:
+  - `transactions`
+  - `budgets`
+  - `ai_usage`
+- User data policies scope rows with `(select auth.uid()) = user_id`.
+- `service_role` key remains backend-only in `supabase_data.py`.
+- Mobile uses only public Expo Supabase/API variables.
 - Rotate keys that were ever pasted into chat before public release.
 - Keep `.env` and `.env.local` untracked.
-- Review production CORS.
-- Add non-AI rate limits for write-heavy endpoints.
+- Production CORS now filters accidental `*` unless explicitly enabled with `ALLOW_WILDCARD_CORS=true`.
+- API responses now include conservative security headers:
+  - `Cache-Control: no-store`
+  - `Referrer-Policy: no-referrer`
+  - `X-Content-Type-Options: nosniff`
+  - `X-Frame-Options: DENY`
+- Non-AI write rate limits now protect:
+  - Add transaction
+  - Update transaction
+  - Delete transaction
+  - Budget save/delete
+  - CSV import commit
 - Treat AI output, CSV content, receipt text, and product names as untrusted text.
 - Do not render arbitrary HTML.
+
+Still required before public release:
+
+- Rotate any key that was ever shared outside secure deployment settings.
+- Review Vercel production `CORS_ORIGINS`.
+- Consider distributed rate limiting if traffic grows beyond one Vercel instance.
+- Run Supabase advisors against the live project before beta.
 
 ## Level 11: Backend And Scaling Readiness
 
