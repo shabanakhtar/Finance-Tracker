@@ -23,6 +23,7 @@ import {
   validateMaxLength,
   useConnectionStatus,
 } from '@/components/ux';
+import { useFloatingToast } from '@/contexts/toast';
 import { AppApiError, MarketSearchAnswer, ReceiptScanResult, addTransaction, scanReceipt, searchMarket } from '@/services/api';
 import { isLikelyNetworkError, queueTransaction } from '@/services/offlineQueue';
 
@@ -39,6 +40,7 @@ const NOTES_LIMIT = 500;
 export default function AddTransactionScreen() {
   const params = useLocalSearchParams<{ category?: string; type?: 'income' | 'expense' }>();
   const { colors } = useAppTheme();
+  const { showToast } = useFloatingToast();
   const connection = useConnectionStatus();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
@@ -108,6 +110,7 @@ export default function AddTransactionScreen() {
       };
       await addTransaction(transaction);
       triggerSuccess();
+      showToast('Transaction added');
       setLastSaved(`${type === 'income' ? 'Income' : 'Expense'} saved: ${category.trim()} - ${money.format(parsedAmount)}`);
       resetForm();
     } catch (err) {
@@ -120,6 +123,7 @@ export default function AddTransactionScreen() {
           notes: notes.trim(),
         });
         triggerSuccess();
+        showToast('Transaction saved offline');
         setLastSaved(`Saved offline: ${category.trim()} - ${money.format(parsedAmount)}. It will sync when the API is reachable.`);
         resetForm();
         return;

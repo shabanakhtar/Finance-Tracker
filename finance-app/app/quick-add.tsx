@@ -24,6 +24,7 @@ import {
   useConnectionStatus,
 } from '@/components/ux';
 import { useAppTheme } from '@/contexts/theme';
+import { useFloatingToast } from '@/contexts/toast';
 import { addTransaction } from '@/services/api';
 import { isLikelyNetworkError, queueTransaction } from '@/services/offlineQueue';
 import { defaultQuickAddShortcuts, getQuickAddShortcuts, QuickAddShortcut } from '@/services/quickAddShortcuts';
@@ -42,6 +43,7 @@ const NOTES_LIMIT = 500;
 export default function QuickAddScreen() {
   const params = useLocalSearchParams<{ amount?: string; category?: string; type?: 'income' | 'expense' }>();
   const { colors } = useAppTheme();
+  const { showToast } = useFloatingToast();
   const connection = useConnectionStatus();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
@@ -125,6 +127,7 @@ export default function QuickAddScreen() {
       setSaving(true);
       await addTransaction(transaction);
       triggerSuccess();
+      showToast('Transaction added');
       if (closeAfterSave) {
         router.back();
       } else {
@@ -134,6 +137,7 @@ export default function QuickAddScreen() {
     } catch (error) {
       if (isLikelyNetworkError(error)) {
         await queueTransaction(transaction);
+        showToast('Transaction saved offline');
         if (closeAfterSave) {
           triggerSuccess();
           Alert.alert('Saved offline', 'This transaction will sync when the API is reachable.', [

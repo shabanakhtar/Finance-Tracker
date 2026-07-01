@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Explain score and harden AI search diagnostics`
+- `Add floating success toasts`
 
 Recent important commits:
 
+- `Add floating success toasts`
 - `Explain score and harden AI search diagnostics`
 - `Refresh app color palette`
 - `Track financial score clarity work`
@@ -850,6 +851,7 @@ Explain score and harden AI search diagnostics
 
 Check:
 
+- Transaction saves, edits, deletes, budget changes, and offline sync success show a small green floating confirmation with a tick.
 - App opens without the SecureStore warning repeating after a fresh login.
 - Auth welcome text animates visibly and does not pop in.
 - Login/signup still works.

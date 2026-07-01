@@ -19,7 +19,6 @@ import {
   FormField,
   PressableScale,
   SkeletonList,
-  SuccessToast,
   triggerSelection,
   triggerSuccess,
   triggerWarning,
@@ -31,6 +30,7 @@ import {
 } from '@/components/ux';
 import { useAuth } from '@/contexts/auth';
 import { useAppTheme } from '@/contexts/theme';
+import { useFloatingToast } from '@/contexts/toast';
 import { getQueuedTransactions, getSyncHistory, SyncHistoryItem, syncQueuedTransactions } from '@/services/offlineQueue';
 import { defaultQuickAddShortcuts, getQuickAddShortcuts, QuickAddShortcut } from '@/services/quickAddShortcuts';
 import { cacheDashboard, formatCachedAt, getCachedDashboard } from '@/services/resilience';
@@ -101,6 +101,7 @@ function useDashboardTheme() {
 export default function DashboardScreen() {
   const { session, signOut } = useAuth();
   const { colors } = useAppTheme();
+  const { showToast: showFloatingToast } = useFloatingToast();
   const connection = useConnectionStatus();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
@@ -122,8 +123,6 @@ export default function DashboardScreen() {
   const [setupDismissed, setSetupDismissed] = useState(false);
   const [pendingBudgetDelete, setPendingBudgetDelete] = useState<string | null>(null);
   const [pendingTransactionDelete, setPendingTransactionDelete] = useState<Transaction | null>(null);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastVisible, setToastVisible] = useState(false);
   const lastAutoSyncCount = useRef(0);
   const [submittedFields, setSubmittedFields] = useState<Record<DashboardFormField, boolean>>({
     budgetAmount: false,
@@ -221,11 +220,10 @@ export default function DashboardScreen() {
     setRefreshing(true);
     loadDashboard();
   };
-  const showToast = (message: string) => {
+  const showToast = useCallback((message: string) => {
     triggerSuccess();
-    setToastMessage(message);
-    setToastVisible(true);
-  };
+    showFloatingToast(message);
+  }, [showFloatingToast]);
   const dismissSetup = async () => {
     setSetupDismissed(true);
     await persistSetupDismissed(true);
@@ -266,7 +264,7 @@ export default function DashboardScreen() {
     } finally {
       setSyncingQueue(false);
     }
-  }, [loadDashboard]);
+  }, [loadDashboard, showToast]);
 
   useEffect(() => {
     if (connection.isOffline) {
@@ -653,11 +651,6 @@ export default function DashboardScreen() {
             onConfirm={confirmDeleteBudget}
             title="Delete budget?"
             visible={Boolean(pendingBudgetDelete)}
-          />
-          <SuccessToast
-            message={toastMessage}
-            onDismiss={() => setToastVisible(false)}
-            visible={toastVisible}
           />
         </>
       ) : null}
