@@ -1,11 +1,12 @@
-import { ReactNode, useMemo, useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Button, Card, Divider, TextInput } from 'react-native-paper';
+import { Button, Card, Divider, SegmentedButtons, TextInput } from 'react-native-paper';
 
 import { useAuth } from '@/contexts/auth';
-import { useCurrency } from '@/contexts/currency';
-import { AppPalette } from '@/constants/theme';
+import { AppCurrency, currencyOptions, useCurrency } from '@/contexts/currency';
+import { AppPalette, AppThemeMode } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
 import {
   AnimatedScreen,
@@ -19,10 +20,29 @@ import {
 } from '@/components/ux';
 
 type AuthField = 'email' | 'firstName' | 'lastName' | 'password';
+const ONBOARDING_PREFERENCES_KEY = 'finance-tracker-onboarding-preferences';
+
+async function readOnboardingPreferencesDone() {
+  if (Platform.OS === 'web') {
+    return globalThis.localStorage?.getItem(ONBOARDING_PREFERENCES_KEY) === 'done';
+  }
+
+  return (await SecureStore.getItemAsync(ONBOARDING_PREFERENCES_KEY)) === 'done';
+}
+
+async function storeOnboardingPreferencesDone() {
+  if (Platform.OS === 'web') {
+    globalThis.localStorage?.setItem(ONBOARDING_PREFERENCES_KEY, 'done');
+    return;
+  }
+
+  await SecureStore.setItemAsync(ONBOARDING_PREFERENCES_KEY, 'done');
+}
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const { initialized, loading, resetPassword, session, signIn, signInWithGoogle, signUp, updateProfile } = useAuth();
-  const { colors } = useAppTheme();
+  const { colors, mode: themeMode, resolvedTheme, setMode: setThemeMode } = useAppTheme();
+  const { currency, setCurrency } = useCurrency();
   const { height } = useWindowDimensions();
   const compactScreen = height < 720;
   const styles = useMemo(() => createStyles(colors, compactScreen), [colors, compactScreen]);
@@ -33,6 +53,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState<string | null>(null);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [authStep, setAuthStep] = useState<'welcome' | 'form'>('welcome');
+  const [preferencesReady, setPreferencesReady] = useState(false);
+  const [preferencesDone, setPreferencesDone] = useState(false);
   const [password, setPassword] = useState('');
   const [secureEntry, setSecureEntry] = useState(true);
   const [submitted, setSubmitted] = useState(false);
@@ -59,6 +81,23 @@ export function AuthGate({ children }: { children: ReactNode }) {
     passwordValidation.isValid &&
     (mode === 'login' || (firstNameValidation.isValid && lastNameValidation.isValid));
   const profileIsValid = firstNameValidation.isValid && lastNameValidation.isValid;
+  const visibleThemeMode = themeMode === 'system' ? resolvedTheme : themeMode;
+
+  useEffect(() => {
+    let active = true;
+    readOnboardingPreferencesDone()
+      .then((done) => {
+        if (!active) return;
+        setPreferencesDone(done);
+      })
+      .finally(() => {
+        if (active) setPreferencesReady(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const markTouched = (field: AuthField) => setTouched((current) => ({ ...current, [field]: true }));
   const shouldShow = (field: AuthField) => submitted || touched[field];
@@ -89,6 +128,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const returnToWelcome = () => {
     resetInteractionState();
     setAuthStep('welcome');
+  };
+  const completePreferences = async () => {
+    await storeOnboardingPreferencesDone();
+    setPreferencesDone(true);
   };
 
   const submit = async () => {
@@ -168,11 +211,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
     }
   };
 
-  if (!initialized) {
+  if (!initialized || (!session && !preferencesReady)) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator color={colors.sky} size="large" />
-        <Text style={styles.muted}>Checking your session...</Text>
+        <Text style={styles.muted}>{initialized ? 'Preparing your preferences...' : 'Checking your session...'}</Text>
       </View>
     );
   }
@@ -235,6 +278,84 @@ export function AuthGate({ children }: { children: ReactNode }) {
       );
     }
     return <>{children}</>;
+  }
+
+  if (!preferencesDone) {
+    return (
+      <KeyboardAvoidingView behavior={keyboardBehavior} style={styles.screen}>
+        <ScrollView contentContainerStyle={[styles.container, styles.welcomeContainer]} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
+          <View style={styles.welcomeHero}>
+            <AnimatedScreen delay={40} style={styles.brandRow}>
+              <View style={styles.brandMark}>
+                <MaterialCommunityIcons color={colors.sky} name="wallet-outline" size={24} />
+              </View>
+              <View style={styles.brandTextWrap}>
+                <Text style={styles.brand}>Finance Tracker</Text>
+                <Text style={styles.brandCaption}>Private money clarity</Text>
+              </View>
+            </AnimatedScreen>
+            <AnimatedScreen delay={120}>
+              <Text style={styles.title}>Set your defaults</Text>
+            </AnimatedScreen>
+            <AnimatedScreen delay={220}>
+              <Text style={styles.subtitle}>Choose how the app should look and show money. You can change both later in Settings.</Text>
+            </AnimatedScreen>
+          </View>
+
+          <AnimatedScreen delay={320}>
+            <Card style={styles.welcomeCard}>
+              <Card.Content style={styles.preferenceContent}>
+                <View style={styles.preferenceBlock}>
+                  <View style={styles.preferenceHeader}>
+                    <MaterialCommunityIcons color={colors.emerald} name="cash-multiple" size={22} />
+                    <View style={styles.preferenceText}>
+                      <Text style={styles.preferenceTitle}>Default currency</Text>
+                      <Text style={styles.preferenceHint}>This is display-only for now. Multi-currency conversion comes later.</Text>
+                    </View>
+                  </View>
+                  <SegmentedButtons
+                    buttons={currencyOptions.map((option) => ({
+                      icon: option.code === 'PKR' ? 'currency-inr' : 'currency-usd',
+                      label: option.code,
+                      value: option.code,
+                    }))}
+                    onValueChange={(value) => setCurrency(value as AppCurrency)}
+                    value={currency}
+                  />
+                </View>
+
+                <View style={styles.preferenceBlock}>
+                  <View style={styles.preferenceHeader}>
+                    <MaterialCommunityIcons color={colors.violet} name="theme-light-dark" size={22} />
+                    <View style={styles.preferenceText}>
+                      <Text style={styles.preferenceTitle}>Theme</Text>
+                      <Text style={styles.preferenceHint}>Pick the mode that feels easiest to read.</Text>
+                    </View>
+                  </View>
+                  <SegmentedButtons
+                    buttons={[
+                      { icon: 'white-balance-sunny', label: 'Light', value: 'light' },
+                      { icon: 'weather-night', label: 'Dark', value: 'dark' },
+                    ]}
+                    onValueChange={(value) => setThemeMode(value as AppThemeMode)}
+                    value={visibleThemeMode}
+                  />
+                </View>
+
+                <View style={styles.modeHint}>
+                  <MaterialCommunityIcons color={colors.sky} name="information-outline" size={18} />
+                  <Text style={styles.modeHintText}>Next, you will choose whether to sign in or create your private account.</Text>
+                </View>
+
+                <Button mode="contained" onPress={completePreferences} style={styles.primary}>
+                  Continue
+                </Button>
+              </Card.Content>
+            </Card>
+          </AnimatedScreen>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
   }
 
   if (authStep === 'welcome') {
@@ -665,6 +786,31 @@ function createStyles(colors: AppPalette, compactScreen = false) {
   primaryLabel: {
     color: '#ffffff',
     fontWeight: '800',
+  },
+  preferenceBlock: {
+    gap: compactScreen ? 9 : 11,
+  },
+  preferenceContent: {
+    gap: compactScreen ? 16 : 18,
+  },
+  preferenceHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  preferenceHint: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  preferenceText: {
+    flex: 1,
+    gap: 2,
+  },
+  preferenceTitle: {
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: '900',
   },
   trustRow: {
     alignItems: 'center',

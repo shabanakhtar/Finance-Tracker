@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Add PKR and USD currency setting`
+- `Add onboarding preference setup`
 
 Recent important commits:
 
+- `Add onboarding preference setup`
 - `Add PKR and USD currency setting`
 - `Add floating success toasts`
 - `Explain score and harden AI search diagnostics`
@@ -851,6 +852,32 @@ Premium future:
 - Save the exchange rate used at transaction time so old reports do not change randomly.
 - Pair premium multi-currency with higher AI limits, deeper AI monthly reports, smarter budgets, recurring-payment detection, and richer receipt/product analysis.
 
+## Onboarding Preference Setup
+
+Status: implemented for the first-run local preference step before auth.
+
+Implemented:
+
+- First-run onboarding asks for default display currency:
+  - PKR
+  - USD
+- First-run onboarding asks for theme:
+  - Light
+  - Dark
+- The step appears before the auth welcome screen and is saved locally.
+- Settings remains the place to change both preferences later.
+
+Evaluation:
+
+- Good first-run questions:
+  - Currency, because it changes every amount in the app.
+  - Theme, because it affects readability and comfort.
+- Better after login/account creation:
+  - Name/profile, because it belongs to the account.
+  - First income, first expense, and first budget, because they become real financial data.
+  - Primary goal such as saving, reducing spending, or tracking subscriptions, because it can personalize future AI guidance.
+- Avoid asking too much before auth. The first launch should feel like setup, not a survey.
+
 ## Current Immediate Agenda
 
 ### Step 1: Current Quality Batch
@@ -874,6 +901,7 @@ Explain score and harden AI search diagnostics
 
 Check:
 
+- First-run onboarding asks for PKR/USD and Light/Dark before the auth welcome step.
 - Settings can switch default currency between PKR and USD.
 - Amounts across Home, Analysis, Add, Quick Add, AI, and auth preview tiles use the selected display currency.
 - Market search text does not hardcode PKR when USD is selected.
