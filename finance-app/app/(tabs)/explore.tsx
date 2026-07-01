@@ -23,22 +23,19 @@ import {
   validateMaxLength,
   useConnectionStatus,
 } from '@/components/ux';
+import { useCurrency } from '@/contexts/currency';
 import { useFloatingToast } from '@/contexts/toast';
 import { AppApiError, MarketSearchAnswer, ReceiptScanResult, addTransaction, scanReceipt, searchMarket } from '@/services/api';
 import { isLikelyNetworkError, queueTransaction } from '@/services/offlineQueue';
 
 const today = new Date().toISOString().slice(0, 10);
 const categories = ['food', 'groceries', 'transport', 'rent', 'salary', 'shopping', 'utilities', 'grooming', 'health', 'education', 'other'];
-const money = new Intl.NumberFormat('en-PK', {
-  maximumFractionDigits: 0,
-  style: 'currency',
-  currency: 'PKR',
-});
 type AddField = 'amount' | 'category' | 'date' | 'notes';
 const NOTES_LIMIT = 500;
 
 export default function AddTransactionScreen() {
   const params = useLocalSearchParams<{ category?: string; type?: 'income' | 'expense' }>();
+  const { currency, formatMoney } = useCurrency();
   const { colors } = useAppTheme();
   const { showToast } = useFloatingToast();
   const connection = useConnectionStatus();
@@ -111,7 +108,7 @@ export default function AddTransactionScreen() {
       await addTransaction(transaction);
       triggerSuccess();
       showToast('Transaction added');
-      setLastSaved(`${type === 'income' ? 'Income' : 'Expense'} saved: ${category.trim()} - ${money.format(parsedAmount)}`);
+      setLastSaved(`${type === 'income' ? 'Income' : 'Expense'} saved: ${category.trim()} - ${formatMoney(parsedAmount)}`);
       resetForm();
     } catch (err) {
       if (isLikelyNetworkError(err)) {
@@ -124,7 +121,7 @@ export default function AddTransactionScreen() {
         });
         triggerSuccess();
         showToast('Transaction saved offline');
-        setLastSaved(`Saved offline: ${category.trim()} - ${money.format(parsedAmount)}. It will sync when the API is reachable.`);
+        setLastSaved(`Saved offline: ${category.trim()} - ${formatMoney(parsedAmount)}. It will sync when the API is reachable.`);
         resetForm();
         return;
       }
@@ -157,6 +154,7 @@ export default function AddTransactionScreen() {
         product_name: itemName,
         current_price: itemPrice,
         category: category.trim() || receipt?.category || undefined,
+        currency,
         location: 'Pakistan',
       });
       setReceiptAlternatives((current) => ({
@@ -382,7 +380,7 @@ export default function AddTransactionScreen() {
                       <View style={styles.receiptItemText}>
                         <Text style={styles.receiptMeta}>
                           {item.name}
-                          {item.price ? ` - ${money.format(item.price)}` : ''}
+                          {item.price ? ` - ${formatMoney(item.price)}` : ''}
                         </Text>
                       </View>
                       {item.price ? (
@@ -401,8 +399,8 @@ export default function AddTransactionScreen() {
                           <Text style={styles.altVerdict}>{receiptAlternatives[item.name].verdict}</Text>
                           {receiptAlternatives[item.name].alternatives.slice(0, 2).map((alt) => (
                             <Text key={alt.url} style={styles.receiptMeta}>
-                              {alt.name} - {money.format(alt.price)}
-                              {alt.savings ? `, save ${money.format(alt.savings)}` : ''}
+                              {alt.name} - {formatMoney(alt.price)}
+                              {alt.savings ? `, save ${formatMoney(alt.savings)}` : ''}
                             </Text>
                           ))}
                           {!receiptAlternatives[item.name].alternatives.length ? (

@@ -18,6 +18,7 @@ import {
   validateMaxLength,
 } from '@/components/ux';
 import { useAppTheme } from '@/contexts/theme';
+import { useCurrency } from '@/contexts/currency';
 import { AiLimitStatus, AiLimits, AppApiError, MarketSearchAnswer, askAi, getAiLimits, searchMarket } from '@/services/api';
 
 type ChatMessage = {
@@ -33,11 +34,6 @@ const suggestions = [
   'Explain my budget warnings.',
 ];
 
-const money = new Intl.NumberFormat('en-PK', {
-  maximumFractionDigits: 0,
-  style: 'currency',
-  currency: 'PKR',
-});
 type AiField = 'question' | 'marketProduct' | 'marketPrice' | 'marketCategory';
 const QUESTION_LIMIT = 1000;
 const PRODUCT_LIMIT = 160;
@@ -75,6 +71,7 @@ function getAiUnavailableMessage(error: unknown, feature: 'chat' | 'market') {
 
 export default function AiScreen() {
   const { colors } = useAppTheme();
+  const { currency, formatMoney } = useCurrency();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -204,7 +201,7 @@ export default function AiScreen() {
     const userMessage: ChatMessage = {
       id: `${Date.now()}-market-user`,
       role: 'user',
-      text: `Find cheaper local alternatives for ${product}${parsedPrice ? ` around PKR ${parsedPrice}` : ''}.`,
+      text: `Find cheaper local alternatives for ${product}${parsedPrice ? ` around ${formatMoney(parsedPrice)}` : ''}.`,
     };
 
     setMessages((current) => [...current, userMessage]);
@@ -215,6 +212,7 @@ export default function AiScreen() {
         product_name: product,
         current_price: parsedPrice,
         category: marketCategory.trim() || undefined,
+        currency,
         location: 'Pakistan',
       });
       triggerSuccess();
@@ -402,8 +400,8 @@ export default function AiScreen() {
                       </View>
                     </View>
                     <View style={styles.altNumbers}>
-                      <Text style={styles.altPrice}>{money.format(item.price)}</Text>
-                      {item.savings ? <Text style={styles.altSavings}>Save {money.format(item.savings)}</Text> : null}
+                      <Text style={styles.altPrice}>{formatMoney(item.price)}</Text>
+                      {item.savings ? <Text style={styles.altSavings}>Save {formatMoney(item.savings)}</Text> : null}
                     </View>
                     <Text style={styles.altReason}>{item.reason}</Text>
                     <Button compact icon="open-in-new" mode="text" onPress={() => Linking.openURL(item.url)} textColor={colors.sky}>

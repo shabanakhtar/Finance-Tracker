@@ -29,6 +29,7 @@ import {
   useConnectionStatus,
 } from '@/components/ux';
 import { useAuth } from '@/contexts/auth';
+import { useCurrency } from '@/contexts/currency';
 import { useAppTheme } from '@/contexts/theme';
 import { useFloatingToast } from '@/contexts/toast';
 import { getQueuedTransactions, getSyncHistory, SyncHistoryItem, syncQueuedTransactions } from '@/services/offlineQueue';
@@ -46,12 +47,6 @@ import {
   saveBudget,
   updateTransaction,
 } from '@/services/api';
-
-const money = new Intl.NumberFormat('en-PK', {
-  maximumFractionDigits: 0,
-  style: 'currency',
-  currency: 'PKR',
-});
 
 const categoryIcons: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   food: 'food-outline',
@@ -100,6 +95,7 @@ function useDashboardTheme() {
 
 export default function DashboardScreen() {
   const { session, signOut } = useAuth();
+  const { formatMoney } = useCurrency();
   const { colors } = useAppTheme();
   const { showToast: showFloatingToast } = useFloatingToast();
   const connection = useConnectionStatus();
@@ -472,14 +468,14 @@ export default function DashboardScreen() {
                     <Text style={styles.liveText}>Live</Text>
                   </View>
                 </View>
-                <Text style={styles.balanceValue}>{money.format(dashboard.summary.balance)}</Text>
+                <Text style={styles.balanceValue}>{formatMoney(dashboard.summary.balance)}</Text>
                 <Text style={styles.balanceHint}>
                   {netCashFlow >= 0 ? '+' : ''}
-                  {money.format(netCashFlow)} net cash flow
+                  {formatMoney(netCashFlow)} net cash flow
                 </Text>
                 <View style={styles.metricRow}>
-                  <Metric label="Income" value={money.format(dashboard.summary.income)} tone="income" />
-                  <Metric label="Spent" value={money.format(dashboard.summary.expense)} tone="expense" />
+                  <Metric label="Income" value={formatMoney(dashboard.summary.income)} tone="income" />
+                  <Metric label="Spent" value={formatMoney(dashboard.summary.expense)} tone="expense" />
                 </View>
                 <QuickAddStrip shortcuts={quickAddShortcuts} />
               </Card.Content>
@@ -635,7 +631,7 @@ export default function DashboardScreen() {
             destructive
             message={
               pendingTransactionDelete
-                ? `${pendingTransactionDelete.category} for ${money.format(pendingTransactionDelete.amount)} will be removed.`
+                ? `${pendingTransactionDelete.category} for ${formatMoney(pendingTransactionDelete.amount)} will be removed.`
                 : ''
             }
             onCancel={() => setPendingTransactionDelete(null)}
@@ -931,6 +927,7 @@ function StepBadge({
 
 function QuickAddStrip({ shortcuts }: { shortcuts: QuickAddShortcut[] }) {
   const { colors, styles } = useDashboardTheme();
+  const { formatMoney } = useCurrency();
   const openQuickAdd = (shortcut: QuickAddShortcut) => {
     router.push({
       pathname: '/quick-add',
@@ -961,7 +958,7 @@ function QuickAddStrip({ shortcuts }: { shortcuts: QuickAddShortcut[] }) {
             style={styles.quickAddButton}>
             <MaterialCommunityIcons color={colors.sky} name={item.icon} size={18} />
             <Text style={styles.quickAddButtonText}>{item.label}</Text>
-            {item.defaultAmount ? <Text style={styles.quickAddAmount}>{money.format(item.defaultAmount)}</Text> : null}
+            {item.defaultAmount ? <Text style={styles.quickAddAmount}>{formatMoney(item.defaultAmount)}</Text> : null}
           </PressableScale>
         ))}
       </View>
@@ -1008,6 +1005,7 @@ function Metric({ label, value, tone }: { label: string; value: string; tone: 'i
 
 function TransactionRow({ item, onDelete, onEdit }: { item: Transaction; onDelete: () => void; onEdit: () => void }) {
   const { colors, styles } = useDashboardTheme();
+  const { formatMoney } = useCurrency();
   const icon = categoryIcons[item.category.toLowerCase()] ?? (item.type === 'income' ? 'cash-plus' : 'cash-minus');
   return (
     <View style={styles.transactionRow}>
@@ -1020,7 +1018,7 @@ function TransactionRow({ item, onDelete, onEdit }: { item: Transaction; onDelet
       </View>
       <Text style={item.type === 'income' ? styles.income : styles.expense}>
         {item.type === 'income' ? '+' : '-'}
-        {money.format(item.amount)}
+        {formatMoney(item.amount)}
       </Text>
       <View style={styles.rowActions}>
         <IconButton icon="pencil-outline" iconColor={colors.sky} onPress={onEdit} size={18} />
@@ -1032,19 +1030,20 @@ function TransactionRow({ item, onDelete, onEdit }: { item: Transaction; onDelet
 
 function BudgetRow({ item, onDelete }: { item: BudgetStatus; onDelete: () => void }) {
   const { colors, styles } = useDashboardTheme();
+  const { formatMoney } = useCurrency();
 
   return (
     <View style={styles.budgetRow}>
       <View style={styles.rowBetween}>
         <Text style={styles.listLabel}>{item.category}</Text>
         <Text style={item.is_over ? styles.expense : styles.listValue}>
-          {money.format(item.spent)} / {money.format(item.limit_amount)}
+          {formatMoney(item.spent)} / {formatMoney(item.limit_amount)}
         </Text>
       </View>
       <AnimatedProgressBar progress={item.progress} color={item.is_over ? colors.coral : colors.emerald} />
       <View style={styles.rowBetween}>
         <Text style={styles.muted}>
-          {item.is_over ? `${money.format(Math.abs(item.remaining))} over` : `${money.format(item.remaining)} left`}
+          {item.is_over ? `${formatMoney(Math.abs(item.remaining))} over` : `${formatMoney(item.remaining)} left`}
         </Text>
         <TouchableOpacity onPress={onDelete}>
           <Text style={styles.deleteText}>Delete</Text>

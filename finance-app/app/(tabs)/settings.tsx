@@ -19,6 +19,7 @@ import {
   triggerWarning,
 } from '@/components/ux';
 import { useAuth } from '@/contexts/auth';
+import { AppCurrency, currencyOptions, useCurrency } from '@/contexts/currency';
 import { useAppTheme } from '@/contexts/theme';
 import { CsvImportPreview, exportTransactionsCsv, importTransactionsCsv, previewTransactionsCsv } from '@/services/api';
 import {
@@ -44,6 +45,7 @@ const themeOptions = [
 
 export default function SettingsScreen() {
   const { session, signOut } = useAuth();
+  const { currency, currencyLabel, setCurrency } = useCurrency();
   const { colors, mode, resolvedTheme, setMode } = useAppTheme();
   const insets = useSafeAreaInsets();
   const styles = createStyles(colors, insets.bottom);
@@ -217,6 +219,28 @@ export default function SettingsScreen() {
           onValueChange={(value) => setMode(value as AppThemeMode)}
           value={mode}
         />
+      </View>
+
+      <View style={styles.panel}>
+        <View style={styles.row}>
+          <View style={styles.rowText}>
+            <Text style={styles.sectionTitle}>Default currency</Text>
+            <Text style={styles.muted}>Current display currency: {currencyLabel}</Text>
+          </View>
+          <MaterialCommunityIcons color={colors.emerald} name="cash-multiple" size={24} />
+        </View>
+        <SegmentedButtons
+          buttons={currencyOptions.map((option) => ({
+            icon: option.code === 'PKR' ? 'currency-inr' : 'currency-usd',
+            label: option.code,
+            value: option.code,
+          }))}
+          onValueChange={(value) => setCurrency(value as AppCurrency)}
+          value={currency}
+        />
+        <Text style={styles.muted}>
+          This changes how amounts are displayed. It does not convert existing transaction values yet.
+        </Text>
       </View>
 
       <View style={styles.panel}>

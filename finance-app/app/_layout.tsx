@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { MD3DarkTheme, MD3LightTheme, Provider as PaperProvider } from 'react-native-paper';
 import { AuthGate } from '@/components/auth-gate';
 import { AuthProvider } from '@/contexts/auth';
+import { CurrencyProvider } from '@/contexts/currency';
 import { AppThemeProvider, useAppTheme } from '@/contexts/theme';
 import { FloatingToastProvider } from '@/contexts/toast';
 
@@ -56,31 +57,33 @@ function ThemedRootLayout() {
 
   return (
     <PaperProvider theme={paperTheme}>
-      <AuthProvider>
-        <FloatingToastProvider>
-          <ThemeProvider value={appNavigationTheme}>
-            <AuthGate>
-              <Stack
-                screenOptions={{
-                  animation: 'fade_from_bottom',
-                  contentStyle: { backgroundColor: colors.background },
-                }}>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="quick-add"
-                  options={{
-                    animation: 'slide_from_bottom',
-                    headerShown: false,
-                    presentation: 'modal',
-                  }}
-                />
-                <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-              </Stack>
-            </AuthGate>
-            <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />
-          </ThemeProvider>
-        </FloatingToastProvider>
-      </AuthProvider>
+      <CurrencyProvider>
+        <AuthProvider>
+          <FloatingToastProvider>
+            <ThemeProvider value={appNavigationTheme}>
+              <AuthGate>
+                <Stack
+                  screenOptions={{
+                    animation: 'fade_from_bottom',
+                    contentStyle: { backgroundColor: colors.background },
+                  }}>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="quick-add"
+                    options={{
+                      animation: 'slide_from_bottom',
+                      headerShown: false,
+                      presentation: 'modal',
+                    }}
+                  />
+                  <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+                </Stack>
+              </AuthGate>
+              <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />
+            </ThemeProvider>
+          </FloatingToastProvider>
+        </AuthProvider>
+      </CurrencyProvider>
     </PaperProvider>
   );
 }

@@ -338,7 +338,7 @@ export function getAiLimits() {
   return request<AiLimits>('/ai-limits');
 }
 
-export function searchMarket(payload: { product_name: string; current_price?: number; category?: string; location?: string }) {
+export function searchMarket(payload: { product_name: string; current_price?: number; category?: string; currency?: 'PKR' | 'USD'; location?: string }) {
   return request<MarketSearchAnswer>('/market-search', {
     method: 'POST',
     body: JSON.stringify(payload),

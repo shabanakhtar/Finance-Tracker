@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Card, Divider, TextInput } from 'react-native-paper';
 
 import { useAuth } from '@/contexts/auth';
+import { useCurrency } from '@/contexts/currency';
 import { AppPalette } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
 import {
@@ -448,10 +449,11 @@ function AuthModeHint({ mode }: { mode: 'login' | 'signup' }) {
 }
 
 function AuthMotionPreview() {
+  const { formatMoney } = useCurrency();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const items = [
-    { detail: '+PKR 85k', icon: 'cash-plus', label: 'Income', tone: colors.emerald },
+    { detail: `+${formatMoney(85000)}`, icon: 'cash-plus', label: 'Income', tone: colors.emerald },
     { detail: 'Food -18%', icon: 'receipt-text-outline', label: 'Spend', tone: colors.coral },
     { detail: '74/100', icon: 'chart-line', label: 'Score', tone: colors.violet },
   ] as const;

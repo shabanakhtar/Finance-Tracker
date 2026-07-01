@@ -136,7 +136,7 @@ def _number_or_none(value):
         return None
 
     try:
-        return float(str(value).replace(",", "").replace("PKR", "").replace("Rs.", "").replace("Rs", "").strip())
+        return float(str(value).replace(",", "").replace("PKR", "").replace("USD", "").replace("Rs.", "").replace("Rs", "").replace("$", "").strip())
     except ValueError:
         return None
 
@@ -226,11 +226,16 @@ def _normalize_alternatives(items, current_price=None):
     return normalized[:3]
 
 
-def search_local_market(product_name, current_price=None, category=None, location="Pakistan"):
+def search_local_market(product_name, current_price=None, category=None, currency="PKR", location="Pakistan"):
     if not client:
         raise RuntimeError("AI is not configured. Add GEMINI_API_KEY to the backend environment.")
 
-    price_context = f"The user paid PKR {current_price}." if current_price else "The user has not provided the current price."
+    clean_currency = currency if currency in ["PKR", "USD"] else "PKR"
+    price_context = (
+        f"The user paid {clean_currency} {current_price}."
+        if current_price
+        else f"The user has not provided the current price. Use {clean_currency} if you mention prices."
+    )
     category_context = f"Category: {category}." if category else "Category is unknown."
 
     prompt = f"""
@@ -263,6 +268,7 @@ Return JSON only with this exact shape:
 Rules:
 - Do not invent prices, stores, or links.
 - Every alternative must include a URL and numeric price found from search.
+- Treat all numeric prices in the JSON response as {clean_currency}.
 - If the user provided a price, only include alternatives that appear cheaper.
 - If search results are weak, say that clearly.
 - Keep the answer concise and practical.
@@ -310,8 +316,8 @@ Rules:
     response_text = verdict
     if alternatives:
         response_text += "\n\n" + "\n".join(
-            f"- {item['name']} at {item['store']} for PKR {item['price']:.0f}"
-            + (f" - save about PKR {item['savings']:.0f}" if item["savings"] else "")
+            f"- {item['name']} at {item['store']} for {clean_currency} {item['price']:.0f}"
+            + (f" - save about {clean_currency} {item['savings']:.0f}" if item["savings"] else "")
             for item in alternatives
         )
 

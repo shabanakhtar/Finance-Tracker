@@ -7,16 +7,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedCard, AnimatedProgressBar, AppErrorState, EmptyState, SkeletonList } from '@/components/ux';
 import { AppPalette, radii, spacing } from '@/constants/theme';
+import { useCurrency } from '@/contexts/currency';
 import { useAppTheme } from '@/contexts/theme';
 import { Dashboard, InsightCard, Opportunity, getDashboard } from '@/services/api';
 
-const money = new Intl.NumberFormat('en-PK', {
-  currency: 'PKR',
-  maximumFractionDigits: 0,
-  style: 'currency',
-});
-
 export default function AnalysisScreen() {
+  const { formatMoney } = useCurrency();
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
@@ -137,7 +133,7 @@ export default function AnalysisScreen() {
                 {dashboard.top_categories.slice(0, 5).map(([category, amount]) => (
                   <View key={category} style={styles.categoryRow}>
                     <Text style={styles.listLabel}>{category}</Text>
-                    <Text style={styles.listValue}>{money.format(amount)}</Text>
+                    <Text style={styles.listValue}>{formatMoney(amount)}</Text>
                   </View>
                 ))}
               </View>

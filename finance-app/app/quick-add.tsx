@@ -23,6 +23,7 @@ import {
   validateMaxLength,
   useConnectionStatus,
 } from '@/components/ux';
+import { useCurrency } from '@/contexts/currency';
 import { useAppTheme } from '@/contexts/theme';
 import { useFloatingToast } from '@/contexts/toast';
 import { addTransaction } from '@/services/api';
@@ -32,16 +33,12 @@ import { defaultQuickAddShortcuts, getQuickAddShortcuts, QuickAddShortcut } from
 const today = new Date().toISOString().slice(0, 10);
 const amountPresets = [250, 500, 1000, 2500, 5000, 10000];
 
-const money = new Intl.NumberFormat('en-PK', {
-  currency: 'PKR',
-  maximumFractionDigits: 0,
-  style: 'currency',
-});
 type QuickAddField = 'amount' | 'category' | 'date' | 'notes';
 const NOTES_LIMIT = 500;
 
 export default function QuickAddScreen() {
   const params = useLocalSearchParams<{ amount?: string; category?: string; type?: 'income' | 'expense' }>();
+  const { formatMoney } = useCurrency();
   const { colors } = useAppTheme();
   const { showToast } = useFloatingToast();
   const connection = useConnectionStatus();
@@ -132,7 +129,7 @@ export default function QuickAddScreen() {
         router.back();
       } else {
         resetForNext();
-        setSaveMessage(`${category} ${money.format(parsedAmount)} was added.`);
+        setSaveMessage(`${category} ${formatMoney(parsedAmount)} was added.`);
       }
     } catch (error) {
       if (isLikelyNetworkError(error)) {
@@ -174,7 +171,7 @@ export default function QuickAddScreen() {
           </View>
           <View style={styles.summaryText}>
             <Text style={styles.summaryLabel}>{type === 'income' ? 'Income' : 'Expense'}</Text>
-            <Text style={styles.summaryValue}>{parsedAmount > 0 ? money.format(parsedAmount) : 'Choose amount'}</Text>
+            <Text style={styles.summaryValue}>{parsedAmount > 0 ? formatMoney(parsedAmount) : 'Choose amount'}</Text>
             <Text style={styles.summaryMeta}>{category || 'category'} - {date}</Text>
           </View>
         </View>
@@ -202,7 +199,7 @@ export default function QuickAddScreen() {
                 }}
                 style={[styles.amountButton, amount === String(value) ? styles.amountButtonActive : null]}>
                 <Text style={[styles.amountButtonText, amount === String(value) ? styles.amountButtonTextActive : null]}>
-                  {money.format(value)}
+                  {formatMoney(value)}
                 </Text>
               </PressableScale>
             ))}

@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Add floating success toasts`
+- `Add PKR and USD currency setting`
 
 Recent important commits:
 
+- `Add PKR and USD currency setting`
 - `Add floating success toasts`
 - `Explain score and harden AI search diagnostics`
 - `Refresh app color palette`
@@ -828,6 +829,28 @@ Not needed for first beta:
 - Marketing site.
 - Advanced analytics dashboards.
 
+## Currency And Premium Direction
+
+Status: free baseline implemented for PKR and USD display currency. True multi-currency remains a premium-ready future feature.
+
+Free baseline:
+
+- Settings includes a default currency choice:
+  - PKR
+  - USD
+- Home, Analysis, Add, Quick Add, AI market results, onboarding preview tiles, budgets, and transaction rows display amounts using the selected currency.
+- Market search receives the selected display currency so prompts and result text do not assume PKR.
+- No exchange-rate conversion happens yet. Existing numeric transaction values are only reformatted.
+
+Premium future:
+
+- True multi-currency transaction entry.
+- Store original amount, original currency, home currency, converted amount, exchange rate, and exchange-rate date.
+- Dashboard totals use converted home-currency amounts.
+- Transaction detail shows both original and converted values.
+- Save the exchange rate used at transaction time so old reports do not change randomly.
+- Pair premium multi-currency with higher AI limits, deeper AI monthly reports, smarter budgets, recurring-payment detection, and richer receipt/product analysis.
+
 ## Current Immediate Agenda
 
 ### Step 1: Current Quality Batch
@@ -851,6 +874,9 @@ Explain score and harden AI search diagnostics
 
 Check:
 
+- Settings can switch default currency between PKR and USD.
+- Amounts across Home, Analysis, Add, Quick Add, AI, and auth preview tiles use the selected display currency.
+- Market search text does not hardcode PKR when USD is selected.
 - Transaction saves, edits, deletes, budget changes, and offline sync success show a small green floating confirmation with a tick.
 - App opens without the SecureStore warning repeating after a fresh login.
 - Auth welcome text animates visibly and does not pop in.

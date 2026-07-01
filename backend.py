@@ -682,6 +682,7 @@ class MarketSearchRequest(BaseModel):
     product_name: str
     current_price: float | None = None
     category: str | None = None
+    currency: str = "PKR"
     location: str = "Pakistan"
 
     @field_validator("product_name")
@@ -702,6 +703,13 @@ class MarketSearchRequest(BaseModel):
     @field_validator("category")
     def validate_market_category(cls, value):
         return value.strip().lower() if value else None
+
+    @field_validator("currency")
+    def validate_currency(cls, value):
+        cleaned = value.strip().upper() if value else "PKR"
+        if cleaned not in {"PKR", "USD"}:
+            raise ValueError("Currency must be PKR or USD")
+        return cleaned
 
     @field_validator("location")
     def validate_location(cls, value):
@@ -773,11 +781,12 @@ def market_search_endpoint(request: MarketSearchRequest, http_request: Request):
         user_id = current_user_id(http_request)
         ensure_ai_limit(user_id, AI_FEATURES["market"])
         result = search_local_market(
-            request.product_name,
-            request.current_price,
-            request.category,
-            request.location,
-        )
+              request.product_name,
+              request.current_price,
+              request.category,
+              request.currency,
+              request.location,
+          )
         usage_status = record_ai_usage(user_id, AI_FEATURES["market"])
 
         return ai_success(result, usage_status)
