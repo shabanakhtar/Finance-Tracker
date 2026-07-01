@@ -14,6 +14,7 @@ import {
   FormField,
   KeyboardAwareScrollView,
   AppErrorState,
+  MoneyField,
   SuccessBanner,
   triggerSuccess,
   triggerWarning,
@@ -283,15 +284,13 @@ export default function AddTransactionScreen() {
             style={styles.segmented}
           />
 
-          <FormField
+          <MoneyField
             error={amountValidation.message}
-            keyboardType="decimal-pad"
             label="Amount"
             onBlur={() => markTouched('amount')}
             onChangeText={setAmount}
             placeholder="5000"
             required
-            left={<TextInput.Icon icon="cash" />}
             style={styles.input}
             touched={shouldShow('amount')}
             value={amount}

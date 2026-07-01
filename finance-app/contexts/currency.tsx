@@ -10,16 +10,18 @@ type CurrencyMeta = {
   code: AppCurrency;
   label: string;
   locale: string;
+  symbol: string;
 };
 
 export const currencyOptions: CurrencyMeta[] = [
-  { code: 'PKR', label: 'Pakistani Rupee', locale: 'en-PK' },
-  { code: 'USD', label: 'US Dollar', locale: 'en-US' },
+  { code: 'PKR', label: 'Pakistani Rupee', locale: 'en-PK', symbol: 'Rs' },
+  { code: 'USD', label: 'US Dollar', locale: 'en-US', symbol: '$' },
 ];
 
 type CurrencyContextValue = {
   currency: AppCurrency;
   currencyLabel: string;
+  currencySymbol: string;
   formatMoney: (amount: number) => string;
   setCurrency: (currency: AppCurrency) => Promise<void>;
 };
@@ -73,13 +75,14 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     () => ({
       currency,
       currencyLabel: meta.label,
+      currencySymbol: meta.symbol,
       formatMoney: (amount) => formatter.format(amount),
       setCurrency: async (nextCurrency) => {
         setCurrencyState(nextCurrency);
         await storeCurrency(nextCurrency);
       },
     }),
-    [currency, formatter, meta.label],
+    [currency, formatter, meta.label, meta.symbol],
   );
 
   return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;

@@ -7,10 +7,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppPalette, radii, spacing } from '@/constants/theme';
 import {
   AnimatedCard,
-  CharacterCounter,
   EmptyState,
   FormField,
   KeyboardAwareScrollView,
+  LabeledCharacterCounter,
+  MoneyField,
   TypingText,
   triggerSuccess,
   triggerWarning,
@@ -330,7 +331,7 @@ export default function AiScreen() {
           </View>
 
           <FormField
-            counter={<CharacterCounter max={PRODUCT_LIMIT} value={marketProduct} />}
+            counter={<LabeledCharacterCounter label="Product" max={PRODUCT_LIMIT} value={marketProduct} />}
             error={productValidation.message}
             label="Product"
             onChangeText={(value) => {
@@ -345,9 +346,8 @@ export default function AiScreen() {
           />
 
           <View style={styles.marketRow}>
-            <FormField
+            <MoneyField
               error={marketPriceValidation.message}
-              keyboardType="decimal-pad"
               label="Paid price"
               onChangeText={(value) => {
                 setMarketPrice(value);
@@ -360,7 +360,7 @@ export default function AiScreen() {
             />
             <FormField
               autoCapitalize="none"
-              counter={<CharacterCounter max={CATEGORY_LIMIT} value={marketCategory} />}
+              counter={<LabeledCharacterCounter label="Category" max={CATEGORY_LIMIT} value={marketCategory} />}
               error={marketCategoryValidation.message}
               label="Category"
               onChangeText={(value) => {
@@ -466,7 +466,7 @@ export default function AiScreen() {
           </View>
 
           <FormField
-            counter={<CharacterCounter max={QUESTION_LIMIT} value={question} />}
+            counter={<LabeledCharacterCounter label="Question" max={QUESTION_LIMIT} value={question} />}
             error={questionValidation.message}
             label="Ask a question"
             multiline
@@ -507,7 +507,7 @@ function LimitCard({ label, status }: { label: string; status: AiLimitStatus }) 
       <View style={styles.limitRow}>
         <Text style={styles.limitLabel}>{label}</Text>
         <Text style={[styles.limitCount, isEmpty ? styles.limitCountEmpty : null]}>
-          {status.remaining}/{status.limit}
+          Remaining {status.remaining}/{status.limit}
         </Text>
       </View>
       <View style={styles.limitTrack}>

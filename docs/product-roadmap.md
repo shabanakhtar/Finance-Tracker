@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Add onboarding preference setup`
+- `Fix P0 mobile UX issues`
 
 Recent important commits:
 
+- `Fix P0 mobile UX issues`
 - `Add onboarding preference setup`
 - `Add PKR and USD currency setting`
 - `Add floating success toasts`
@@ -880,27 +881,40 @@ Evaluation:
 
 ## Current Immediate Agenda
 
-### Step 1: Current Quality Batch
+### Step 1: P0 Fix List Batch
 
-Status: implemented in `Explain score and harden AI search diagnostics`.
+Status: implemented in `Fix P0 mobile UX issues`.
 
-- Replaced Supabase auth session persistence that triggered the Expo SecureStore 2048-byte warning.
-- Made the Financial Score card explain itself inside the Analysis tab.
-- Improved market/product search failure messages so config/provider issues are obvious instead of vague.
-- Updated this roadmap with the current agenda.
-- Validated mobile and backend.
-- Pushed a checkpoint.
+- Added shared currency-aware money inputs so amount fields show the selected PKR/USD prefix consistently.
+- Hid production API connection text from the normal Home UI while keeping useful cached snapshot recovery text.
+- Increased bottom spacing on Home and Settings so long content has more room above the floating navigation.
+- Clarified AI usage cards with `Remaining X/Y` and `Used N today` labels while keeping fill based on used quota.
+- Replaced bare AI character counters with labeled counters for Product, Category, and Question.
+- Updated this roadmap with the current P0 checkpoint.
 
 Potential commit:
 
 ```text
-Explain score and harden AI search diagnostics
+Fix P0 mobile UX issues
 ```
 
-### Step 2: Emulator QA
+### Step 2: P1 Consistency Batch
+
+Next:
+
+- Share the same Theme and Currency toggle components between onboarding and Settings.
+- Normalize category labels for display without changing stored lowercase matching values.
+- Audit required-field placeholders and helper text.
+- Route Add and Quick Add entry points into the active setup step while essentials are incomplete.
+- Remove realistic-looking numeric sample data from the pre-auth welcome preview.
+
+### Step 3: Emulator QA
 
 Check:
 
+- Money fields show the selected currency prefix across Add, Quick Add, edit transaction, budgets, settings shortcuts, and AI market search.
+- AI usage cards read clearly at 0, partial, and max usage.
+- AI field counters are labeled and do not collide with the floating navigation.
 - First-run onboarding asks for PKR/USD and Light/Dark before the auth welcome step.
 - Settings can switch default currency between PKR and USD.
 - Amounts across Home, Analysis, Add, Quick Add, AI, and auth preview tiles use the selected display currency.

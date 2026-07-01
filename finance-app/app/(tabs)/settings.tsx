@@ -13,6 +13,7 @@ import {
   EmptyState,
   FormField,
   KeyboardAwareScrollView,
+  MoneyField,
   SuccessBanner,
   SuccessPulse,
   triggerSuccess,
@@ -313,10 +314,9 @@ export default function SettingsScreen() {
             onValueChange={(value) => updateShortcutDraft('type', value as QuickAddShortcutType)}
             value={shortcutDraft.type}
           />
-          <FormField
+          <MoneyField
             error={shortcutValidation.defaultAmount}
             helper="Optional amount prefilled when this shortcut is tapped."
-            keyboardType="decimal-pad"
             label="Default amount"
             onChangeText={(value) => updateShortcutDraft('defaultAmount', value)}
             touched={Boolean(shortcutDraft.defaultAmount)}
@@ -531,7 +531,7 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
       flexGrow: 1,
       gap: spacing.lg,
       padding: spacing.xl,
-      paddingBottom: Math.max(132, bottomInset + 120),
+      paddingBottom: Math.max(180, bottomInset + 164),
       paddingTop: 34,
     },
     sectionTitle: {

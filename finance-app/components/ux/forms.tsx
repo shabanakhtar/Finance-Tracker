@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { TextInput } from 'react-native-paper';
 
 import { AppPalette, spacing } from '@/constants/theme';
+import { useCurrency } from '@/contexts/currency';
 import { useAppTheme } from '@/contexts/theme';
 
 type PaperTextInputProps = ComponentProps<typeof TextInput>;
@@ -68,6 +69,30 @@ export function CharacterCounter({ max, value }: { max: number; value: string })
     <Text style={[styles.counterText, overLimit ? styles.counterOver : null]}>
       {value.length}/{max}
     </Text>
+  );
+}
+
+export function LabeledCharacterCounter({ label, max, value }: { label: string; max: number; value: string }) {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+  const overLimit = value.length > max;
+
+  return (
+    <Text style={[styles.counterText, styles.labeledCounterText, overLimit ? styles.counterOver : null]}>
+      {label} {value.length}/{max}
+    </Text>
+  );
+}
+
+export function MoneyField(props: Omit<FormFieldProps, 'keyboardType' | 'left'>) {
+  const { currencySymbol } = useCurrency();
+
+  return (
+    <FormField
+      keyboardType="decimal-pad"
+      left={<TextInput.Affix text={currencySymbol} />}
+      {...props}
+    />
   );
 }
 
@@ -195,6 +220,9 @@ function createStyles(colors: AppPalette) {
       alignItems: 'center',
       flexDirection: 'row',
       gap: spacing.xs,
+    },
+    labeledCounterText: {
+      minWidth: 92,
     },
     metaRow: {
       alignItems: 'flex-start',

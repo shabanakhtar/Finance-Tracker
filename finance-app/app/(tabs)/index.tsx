@@ -17,6 +17,7 @@ import {
   ConfirmDialog,
   DelayedLoader,
   FormField,
+  MoneyField,
   PressableScale,
   SkeletonList,
   triggerSelection,
@@ -37,7 +38,6 @@ import { defaultQuickAddShortcuts, getQuickAddShortcuts, QuickAddShortcut } from
 import { cacheDashboard, formatCachedAt, getCachedDashboard } from '@/services/resilience';
 import { getSetupDismissed, setSetupDismissed as persistSetupDismissed } from '@/services/setupProgress';
 import {
-  API_BASE_URL,
   BudgetStatus,
   Dashboard,
   Transaction,
@@ -497,9 +497,8 @@ export default function DashboardScreen() {
                 touched={submittedFields.budgetCategory}
                 value={budgetCategory}
               />
-              <FormField
+              <MoneyField
                 error={budgetAmountValidation.message}
-                keyboardType="decimal-pad"
                 label="Monthly limit"
                 onChangeText={setBudgetAmount}
                 placeholder="15000"
@@ -534,9 +533,8 @@ export default function DashboardScreen() {
                 ]}
               />
               <View style={styles.formGrid}>
-                <FormField
+                <MoneyField
                   error={editAmountValidation.message}
-                  keyboardType="decimal-pad"
                   label="Amount"
                   onChangeText={(value) => setEditing({ ...editing, amount: value })}
                   required
@@ -623,9 +621,7 @@ export default function DashboardScreen() {
             )}
           </Section>
 
-          <Text style={styles.apiHint}>
-            {dashboardCachedAt ? `Showing saved snapshot from ${formatCachedAt(dashboardCachedAt)}` : `Connected to ${API_BASE_URL.replace('https://', '')}`}
-          </Text>
+          {dashboardCachedAt ? <Text style={styles.apiHint}>Showing saved snapshot from {formatCachedAt(dashboardCachedAt)}</Text> : null}
           <ConfirmDialog
             confirmLabel="Delete"
             destructive
@@ -1281,7 +1277,7 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     backgroundColor: colors.background,
     gap: 16,
     padding: 20,
-    paddingBottom: Math.max(132, bottomInset + 120),
+    paddingBottom: Math.max(172, bottomInset + 156),
   },
   deleteText: {
     color: colors.coral,

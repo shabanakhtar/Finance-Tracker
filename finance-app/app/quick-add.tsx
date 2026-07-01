@@ -11,6 +11,7 @@ import {
   ConnectionNotice,
   FormField,
   KeyboardAwareScrollView,
+  MoneyField,
   PressableScale,
   SuccessBanner,
   SuccessPulse,
@@ -204,9 +205,8 @@ export default function QuickAddScreen() {
               </PressableScale>
             ))}
           </View>
-          <FormField
+          <MoneyField
             error={amountValidation.message}
-            keyboardType="decimal-pad"
             label="Custom amount"
             onBlur={() => markTouched('amount')}
             onChangeText={setAmount}
