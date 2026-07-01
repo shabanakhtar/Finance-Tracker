@@ -52,6 +52,15 @@ function getAiUnavailableMessage(error: unknown, feature: 'chat' | 'market') {
         : `You have used today's market search limit${suffix}. I will not guess prices, so try again tomorrow or compare stores manually.`;
     }
     if (error.kind === 'network' || error.kind === 'timeout' || error.kind === 'backend') {
+      const backendMessage = error.message.toLowerCase();
+      const marketNeedsConfig =
+        feature === 'market' &&
+        ['not configured', 'gemini', 'provider', 'grounding', 'api_key', 'search model'].some((token) =>
+          backendMessage.includes(token),
+        );
+      if (marketNeedsConfig) {
+        return 'Market search is not fully configured on the backend yet. Your finance tracking still works, but Gemini/Search settings need review before prices can be verified.';
+      }
       return feature === 'chat'
         ? 'AI is temporarily unavailable, but core finance tracking still works. Try again when the connection settles.'
         : 'Market search is temporarily unavailable. No recommendation is safer than an unreliable one, so try again later.';
@@ -221,19 +230,24 @@ export default function AiScreen() {
         },
       ]);
     } catch (err) {
+      const unavailableMessage = getAiUnavailableMessage(err, 'market');
       setMarketResult({
         alternatives: [],
-        response: getAiUnavailableMessage(err, 'market'),
+        response: unavailableMessage,
         sources: [],
         verdict: 'No reliable cheaper option could be checked right now.',
-        warnings: ['Prices and stores were not verified because the AI/search service was unavailable.'],
+        warnings: [
+          unavailableMessage.includes('configured')
+            ? 'Backend Gemini/Search settings need review before prices can be verified.'
+            : 'Prices and stores were not verified because the AI/search service was unavailable.',
+        ],
       });
       setMessages((current) => [
         ...current,
         {
           id: `${Date.now()}-market-error`,
           role: 'assistant',
-          text: getAiUnavailableMessage(err, 'market'),
+          text: unavailableMessage,
         },
       ]);
     } finally {

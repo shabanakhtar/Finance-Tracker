@@ -269,13 +269,19 @@ Rules:
 - Always include a warning to verify price, stock, and seller before buying.
 """
 
-    response = client.models.generate_content(
-        model=GEMINI_SEARCH_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            tools=[types.Tool(googleSearch=types.GoogleSearch())],
-        ),
-    )
+    try:
+        response = client.models.generate_content(
+            model=GEMINI_SEARCH_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                tools=[types.Tool(googleSearch=types.GoogleSearch())],
+            ),
+        )
+    except Exception as exc:
+        raise RuntimeError(
+            "Market search provider is unavailable or not configured for Google Search grounding. "
+            "Check GEMINI_API_KEY and GEMINI_SEARCH_MODEL in the backend environment."
+        ) from exc
 
     sources = _grounding_sources(response)
 

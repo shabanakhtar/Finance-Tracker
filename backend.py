@@ -792,7 +792,8 @@ def market_search_endpoint(request: MarketSearchRequest, http_request: Request):
                 "message": str(e)
             }
         )
-    except Exception:
+    except Exception as e:
+        print(f"Unexpected market search error: {e}")
         raise HTTPException(
             status_code=500,
             detail={

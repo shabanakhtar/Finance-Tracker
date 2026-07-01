@@ -25,10 +25,15 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Polish post-login setup guide`
+- `Explain score and harden AI search diagnostics`
 
 Recent important commits:
 
+- `Explain score and harden AI search diagnostics`
+- `Refresh app color palette`
+- `Track financial score clarity work`
+- `Track home trend widget ideas`
+- `Track product search follow-ups`
 - `Polish post-login setup guide`
 - `Harden Supabase advisor warnings`
 - `Add SQL-backed AI context`
@@ -210,10 +215,10 @@ Implemented in `dcb3ab7`:
   - Top categories
   - Opportunities
   - Smart insights
-- Future Analysis clarity work:
-  - Explain what the financial score means and what it does not mean.
-  - Make the score card tappable, opening a short breakdown of spending ratio, consistency, data confidence, and budget impact.
-  - Avoid presenting the score like a credit score or full net-worth health score until the formula is expanded.
+- Analysis clarity work:
+  - Implemented: the financial score card is tappable and explains what the score means and what it does not mean.
+  - Implemented: score explanation includes spending ratio, consistency, data confidence, and budget pressure.
+  - Implemented: score copy avoids presenting the value like a credit score or full net-worth health score.
   - Add a compact category-spending donut or bar chart if it improves scanning more than the current list.
   - Keep Smart Insights as readable cards; use charts only for data that benefits from visual comparison.
 - Home is lighter and more focused:
@@ -529,8 +534,8 @@ Future:
 - Offline edit/delete queue.
 - Conflict handling.
 - Background sync scheduling if production usage justifies it.
-- Investigate why local market/product search currently returns "AI/search service unavailable" in the emulator.
-- Improve product-search empty/error states so users know whether the issue is missing configuration, temporary provider failure, or no trustworthy match.
+- Implemented: market/product search now distinguishes backend Gemini/Search configuration issues from temporary provider failure or no trustworthy match.
+- Still needed: verify the deployed Vercel environment has `GEMINI_API_KEY` and a search-capable `GEMINI_SEARCH_MODEL` configured.
 
 ## Level 9: AI Limits And Cost Protection
 
@@ -824,75 +829,52 @@ Not needed for first beta:
 
 ## Current Immediate Agenda
 
-### Step 1: Build And Test APK
+### Step 1: Current Quality Batch
 
-- Create fresh EAS Android preview build.
-- Install on phone.
-- Confirm latest Level 1 through Level 4 UI is present.
+Status: implemented in `Explain score and harden AI search diagnostics`.
 
-### Step 2: Phone UX Review
+- Replaced Supabase auth session persistence that triggered the Expo SecureStore 2048-byte warning.
+- Made the Financial Score card explain itself inside the Analysis tab.
+- Improved market/product search failure messages so config/provider issues are obvious instead of vague.
+- Updated this roadmap with the current agenda.
+- Validated mobile and backend.
+- Pushed a checkpoint.
+
+Potential commit:
+
+```text
+Explain score and harden AI search diagnostics
+```
+
+### Step 2: Emulator QA
 
 Check:
 
-- Auth field cropping.
-- Auth first impression and mode-specific copy.
-- Password checklist behavior.
-- Keyboard overlap.
-- Floating nav overlap.
-- Floating nav keyboard-hide behavior.
-- Analysis tab.
-- Home Today focus card.
-- First-run setup progress behavior.
-- Recent transaction preview length.
-- First-run setup skip.
-- Settings setup restore action.
-- Settings bottom content.
-- Add form submit button visibility.
+- App opens without the SecureStore warning repeating after a fresh login.
+- Auth welcome text animates visibly and does not pop in.
+- Login/signup still works.
+- First-run setup appears after login when essentials are unfinished.
+- Financial Score card opens the explanation dialog.
+- Product search uses realistic examples such as sea salt hair spray.
+- Product search clearly says whether the backend/search provider is unavailable.
+- AI chat still works when limits/config allow it.
 
-### Step 3: Push UX Batch 2
+### Step 3: Visual And Dashboard Follow-Ups
 
-If APK review finds issues:
+- Verify the new light/dark palette feels like the same product in both modes.
+- Confirm old orange/brown branding is gone except for warnings/caution states.
+- Add the Home trend widgets:
+  - 7-day and 30-day selector.
+  - Income/spend movement such as "+20% vs last 7 days" only when the data supports it.
+  - Small chart that helps scanning without crowding Home.
+- Decide whether a category donut/bar chart belongs in Analysis after emulator review.
 
-- Fix them.
-- Run validation.
-- Commit.
-- Push checkpoint.
+### Step 4: EAS Preview Build
 
-Potential commit:
-
-```text
-Polish phone UX after preview build
-```
-
-### Step 4: Level 4 First-Run Setup Polish
-
-- Guided active step.
-- Essential setup states.
-- Optional setup actions.
-- Settings restore action.
-- Validate.
-- Push checkpoint.
-
-Potential commit:
-
-```text
-Polish first run setup flow
-```
-
-### Step 5: Quick Add Personalization
-
-- Shared shortcut model.
-- Settings editor.
-- Home and Quick Add loading.
-- Default amounts.
-- Validation and reset.
-- Push checkpoint.
-
-Potential commit:
-
-```text
-Personalize quick add shortcuts
-```
+- Create a fresh Android preview APK after emulator QA passes.
+- Install on phone.
+- Confirm the emulator fixes are present on real device.
+- Run a final phone UX review for keyboard, nav overlap, auth, setup, AI, Add, and Settings.
 
 ## Quality Bar
 

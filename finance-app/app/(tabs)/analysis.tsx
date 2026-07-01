@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Card, Chip } from 'react-native-paper';
+import { Button, Card, Chip, Dialog, Portal } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedCard, AnimatedProgressBar, AppErrorState, EmptyState, SkeletonList } from '@/components/ux';
@@ -24,6 +24,7 @@ export default function AnalysisScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [scoreHelpVisible, setScoreHelpVisible] = useState(false);
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -54,6 +55,7 @@ export default function AnalysisScreen() {
     return Math.max(1, ...Object.values(dashboard.monthly).flatMap((item) => [item.income, item.expense]));
   }, [dashboard]);
   const scoreProgress = Math.max(0, Math.min((dashboard?.financial_score ?? 0) / 100, 1));
+  const scoreFactors = useMemo(() => (dashboard ? getScoreFactors(dashboard, colors) : []), [colors, dashboard]);
 
   const refresh = () => {
     setRefreshing(true);
@@ -87,7 +89,11 @@ export default function AnalysisScreen() {
       {dashboard ? (
         <>
           <AnimatedCard>
-            <Card style={styles.scoreCard}>
+            <Card
+              accessibilityLabel="Financial score explanation"
+              accessibilityRole="button"
+              onPress={() => setScoreHelpVisible(true)}
+              style={styles.scoreCard}>
               <Card.Content style={styles.scoreContent}>
                 <View style={styles.scoreCircle}>
                   <Text style={styles.scoreValue}>{dashboard.financial_score}</Text>
@@ -96,7 +102,12 @@ export default function AnalysisScreen() {
                 <View style={styles.scoreText}>
                   <Text style={styles.cardTitle}>Financial score</Text>
                   <AnimatedProgressBar color={colors.emerald} progress={scoreProgress} />
+                  <Text style={styles.scoreHint}>A tracker score based on spending ratio, consistency, and data confidence.</Text>
                   <Text style={styles.muted}>{dashboard.transaction_count} transactions analyzed</Text>
+                  <View style={styles.learnRow}>
+                    <MaterialCommunityIcons color={colors.sky} name="information-outline" size={16} />
+                    <Text style={styles.learnText}>Tap to see how it is calculated</Text>
+                  </View>
                 </View>
               </Card.Content>
             </Card>
@@ -166,6 +177,38 @@ export default function AnalysisScreen() {
               ) : null}
             </View>
           </Section>
+
+          <Portal>
+            <Dialog visible={scoreHelpVisible} onDismiss={() => setScoreHelpVisible(false)} style={styles.dialog}>
+              <Dialog.Title>
+                <Text style={styles.dialogTitle}>What this score means</Text>
+              </Dialog.Title>
+              <Dialog.Content>
+                <Text style={styles.dialogText}>
+                  This is a Finance Tracker score, not a credit score. It starts from 100 and adjusts based on what the app
+                  can see in your tracked money history.
+                </Text>
+                <View style={styles.factorList}>
+                  {scoreFactors.map((factor) => (
+                    <View key={factor.title} style={styles.factorRow}>
+                      <View style={[styles.factorIcon, { backgroundColor: factor.surface }]}>
+                        <MaterialCommunityIcons color={factor.color} name={factor.icon} size={18} />
+                      </View>
+                      <View style={styles.factorText}>
+                        <Text style={styles.factorTitle}>{factor.title}</Text>
+                        <Text style={styles.factorDetail}>{factor.detail}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </Dialog.Content>
+              <Dialog.Actions>
+                <Button onPress={() => setScoreHelpVisible(false)} textColor={colors.sky}>
+                  Got it
+                </Button>
+              </Dialog.Actions>
+            </Dialog>
+          </Portal>
         </>
       ) : null}
     </ScrollView>
@@ -234,6 +277,78 @@ function InsightCardRow({ colors, item, styles }: { colors: AppPalette; item: In
   );
 }
 
+type ScoreFactor = {
+  color: string;
+  detail: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  surface: string;
+  title: string;
+};
+
+function getScoreFactors(dashboard: Dashboard, colors: AppPalette): ScoreFactor[] {
+  const income = dashboard.summary.income;
+  const expense = dashboard.summary.expense;
+  const spendingRatio = income > 0 ? expense / income : null;
+  const monthlyExpenses = Object.values(dashboard.monthly).map((item) => item.expense).filter((amount) => amount > 0);
+  const averageExpense = monthlyExpenses.length
+    ? monthlyExpenses.reduce((total, amount) => total + amount, 0) / monthlyExpenses.length
+    : 0;
+  const expenseSwing = monthlyExpenses.length >= 3 ? Math.max(...monthlyExpenses) - Math.min(...monthlyExpenses) : 0;
+  const hasOverBudget = dashboard.budget_status.some((budget) => budget.is_over);
+
+  const ratioDetail =
+    income <= 0
+      ? 'Add income so the app can judge spending against money coming in.'
+      : spendingRatio && spendingRatio > 1
+        ? 'Expenses are above tracked income, which pulls the score down strongly.'
+        : spendingRatio && spendingRatio > 0.8
+          ? 'Most tracked income is being spent, so the score is cautious.'
+          : 'Tracked spending is staying within income, which supports the score.';
+
+  const consistencyDetail =
+    monthlyExpenses.length < 3
+      ? 'More monthly history will make consistency checks more useful.'
+      : expenseSwing > averageExpense * 0.5
+        ? 'Monthly spending is swinging a lot, so the score treats the pattern as less stable.'
+        : 'Monthly spending is fairly steady across recent history.';
+
+  return [
+    {
+      color: spendingRatio && spendingRatio > 1 ? colors.coral : colors.emerald,
+      detail: ratioDetail,
+      icon: 'scale-balance',
+      surface: spendingRatio && spendingRatio > 1 ? colors.coralSoft : colors.emeraldSoft,
+      title: 'Spending vs income',
+    },
+    {
+      color: monthlyExpenses.length >= 3 && expenseSwing > averageExpense * 0.5 ? colors.amber : colors.sky,
+      detail: consistencyDetail,
+      icon: 'chart-timeline-variant',
+      surface: monthlyExpenses.length >= 3 && expenseSwing > averageExpense * 0.5 ? colors.warningSoft : colors.skySoft,
+      title: 'Consistency',
+    },
+    {
+      color: dashboard.transaction_count < 5 ? colors.amber : colors.emerald,
+      detail:
+        dashboard.transaction_count < 5
+          ? 'The score is less confident until at least a few real transactions are tracked.'
+          : `${dashboard.transaction_count} transactions give the score a stronger base.`,
+      icon: 'database-check-outline',
+      surface: dashboard.transaction_count < 5 ? colors.warningSoft : colors.emeraldSoft,
+      title: 'Data confidence',
+    },
+    {
+      color: hasOverBudget ? colors.coral : colors.violet,
+      detail: hasOverBudget
+        ? 'One or more budgets are over the limit, so the score will flag pressure.'
+        : 'Budgets help explain where the score is healthy or under pressure.',
+      icon: 'target',
+      surface: hasOverBudget ? colors.coralSoft : colors.violetSoft,
+      title: 'Budget pressure',
+    },
+  ];
+}
+
 function createStyles(colors: AppPalette, bottomInset: number) {
   return StyleSheet.create({
     barColumn: {
@@ -300,6 +415,22 @@ function createStyles(colors: AppPalette, bottomInset: number) {
       lineHeight: 19,
       marginTop: 3,
     },
+    dialog: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: radii.card,
+      borderWidth: 1,
+    },
+    dialogText: {
+      color: colors.muted,
+      fontSize: 14,
+      lineHeight: 21,
+    },
+    dialogTitle: {
+      color: colors.ink,
+      fontSize: 20,
+      fontWeight: '900',
+    },
     expenseBar: {
       backgroundColor: colors.coral,
       borderRadius: radii.pill,
@@ -308,6 +439,41 @@ function createStyles(colors: AppPalette, bottomInset: number) {
     },
     header: {
       gap: spacing.sm,
+    },
+    factorDetail: {
+      color: colors.muted,
+      fontSize: 13,
+      lineHeight: 19,
+      marginTop: 2,
+    },
+    factorIcon: {
+      alignItems: 'center',
+      borderRadius: radii.card,
+      height: 38,
+      justifyContent: 'center',
+      width: 38,
+    },
+    factorList: {
+      gap: spacing.sm,
+      marginTop: spacing.md,
+    },
+    factorRow: {
+      alignItems: 'flex-start',
+      backgroundColor: colors.background,
+      borderColor: colors.border,
+      borderRadius: radii.card,
+      borderWidth: 1,
+      flexDirection: 'row',
+      gap: spacing.md,
+      padding: spacing.md,
+    },
+    factorText: {
+      flex: 1,
+    },
+    factorTitle: {
+      color: colors.ink,
+      fontSize: 14,
+      fontWeight: '900',
     },
     iconBox: {
       alignItems: 'center',
@@ -371,6 +537,17 @@ function createStyles(colors: AppPalette, bottomInset: number) {
     listValue: {
       color: colors.muted,
       fontSize: 14,
+      fontWeight: '900',
+    },
+    learnRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 6,
+      marginTop: 2,
+    },
+    learnText: {
+      color: colors.sky,
+      fontSize: 12,
       fontWeight: '900',
     },
     loadingScreen: {
@@ -438,6 +615,11 @@ function createStyles(colors: AppPalette, bottomInset: number) {
       alignItems: 'center',
       flexDirection: 'row',
       gap: spacing.lg,
+    },
+    scoreHint: {
+      color: colors.muted,
+      fontSize: 12,
+      lineHeight: 17,
     },
     scoreMax: {
       color: colors.muted,
