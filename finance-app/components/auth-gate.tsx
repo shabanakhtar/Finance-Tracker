@@ -71,7 +71,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const needsProfile = Boolean(session) && typeof displayName !== 'string';
   const emailValidation = useMemo(() => validateEmail(email), [email]);
   const passwordValidation = useMemo(
-    () => (mode === 'login' ? { isValid: Boolean(password), message: 'Password is required.' } : validatePassword(password)),
+    () => (mode === 'login' ? (password ? { isValid: true } : { isValid: false, message: 'Password is required.' }) : validatePassword(password)),
     [mode, password],
   );
   const firstNameValidation = useMemo(() => validateName(firstName, 'First name'), [firstName]);
