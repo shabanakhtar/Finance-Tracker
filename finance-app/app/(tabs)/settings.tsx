@@ -209,27 +209,28 @@ export default function SettingsScreen() {
 
       <View style={styles.panel}>
         <View style={styles.row}>
-          <View>
-            <Text style={styles.sectionTitle}>Theme</Text>
-            <Text style={styles.muted}>Current look: {resolvedTheme === 'dark' ? 'Electric dark' : 'Warm light'}</Text>
-          </View>
-          <MaterialCommunityIcons color={colors.violet} name="palette-outline" size={24} />
-        </View>
-        <ThemeToggle onValueChange={setMode} value={mode} />
-      </View>
-
-      <View style={styles.panel}>
-        <View style={styles.row}>
           <View style={styles.rowText}>
-            <Text style={styles.sectionTitle}>Default currency</Text>
-            <Text style={styles.muted}>Current display currency: {currencyLabel}</Text>
+            <Text style={styles.sectionTitle}>Preferences</Text>
+            <Text style={styles.muted}>Theme: {resolvedTheme === 'dark' ? 'Dark' : 'Light'} · Currency: {currencyLabel}</Text>
           </View>
-          <MaterialCommunityIcons color={colors.emerald} name="cash-multiple" size={24} />
+          <MaterialCommunityIcons color={colors.sky} name="tune-variant" size={24} />
         </View>
-        <CurrencyToggle onValueChange={setCurrency} value={currency} />
-        <Text style={styles.muted}>
-          This changes how amounts are displayed. It does not convert existing transaction values yet.
-        </Text>
+        <View style={styles.preferenceGroup}>
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceLabelRow}>
+              <MaterialCommunityIcons color={colors.sky} name="palette-outline" size={20} />
+              <Text style={styles.preferenceLabel}>Theme</Text>
+            </View>
+            <ThemeToggle onValueChange={setMode} value={mode} />
+          </View>
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceLabelRow}>
+              <MaterialCommunityIcons color={colors.emerald} name="cash-multiple" size={20} />
+              <Text style={styles.preferenceLabel}>Default currency</Text>
+            </View>
+            <CurrencyToggle onValueChange={setCurrency} value={currency} />
+          </View>
+        </View>
       </View>
 
       <View style={styles.panel}>
@@ -245,7 +246,7 @@ export default function SettingsScreen() {
         <View style={styles.row}>
           <View style={styles.rowText}>
             <Text style={styles.sectionTitle}>Setup guide</Text>
-            <Text style={styles.muted}>Bring back the money snapshot guide if you skipped it before finishing the essentials.</Text>
+            <Text style={styles.muted}>Show the Home setup guide again.</Text>
           </View>
           <MaterialCommunityIcons color={colors.sky} name="map-marker-path" size={24} />
         </View>
@@ -259,7 +260,7 @@ export default function SettingsScreen() {
         <View style={styles.row}>
           <View style={styles.rowText}>
             <Text style={styles.sectionTitle}>Quick Add shortcuts</Text>
-            <Text style={styles.muted}>Edit the tiles that appear on Home and inside Quick Add.</Text>
+            <Text style={styles.muted}>Edit the tiles used on Home and Quick Add.</Text>
           </View>
           <MaterialCommunityIcons color={colors.violet} name="tune-variant" size={24} />
         </View>
@@ -466,6 +467,22 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
       gap: spacing.sm,
       padding: spacing.md,
     },
+    preferenceGroup: {
+      gap: spacing.lg,
+    },
+    preferenceItem: {
+      gap: spacing.sm,
+    },
+    preferenceLabel: {
+      color: colors.ink,
+      fontSize: 14,
+      fontWeight: '900',
+    },
+    preferenceLabelRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
     previewRow: {
       color: colors.ink,
       fontSize: 13,
@@ -506,12 +523,7 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
       borderRadius: radii.card,
     },
     shortcutEditor: {
-      backgroundColor: colors.background,
-      borderColor: colors.border,
-      borderRadius: radii.card,
-      borderWidth: 1,
       gap: spacing.md,
-      padding: spacing.md,
     },
     shortcutGrid: {
       flexDirection: 'row',

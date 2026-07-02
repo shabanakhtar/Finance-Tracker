@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Implement P1 trust and consistency fixes`
+- `Tighten structure and settings density`
 
 Recent important commits:
 
+- `Tighten structure and settings density`
 - `Implement P1 trust and consistency fixes`
 - `Fix P0 mobile UX issues`
 - `Add onboarding preference setup`
@@ -919,13 +920,18 @@ Implement P1 trust and consistency fixes
 
 ### Step 3: Structure, Trust, And Density Pass
 
-Next:
+Status: implemented in `Tighten structure and settings density`.
 
-- Make helper copy state-based so returning users do not keep seeing onboarding-style explanations.
-- Collapse or remove the Home setup checklist once essentials are complete.
-- Group simple Settings preferences more tightly instead of using one large card per low-stakes control.
-- Flatten nested Quick Add shortcut editor surfaces.
-- Keep one strongest hero element per screen where the screen naturally has a hero.
+- Settings now groups Theme and Currency into one Preferences panel.
+- Settings helper copy is shorter and less onboarding-like for returning users.
+- Quick Add shortcut editing keeps the same controls but removes the nested bordered editor container.
+- Home already removes the setup guide once essentials are complete, keeping the balance card as the primary hero for completed users.
+
+Potential commit:
+
+```text
+Tighten structure and settings density
+```
 
 ### Step 4: Emulator QA
 

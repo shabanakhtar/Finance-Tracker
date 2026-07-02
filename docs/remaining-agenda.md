@@ -2,20 +2,7 @@
 
 This is the simplified list of what is still left. Completed P0 and P1 work has been removed from this file.
 
-## 1. Structure And Density Pass
-
-- Make helper copy appear only when useful:
-  - first visit
-  - empty state
-  - setup state
-  - optional info/help action
-- Remove repeated explanatory sentences for returning users.
-- Collapse or remove the Home setup checklist once income, expense, and budget essentials are complete.
-- Tighten Settings so simple preferences are grouped together instead of spread across oversized cards.
-- Flatten the Quick Add shortcut editor so it does not feel like cards inside cards.
-- Keep the available balance card as the strongest Home hero element.
-
-## 2. Emulator QA
+## 1. Emulator QA
 
 Check these in the Android emulator:
 
@@ -36,7 +23,7 @@ Check these in the Android emulator:
 - Product search clearly says when the search or AI service is unavailable.
 - AI chat still works when limits and config allow it.
 
-## 3. Visual And Dashboard Follow-Ups
+## 2. Visual And Dashboard Follow-Ups
 
 - Verify light and dark mode feel like the same product.
 - Confirm orange/brown branding is gone except warning or caution states.
@@ -46,7 +33,7 @@ Check these in the Android emulator:
   - small chart that helps scanning without crowding Home
 - Decide after emulator review whether Analysis should include a category donut chart or bar chart.
 
-## 4. EAS Preview Build
+## 3. EAS Preview Build
 
 - Build a fresh Android preview APK after emulator QA passes.
 - Install it on phone.
