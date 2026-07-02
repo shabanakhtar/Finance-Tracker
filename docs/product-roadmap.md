@@ -955,7 +955,7 @@ Check:
 - App opens without the SecureStore warning repeating after a fresh login.
 - Auth welcome text animates visibly and does not pop in.
 - Login/signup still works.
-- First-run setup appears after login when essentials are unfinished.
+- First-run setup appears after login when essentials still need setup.
 - Financial Score card opens the explanation dialog.
 - Product search uses realistic examples such as sea salt hair spray.
 - Product search clearly says whether the backend/search provider is unavailable.

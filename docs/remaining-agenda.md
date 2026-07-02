@@ -19,7 +19,7 @@ Check these in the Android emulator:
 - AI counters stay visible and do not collide with navigation.
 - Floating navigation does not cover content on Home, Analysis, Add, Quick Add, AI, or Settings.
 - Login and signup still work.
-- First-run setup appears after login when essentials are unfinished.
+- First-run setup appears after login when essentials still need setup.
 - Financial Score explanation opens correctly.
 - Product search uses realistic examples like sea salt hair spray.
 - Product search clearly says when the search or AI service is unavailable.
