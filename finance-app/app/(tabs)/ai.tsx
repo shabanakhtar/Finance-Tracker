@@ -613,7 +613,7 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
       backgroundColor: colors.background,
       gap: spacing.lg,
       padding: spacing.lg,
-      paddingBottom: Math.max(132, bottomInset + 120),
+      paddingBottom: Math.max(220, bottomInset + 190),
     },
     confidencePill: {
       backgroundColor: colors.violetSoft,
@@ -664,8 +664,9 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     },
     limitCount: {
       color: colors.sky,
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '900',
+      lineHeight: 16,
     },
     limitCountEmpty: {
       color: colors.coral,
@@ -683,6 +684,7 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
       color: colors.ink,
       fontSize: 13,
       fontWeight: '900',
+      lineHeight: 17,
     },
     limitMeta: {
       color: colors.muted,
@@ -697,9 +699,8 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
       padding: spacing.lg,
     },
     limitRow: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: 2,
     },
     limitTrack: {
       backgroundColor: colors.surface2,
