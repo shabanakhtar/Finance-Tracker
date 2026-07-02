@@ -28,6 +28,7 @@ import { useCurrency } from '@/contexts/currency';
 import { useAppTheme } from '@/contexts/theme';
 import { useFloatingToast } from '@/contexts/toast';
 import { addTransaction } from '@/services/api';
+import { formatCategoryLabel } from '@/services/formatters';
 import { isLikelyNetworkError, queueTransaction } from '@/services/offlineQueue';
 import { defaultQuickAddShortcuts, getQuickAddShortcuts, QuickAddShortcut } from '@/services/quickAddShortcuts';
 
@@ -130,7 +131,7 @@ export default function QuickAddScreen() {
         router.back();
       } else {
         resetForNext();
-        setSaveMessage(`${category} ${formatMoney(parsedAmount)} was added.`);
+        setSaveMessage(`${formatCategoryLabel(category)} ${formatMoney(parsedAmount)} was added.`);
       }
     } catch (error) {
       if (isLikelyNetworkError(error)) {
@@ -173,7 +174,7 @@ export default function QuickAddScreen() {
           <View style={styles.summaryText}>
             <Text style={styles.summaryLabel}>{type === 'income' ? 'Income' : 'Expense'}</Text>
             <Text style={styles.summaryValue}>{parsedAmount > 0 ? formatMoney(parsedAmount) : 'Choose amount'}</Text>
-            <Text style={styles.summaryMeta}>{category || 'category'} - {date}</Text>
+            <Text style={styles.summaryMeta}>{category ? formatCategoryLabel(category) : 'Category'} - {date}</Text>
           </View>
         </View>
 

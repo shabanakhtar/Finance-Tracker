@@ -7,22 +7,26 @@ import { Button, Chip, SegmentedButtons, Text } from 'react-native-paper';
 import { useEffect, useMemo, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppPalette, AppThemeMode, radii, spacing } from '@/constants/theme';
+import { AppPalette, radii, spacing } from '@/constants/theme';
 import {
   AppErrorState,
+  ConfirmDialog,
+  CurrencyToggle,
   EmptyState,
   FormField,
   KeyboardAwareScrollView,
   MoneyField,
   SuccessBanner,
   SuccessPulse,
+  ThemeToggle,
   triggerSuccess,
   triggerWarning,
 } from '@/components/ux';
 import { useAuth } from '@/contexts/auth';
-import { AppCurrency, currencyOptions, useCurrency } from '@/contexts/currency';
+import { useCurrency } from '@/contexts/currency';
 import { useAppTheme } from '@/contexts/theme';
 import { CsvImportPreview, exportTransactionsCsv, importTransactionsCsv, previewTransactionsCsv } from '@/services/api';
+import { formatCategoryLabel } from '@/services/formatters';
 import {
   defaultQuickAddShortcuts,
   draftToShortcut,
@@ -38,12 +42,6 @@ import {
 } from '@/services/quickAddShortcuts';
 import { setSetupDismissed as persistSetupDismissed } from '@/services/setupProgress';
 
-const themeOptions = [
-  { value: 'dark', label: 'Dark', icon: 'weather-night' },
-  { value: 'light', label: 'Light', icon: 'white-balance-sunny' },
-  { value: 'system', label: 'System', icon: 'cellphone-cog' },
-];
-
 export default function SettingsScreen() {
   const { session, signOut } = useAuth();
   const { currency, currencyLabel, setCurrency } = useCurrency();
@@ -56,12 +54,14 @@ export default function SettingsScreen() {
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [preview, setPreview] = useState<CsvImportPreview | null>(null);
+  const [signOutVisible, setSignOutVisible] = useState(false);
   const [shortcutDraft, setShortcutDraft] = useState<QuickAddShortcutDraft>(() => shortcutToDraft(defaultQuickAddShortcuts[0]));
   const [shortcutFeedback, setShortcutFeedback] = useState<string | null>(null);
   const [shortcutError, setShortcutError] = useState<string | null>(null);
   const [shortcuts, setShortcuts] = useState<QuickAddShortcut[]>(defaultQuickAddShortcuts);
   const [setupFeedback, setSetupFeedback] = useState<string | null>(null);
   const shortcutValidation = useMemo(() => validateQuickAddShortcut(shortcutDraft), [shortcutDraft]);
+  const shortcutHasErrors = Object.keys(shortcutValidation).length > 0;
   const profileName =
     session?.user.user_metadata?.full_name ??
     session?.user.user_metadata?.name ??
@@ -215,11 +215,7 @@ export default function SettingsScreen() {
           </View>
           <MaterialCommunityIcons color={colors.violet} name="palette-outline" size={24} />
         </View>
-        <SegmentedButtons
-          buttons={themeOptions}
-          onValueChange={(value) => setMode(value as AppThemeMode)}
-          value={mode}
-        />
+        <ThemeToggle onValueChange={setMode} value={mode} />
       </View>
 
       <View style={styles.panel}>
@@ -230,15 +226,7 @@ export default function SettingsScreen() {
           </View>
           <MaterialCommunityIcons color={colors.emerald} name="cash-multiple" size={24} />
         </View>
-        <SegmentedButtons
-          buttons={currencyOptions.map((option) => ({
-            icon: option.code === 'PKR' ? 'currency-inr' : 'currency-usd',
-            label: option.code,
-            value: option.code,
-          }))}
-          onValueChange={(value) => setCurrency(value as AppCurrency)}
-          value={currency}
-        />
+        <CurrencyToggle onValueChange={setCurrency} value={currency} />
         <Text style={styles.muted}>
           This changes how amounts are displayed. It does not convert existing transaction values yet.
         </Text>
@@ -248,7 +236,7 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>Account</Text>
         <Text style={styles.muted}>{profileName}</Text>
         <Text style={styles.muted}>{session?.user.email ?? 'Your private workspace'}</Text>
-        <Button icon="logout" mode="outlined" onPress={signOut} style={styles.signOut}>
+        <Button icon="logout" mode="outlined" onPress={() => setSignOutVisible(true)} style={styles.signOut}>
           Sign Out
         </Button>
       </View>
@@ -345,7 +333,7 @@ export default function SettingsScreen() {
         ) : null}
         {shortcutError ? <AppErrorState message={shortcutError} title="Shortcut needs attention" /> : null}
         <View style={styles.actionRow}>
-          <Button icon="content-save-outline" mode="contained" onPress={saveShortcut} style={styles.actionButton}>
+          <Button disabled={shortcutHasErrors} icon="content-save-outline" mode="contained" onPress={saveShortcut} style={styles.actionButton}>
             Save Shortcut
           </Button>
           <Button icon="restore" mode="outlined" onPress={resetShortcuts} style={styles.actionButton}>
@@ -387,7 +375,7 @@ export default function SettingsScreen() {
             </Text>
             {preview.preview.slice(0, 3).map((row) => (
               <Text key={`${row.row}-${row.date}-${row.category}`} style={styles.previewRow}>
-                {row.date} - {row.type} - {row.category} - {row.amount}
+                {row.date} - {row.type} - {formatCategoryLabel(row.category)} - {row.amount}
               </Text>
             ))}
             {preview.errors.slice(0, 3).map((row) => (
@@ -407,6 +395,18 @@ export default function SettingsScreen() {
           </View>
         ) : null}
       </View>
+      <ConfirmDialog
+        confirmLabel="Sign Out"
+        destructive
+        message="You will need to sign in again to access this workspace."
+        onCancel={() => setSignOutVisible(false)}
+        onConfirm={() => {
+          setSignOutVisible(false);
+          void signOut();
+        }}
+        title="Sign out?"
+        visible={signOutVisible}
+      />
     </KeyboardAwareScrollView>
   );
 }

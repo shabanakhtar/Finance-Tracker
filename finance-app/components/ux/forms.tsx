@@ -1,10 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ComponentProps, ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { TextInput } from 'react-native-paper';
+import { SegmentedButtons, TextInput } from 'react-native-paper';
 
-import { AppPalette, spacing } from '@/constants/theme';
-import { useCurrency } from '@/contexts/currency';
+import { AppPalette, AppThemeMode, spacing } from '@/constants/theme';
+import { AppCurrency, currencyOptions, useCurrency } from '@/contexts/currency';
 import { useAppTheme } from '@/contexts/theme';
 
 type PaperTextInputProps = ComponentProps<typeof TextInput>;
@@ -92,6 +92,46 @@ export function MoneyField(props: Omit<FormFieldProps, 'keyboardType' | 'left'>)
       keyboardType="decimal-pad"
       left={<TextInput.Affix text={currencySymbol} />}
       {...props}
+    />
+  );
+}
+
+export function CurrencyToggle({
+  onValueChange,
+  value,
+}: {
+  onValueChange: (currency: AppCurrency) => void;
+  value: AppCurrency;
+}) {
+  return (
+    <SegmentedButtons
+      buttons={currencyOptions.map((option) => ({
+        icon: option.code === 'PKR' ? 'cash' : 'currency-usd',
+        label: option.code,
+        value: option.code,
+      }))}
+      onValueChange={(nextValue) => onValueChange(nextValue as AppCurrency)}
+      value={value}
+    />
+  );
+}
+
+export function ThemeToggle({
+  onValueChange,
+  value,
+}: {
+  onValueChange: (mode: AppThemeMode) => void;
+  value: AppThemeMode;
+}) {
+  return (
+    <SegmentedButtons
+      buttons={[
+        { icon: 'white-balance-sunny', label: 'Light', value: 'light' },
+        { icon: 'weather-night', label: 'Dark', value: 'dark' },
+        { icon: 'cellphone-cog', label: 'System', value: 'system' },
+      ]}
+      onValueChange={(nextValue) => onValueChange(nextValue as AppThemeMode)}
+      value={value}
     />
   );
 }

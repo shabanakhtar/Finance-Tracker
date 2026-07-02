@@ -2,17 +2,19 @@ import * as SecureStore from 'expo-secure-store';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Button, Card, Divider, SegmentedButtons, TextInput } from 'react-native-paper';
+import { Button, Card, Divider, TextInput } from 'react-native-paper';
 
 import { useAuth } from '@/contexts/auth';
-import { AppCurrency, currencyOptions, useCurrency } from '@/contexts/currency';
-import { AppPalette, AppThemeMode } from '@/constants/theme';
+import { useCurrency } from '@/contexts/currency';
+import { AppPalette } from '@/constants/theme';
 import { useAppTheme } from '@/contexts/theme';
 import {
   AnimatedScreen,
+  CurrencyToggle,
   FormField,
   PasswordChecklist,
   SuccessBanner,
+  ThemeToggle,
   TypingText,
   validateEmail,
   validateName,
@@ -41,7 +43,7 @@ async function storeOnboardingPreferencesDone() {
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const { initialized, loading, resetPassword, session, signIn, signInWithGoogle, signUp, updateProfile } = useAuth();
-  const { colors, mode: themeMode, resolvedTheme, setMode: setThemeMode } = useAppTheme();
+  const { colors, mode: themeMode, setMode: setThemeMode } = useAppTheme();
   const { currency, setCurrency } = useCurrency();
   const { height } = useWindowDimensions();
   const compactScreen = height < 720;
@@ -81,7 +83,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
     passwordValidation.isValid &&
     (mode === 'login' || (firstNameValidation.isValid && lastNameValidation.isValid));
   const profileIsValid = firstNameValidation.isValid && lastNameValidation.isValid;
-  const visibleThemeMode = themeMode === 'system' ? resolvedTheme : themeMode;
 
   useEffect(() => {
     let active = true;
@@ -285,6 +286,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       <KeyboardAvoidingView behavior={keyboardBehavior} style={styles.screen}>
         <ScrollView contentContainerStyle={[styles.container, styles.welcomeContainer]} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
           <View style={styles.welcomeHero}>
+            <StepIndicator current={1} total={2} />
             <AnimatedScreen delay={40} style={styles.brandRow}>
               <View style={styles.brandMark}>
                 <MaterialCommunityIcons color={colors.sky} name="wallet-outline" size={24} />
@@ -298,7 +300,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
               <Text style={styles.title}>Set your defaults</Text>
             </AnimatedScreen>
             <AnimatedScreen delay={220}>
-              <Text style={styles.subtitle}>Choose how the app should look and show money. You can change both later in Settings.</Text>
+              <Text style={styles.subtitle}>Choose how the app should look and show money. You can change this anytime in Settings.</Text>
             </AnimatedScreen>
           </View>
 
@@ -313,15 +315,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                       <Text style={styles.preferenceHint}>This is display-only for now. Multi-currency conversion comes later.</Text>
                     </View>
                   </View>
-                  <SegmentedButtons
-                    buttons={currencyOptions.map((option) => ({
-                      icon: option.code === 'PKR' ? 'currency-inr' : 'currency-usd',
-                      label: option.code,
-                      value: option.code,
-                    }))}
-                    onValueChange={(value) => setCurrency(value as AppCurrency)}
-                    value={currency}
-                  />
+                  <CurrencyToggle onValueChange={setCurrency} value={currency} />
                 </View>
 
                 <View style={styles.preferenceBlock}>
@@ -332,19 +326,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                       <Text style={styles.preferenceHint}>Pick the mode that feels easiest to read.</Text>
                     </View>
                   </View>
-                  <SegmentedButtons
-                    buttons={[
-                      { icon: 'white-balance-sunny', label: 'Light', value: 'light' },
-                      { icon: 'weather-night', label: 'Dark', value: 'dark' },
-                    ]}
-                    onValueChange={(value) => setThemeMode(value as AppThemeMode)}
-                    value={visibleThemeMode}
-                  />
-                </View>
-
-                <View style={styles.modeHint}>
-                  <MaterialCommunityIcons color={colors.sky} name="information-outline" size={18} />
-                  <Text style={styles.modeHintText}>Next, you will choose whether to sign in or create your private account.</Text>
+                  <ThemeToggle onValueChange={setThemeMode} value={themeMode} />
                 </View>
 
                 <Button mode="contained" onPress={completePreferences} style={styles.primary}>
@@ -363,6 +345,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       <KeyboardAvoidingView behavior={keyboardBehavior} style={styles.screen}>
         <ScrollView contentContainerStyle={[styles.container, styles.welcomeContainer]} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
           <View style={styles.welcomeHero}>
+            <StepIndicator current={2} total={2} />
             <AnimatedScreen delay={40} style={styles.brandRow}>
               <View style={styles.brandMark}>
                 <MaterialCommunityIcons color={colors.sky} name="wallet-outline" size={24} />
@@ -397,7 +380,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 </Button>
                 <View style={styles.trustRow}>
                   <MaterialCommunityIcons color={colors.sky} name="shield-check-outline" size={18} />
-                  <Text style={styles.trustText}>Your data stays tied to your private Supabase account.</Text>
+                  <Text style={styles.trustText}>Your data stays private and secure.</Text>
                 </View>
               </Card.Content>
             </Card>
@@ -539,7 +522,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
             </Button>
             <View style={styles.trustRow}>
               <MaterialCommunityIcons color={colors.sky} name="shield-check-outline" size={18} />
-              <Text style={styles.trustText}>Private sign-in by Supabase.</Text>
+              <Text style={styles.trustText}>Private and secure sign-in.</Text>
             </View>
           </Card.Content>
         </Card>
@@ -569,14 +552,31 @@ function AuthModeHint({ mode }: { mode: 'login' | 'signup' }) {
   );
 }
 
+function StepIndicator({ current, total }: { current: number; total: number }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  return (
+    <View style={styles.stepRow}>
+      <Text style={styles.stepText}>
+        Step {current} of {total}
+      </Text>
+      <View style={styles.stepDots}>
+        {Array.from({ length: total }).map((_, index) => (
+          <View key={index} style={[styles.stepDot, index + 1 <= current ? styles.stepDotActive : null]} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function AuthMotionPreview() {
-  const { formatMoney } = useCurrency();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const items = [
-    { detail: `+${formatMoney(85000)}`, icon: 'cash-plus', label: 'Income', tone: colors.emerald },
-    { detail: 'Food -18%', icon: 'receipt-text-outline', label: 'Spend', tone: colors.coral },
-    { detail: '74/100', icon: 'chart-line', label: 'Score', tone: colors.violet },
+    { detail: 'Track money in', icon: 'cash-plus', label: 'Income', tone: colors.emerald },
+    { detail: 'Spot spending', icon: 'receipt-text-outline', label: 'Spend', tone: colors.coral },
+    { detail: 'See patterns', icon: 'chart-line', label: 'Score', tone: colors.violet },
   ] as const;
 
   return (
@@ -679,6 +679,33 @@ function createStyles(colors: AppPalette, compactScreen = false) {
     color: colors.muted,
     fontSize: compactScreen ? 14 : 15,
     lineHeight: compactScreen ? 20 : 22,
+  },
+  stepDot: {
+    backgroundColor: colors.border,
+    borderRadius: 999,
+    height: 7,
+    width: 7,
+  },
+  stepDotActive: {
+    backgroundColor: colors.sky,
+    width: 18,
+  },
+  stepDots: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5,
+  },
+  stepRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  stepText: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0,
+    textTransform: 'uppercase',
   },
   card: {
     backgroundColor: colors.surface,

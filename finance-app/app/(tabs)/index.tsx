@@ -33,6 +33,7 @@ import { useAuth } from '@/contexts/auth';
 import { useCurrency } from '@/contexts/currency';
 import { useAppTheme } from '@/contexts/theme';
 import { useFloatingToast } from '@/contexts/toast';
+import { formatCategoryLabel } from '@/services/formatters';
 import { getQueuedTransactions, getSyncHistory, SyncHistoryItem, syncQueuedTransactions } from '@/services/offlineQueue';
 import { defaultQuickAddShortcuts, getQuickAddShortcuts, QuickAddShortcut } from '@/services/quickAddShortcuts';
 import { cacheDashboard, formatCachedAt, getCachedDashboard } from '@/services/resilience';
@@ -118,6 +119,7 @@ export default function DashboardScreen() {
   const [syncingQueue, setSyncingQueue] = useState(false);
   const [setupDismissed, setSetupDismissed] = useState(false);
   const [pendingBudgetDelete, setPendingBudgetDelete] = useState<string | null>(null);
+  const [signOutVisible, setSignOutVisible] = useState(false);
   const [pendingTransactionDelete, setPendingTransactionDelete] = useState<Transaction | null>(null);
   const lastAutoSyncCount = useRef(0);
   const [submittedFields, setSubmittedFields] = useState<Record<DashboardFormField, boolean>>({
@@ -423,7 +425,7 @@ export default function DashboardScreen() {
     return (
       <View style={styles.loadingScreen}>
         <Text style={styles.loadingTitle}>Preparing your dashboard</Text>
-        <Text style={styles.muted}>Syncing Vercel, Supabase, and your latest transactions.</Text>
+        <Text style={styles.muted}>Syncing your latest transactions and saved snapshot.</Text>
         <SkeletonList count={4} />
         <DelayedLoader label="Still loading your dashboard..." longLabel="Still working. Your connection or backend may be slow." />
       </View>
@@ -440,7 +442,14 @@ export default function DashboardScreen() {
           <Text style={styles.brand}>Finance Tracker</Text>
           <Text style={styles.title}>Welcome, {profileName}</Text>
         </AnimatedScreen>
-        <IconButton icon="logout" iconColor={colors.ink} mode="contained-tonal" onPress={signOut} size={20} />
+        <IconButton
+          accessibilityLabel="Sign out"
+          icon="logout"
+          iconColor={colors.ink}
+          mode="contained-tonal"
+          onPress={() => setSignOutVisible(true)}
+          size={20}
+        />
       </View>
 
       <Text style={styles.subtitle}>Here is your money snapshot for today.</Text>
@@ -491,6 +500,7 @@ export default function DashboardScreen() {
                 error={budgetCategoryValidation.message}
                 label="Category"
                 onChangeText={setBudgetCategory}
+                onBlur={() => markSubmitted('budgetCategory')}
                 placeholder="food"
                 required
                 style={styles.input}
@@ -501,13 +511,14 @@ export default function DashboardScreen() {
                 error={budgetAmountValidation.message}
                 label="Monthly limit"
                 onChangeText={setBudgetAmount}
+                onBlur={() => markSubmitted('budgetAmount')}
                 placeholder="15000"
                 required
                 style={styles.input}
                 touched={submittedFields.budgetAmount}
                 value={budgetAmount}
               />
-              <Button disabled={savingBudget} loading={savingBudget} mode="contained" onPress={submitBudget} style={styles.primaryButton}>
+              <Button disabled={savingBudget || !budgetFormIsValid} loading={savingBudget} mode="contained" onPress={submitBudget} style={styles.primaryButton}>
                 Save Budget
               </Button>
             </View>
@@ -627,7 +638,7 @@ export default function DashboardScreen() {
             destructive
             message={
               pendingTransactionDelete
-                ? `${pendingTransactionDelete.category} for ${formatMoney(pendingTransactionDelete.amount)} will be removed.`
+                ? `${formatCategoryLabel(pendingTransactionDelete.category)} for ${formatMoney(pendingTransactionDelete.amount)} will be removed.`
                 : ''
             }
             onCancel={() => setPendingTransactionDelete(null)}
@@ -638,11 +649,23 @@ export default function DashboardScreen() {
           <ConfirmDialog
             confirmLabel="Delete"
             destructive
-            message={pendingBudgetDelete ? `Remove the ${pendingBudgetDelete} monthly limit?` : ''}
+            message={pendingBudgetDelete ? `Remove the ${formatCategoryLabel(pendingBudgetDelete)} monthly limit?` : ''}
             onCancel={() => setPendingBudgetDelete(null)}
             onConfirm={confirmDeleteBudget}
             title="Delete budget?"
             visible={Boolean(pendingBudgetDelete)}
+          />
+          <ConfirmDialog
+            confirmLabel="Sign Out"
+            destructive
+            message="You will need to sign in again to access this workspace."
+            onCancel={() => setSignOutVisible(false)}
+            onConfirm={() => {
+              setSignOutVisible(false);
+              void signOut();
+            }}
+            title="Sign out?"
+            visible={signOutVisible}
           />
         </>
       ) : null}
@@ -1009,7 +1032,7 @@ function TransactionRow({ item, onDelete, onEdit }: { item: Transaction; onDelet
         <MaterialCommunityIcons color={item.type === 'income' ? colors.emerald : colors.coral} name={icon} size={20} />
       </View>
       <View style={styles.transactionText}>
-        <Text style={styles.listLabel}>{item.category}</Text>
+        <Text style={styles.listLabel}>{formatCategoryLabel(item.category)}</Text>
         <Text style={styles.muted}>{item.date}</Text>
       </View>
       <Text style={item.type === 'income' ? styles.income : styles.expense}>
@@ -1031,7 +1054,7 @@ function BudgetRow({ item, onDelete }: { item: BudgetStatus; onDelete: () => voi
   return (
     <View style={styles.budgetRow}>
       <View style={styles.rowBetween}>
-        <Text style={styles.listLabel}>{item.category}</Text>
+        <Text style={styles.listLabel}>{formatCategoryLabel(item.category)}</Text>
         <Text style={item.is_over ? styles.expense : styles.listValue}>
           {formatMoney(item.spent)} / {formatMoney(item.limit_amount)}
         </Text>

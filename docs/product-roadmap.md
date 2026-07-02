@@ -25,10 +25,11 @@ The goal is not just to make the app "work." The goal is to make it feel like a 
 
 ### Latest GitHub Checkpoint
 
-- `Fix P0 mobile UX issues`
+- `Implement P1 trust and consistency fixes`
 
 Recent important commits:
 
+- `Implement P1 trust and consistency fixes`
 - `Fix P0 mobile UX issues`
 - `Add onboarding preference setup`
 - `Add PKR and USD currency setting`
@@ -898,20 +899,45 @@ Potential commit:
 Fix P0 mobile UX issues
 ```
 
-### Step 2: P1 Consistency Batch
+### Step 2: P1 Trust And Consistency Batch
+
+Status: implemented in `Implement P1 trust and consistency fixes`.
+
+- Shared Theme and Currency toggles now power both onboarding and Settings, with Light, Dark, and System available consistently.
+- Home and Settings require confirmation before signing out.
+- Budget save is disabled until required fields are valid, with inline field errors on interaction.
+- Shortcut editing keeps inline validation visible and prevents saving invalid drafts.
+- Auth/onboarding copy no longer exposes infrastructure wording in the primary user journey.
+- Auth preview tiles use illustrative non-numeric labels instead of realistic account-like data.
+- Category labels are formatted for display while stored values remain lowercase for matching.
+
+Potential commit:
+
+```text
+Implement P1 trust and consistency fixes
+```
+
+### Step 3: Structure, Trust, And Density Pass
 
 Next:
 
-- Share the same Theme and Currency toggle components between onboarding and Settings.
-- Normalize category labels for display without changing stored lowercase matching values.
-- Audit required-field placeholders and helper text.
-- Route Add and Quick Add entry points into the active setup step while essentials are incomplete.
-- Remove realistic-looking numeric sample data from the pre-auth welcome preview.
+- Make helper copy state-based so returning users do not keep seeing onboarding-style explanations.
+- Collapse or remove the Home setup checklist once essentials are complete.
+- Group simple Settings preferences more tightly instead of using one large card per low-stakes control.
+- Flatten nested Quick Add shortcut editor surfaces.
+- Keep one strongest hero element per screen where the screen naturally has a hero.
 
-### Step 3: Emulator QA
+### Step 4: Emulator QA
 
 Check:
 
+- Onboarding and Settings show identical theme/currency choices, including System theme.
+- Sign-out from Home and Settings requires confirmation.
+- Budget save cannot submit empty required fields and shows inline errors after interaction.
+- Successful budget, shortcut, transaction, import, and setup actions show visible feedback.
+- Auth welcome preview does not look like real account data.
+- No primary user-facing auth/onboarding copy mentions backend infrastructure.
+- Category labels look human-readable in display surfaces.
 - Money fields show the selected currency prefix across Add, Quick Add, edit transaction, budgets, settings shortcuts, and AI market search.
 - AI usage cards read clearly at 0, partial, and max usage.
 - AI field counters are labeled and do not collide with the floating navigation.
@@ -929,7 +955,7 @@ Check:
 - Product search clearly says whether the backend/search provider is unavailable.
 - AI chat still works when limits/config allow it.
 
-### Step 3: Visual And Dashboard Follow-Ups
+### Step 5: Visual And Dashboard Follow-Ups
 
 - Verify the new light/dark palette feels like the same product in both modes.
 - Confirm old orange/brown branding is gone except for warnings/caution states.
@@ -939,7 +965,7 @@ Check:
   - Small chart that helps scanning without crowding Home.
 - Decide whether a category donut/bar chart belongs in Analysis after emulator review.
 
-### Step 4: EAS Preview Build
+### Step 6: EAS Preview Build
 
 - Create a fresh Android preview APK after emulator QA passes.
 - Install on phone.

@@ -10,6 +10,7 @@ import { AppPalette, radii, spacing } from '@/constants/theme';
 import { useCurrency } from '@/contexts/currency';
 import { useAppTheme } from '@/contexts/theme';
 import { Dashboard, InsightCard, Opportunity, getDashboard } from '@/services/api';
+import { formatCategoryLabel } from '@/services/formatters';
 
 export default function AnalysisScreen() {
   const { formatMoney } = useCurrency();
@@ -132,7 +133,7 @@ export default function AnalysisScreen() {
               <View style={styles.categoryList}>
                 {dashboard.top_categories.slice(0, 5).map(([category, amount]) => (
                   <View key={category} style={styles.categoryRow}>
-                    <Text style={styles.listLabel}>{category}</Text>
+                    <Text style={styles.listLabel}>{formatCategoryLabel(category)}</Text>
                     <Text style={styles.listValue}>{formatMoney(amount)}</Text>
                   </View>
                 ))}

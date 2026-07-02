@@ -27,6 +27,7 @@ import {
 import { useCurrency } from '@/contexts/currency';
 import { useFloatingToast } from '@/contexts/toast';
 import { AppApiError, MarketSearchAnswer, ReceiptScanResult, addTransaction, scanReceipt, searchMarket } from '@/services/api';
+import { formatCategoryLabel } from '@/services/formatters';
 import { isLikelyNetworkError, queueTransaction } from '@/services/offlineQueue';
 
 const today = new Date().toISOString().slice(0, 10);
@@ -109,7 +110,7 @@ export default function AddTransactionScreen() {
       await addTransaction(transaction);
       triggerSuccess();
       showToast('Transaction added');
-      setLastSaved(`${type === 'income' ? 'Income' : 'Expense'} saved: ${category.trim()} - ${formatMoney(parsedAmount)}`);
+      setLastSaved(`${type === 'income' ? 'Income' : 'Expense'} saved: ${formatCategoryLabel(category)} - ${formatMoney(parsedAmount)}`);
       resetForm();
     } catch (err) {
       if (isLikelyNetworkError(err)) {
@@ -122,7 +123,7 @@ export default function AddTransactionScreen() {
         });
         triggerSuccess();
         showToast('Transaction saved offline');
-        setLastSaved(`Saved offline: ${category.trim()} - ${formatMoney(parsedAmount)}. It will sync when the API is reachable.`);
+        setLastSaved(`Saved offline: ${formatCategoryLabel(category)} - ${formatMoney(parsedAmount)}. It will sync when the API is reachable.`);
         resetForm();
         return;
       }
@@ -318,7 +319,7 @@ export default function AddTransactionScreen() {
                 selected={category === item}
                 onPress={() => setCategory(item)}
                 style={[styles.chip, category === item ? styles.chipSelected : null]}>
-                {item}
+                {formatCategoryLabel(item)}
               </Chip>
             ))}
           </View>
