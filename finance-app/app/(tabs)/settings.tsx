@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppPalette, radii, spacing } from '@/constants/theme';
+import { getFloatingTabBarBottomPadding } from '@/components/navigation/floating-tab-bar';
 import {
   AppErrorState,
   ConfirmDialog,
@@ -282,6 +283,7 @@ export default function SettingsScreen() {
             error={shortcutValidation.label}
             label="Shortcut label"
             onChangeText={(value) => updateShortcutDraft('label', value)}
+            placeholder="Food"
             required
             touched
             value={shortcutDraft.label}
@@ -291,6 +293,7 @@ export default function SettingsScreen() {
             error={shortcutValidation.category}
             label="Category"
             onChangeText={(value) => updateShortcutDraft('category', value)}
+            placeholder="food"
             required
             touched
             value={shortcutDraft.category}
@@ -308,6 +311,7 @@ export default function SettingsScreen() {
             helper="Optional amount prefilled when this shortcut is tapped."
             label="Default amount"
             onChangeText={(value) => updateShortcutDraft('defaultAmount', value)}
+            placeholder="500"
             touched={Boolean(shortcutDraft.defaultAmount)}
             value={shortcutDraft.defaultAmount}
           />
@@ -543,7 +547,7 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
       flexGrow: 1,
       gap: spacing.lg,
       padding: spacing.xl,
-      paddingBottom: Math.max(180, bottomInset + 164),
+      paddingBottom: getFloatingTabBarBottomPadding(bottomInset, 68, 180),
       paddingTop: 34,
     },
     sectionTitle: {

@@ -3,6 +3,7 @@ import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button, Card, Divider, TextInput } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/contexts/auth';
 import { useCurrency } from '@/contexts/currency';
@@ -46,8 +47,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const { colors, mode: themeMode, setMode: setThemeMode } = useAppTheme();
   const { currency, setCurrency } = useCurrency();
   const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const compactScreen = height < 720;
-  const styles = useMemo(() => createStyles(colors, compactScreen), [colors, compactScreen]);
+  const styles = useMemo(() => createStyles(colors, compactScreen, insets.top), [colors, compactScreen, insets.top]);
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [firstName, setFirstName] = useState('');
@@ -247,6 +249,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                     }}
                     onChangeText={setFirstName}
                     onFocus={() => setFocusedField('firstName')}
+                    placeholder="Shabaan"
                     required
                     style={styles.nameInput}
                     touched={shouldShow('firstName')}
@@ -261,6 +264,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                     }}
                     onChangeText={setLastName}
                     onFocus={() => setFocusedField('lastName')}
+                    placeholder="Akhtar"
                     required
                     style={styles.nameInput}
                     touched={shouldShow('lastName')}
@@ -462,6 +466,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
               }}
               onChangeText={setPassword}
               onFocus={() => setFocusedField('password')}
+              placeholder="Your password"
               required
               right={
                 <TextInput.Icon
@@ -485,6 +490,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                   }}
                   onChangeText={setFirstName}
                   onFocus={() => setFocusedField('firstName')}
+                  placeholder="Shabaan"
                   required
                   style={styles.nameInput}
                   touched={shouldShow('firstName')}
@@ -499,6 +505,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                   }}
                   onChangeText={setLastName}
                   onFocus={() => setFocusedField('lastName')}
+                  placeholder="Akhtar"
                   required
                   style={styles.nameInput}
                   touched={shouldShow('lastName')}
@@ -596,7 +603,7 @@ function AuthMotionPreview() {
   );
 }
 
-function createStyles(colors: AppPalette, compactScreen = false) {
+function createStyles(colors: AppPalette, compactScreen = false, topInset = 0) {
   return StyleSheet.create({
   activeLabel: {
     color: '#ffffff',
@@ -624,7 +631,7 @@ function createStyles(colors: AppPalette, compactScreen = false) {
     minHeight: '100%',
     padding: compactScreen ? 16 : 20,
     paddingBottom: compactScreen ? 20 : 34,
-    paddingTop: compactScreen ? 20 : 34,
+    paddingTop: Math.max(compactScreen ? 20 : 34, topInset + 12),
   },
   brand: {
     color: colors.sky,

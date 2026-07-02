@@ -18,6 +18,7 @@ import {
   validateAmount,
   validateMaxLength,
 } from '@/components/ux';
+import { getFloatingTabBarBottomPadding } from '@/components/navigation/floating-tab-bar';
 import { useAppTheme } from '@/contexts/theme';
 import { useCurrency } from '@/contexts/currency';
 import { AiLimitStatus, AiLimits, AppApiError, MarketSearchAnswer, askAi, getAiLimits, searchMarket } from '@/services/api';
@@ -506,9 +507,10 @@ function LimitCard({ label, status }: { label: string; status: AiLimitStatus }) 
     <View style={[styles.limitCard, isEmpty ? styles.limitCardEmpty : null]}>
       <View style={styles.limitRow}>
         <Text style={styles.limitLabel}>{label}</Text>
-        <Text style={[styles.limitCount, isEmpty ? styles.limitCountEmpty : null]}>
-          Remaining {status.remaining}/{status.limit}
-        </Text>
+        <View style={styles.limitCountWrap}>
+          <Text style={[styles.limitCountLabel, isEmpty ? styles.limitCountEmpty : null]}>Remaining</Text>
+          <Text style={[styles.limitCount, isEmpty ? styles.limitCountEmpty : null]}>{status.remaining}/{status.limit}</Text>
+        </View>
       </View>
       <View style={styles.limitTrack}>
         <View style={[styles.limitFill, { backgroundColor: isEmpty ? colors.coral : colors.sky, width: `${usedRatio * 100}%` }]} />
@@ -613,7 +615,7 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
       backgroundColor: colors.background,
       gap: spacing.lg,
       padding: spacing.lg,
-      paddingBottom: Math.max(220, bottomInset + 190),
+      paddingBottom: getFloatingTabBarBottomPadding(bottomInset, 94, 220),
     },
     confidencePill: {
       backgroundColor: colors.violetSoft,
@@ -664,9 +666,19 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     },
     limitCount: {
       color: colors.sky,
-      fontSize: 12,
+      fontSize: 16,
       fontWeight: '900',
-      lineHeight: 16,
+      lineHeight: 19,
+    },
+    limitCountLabel: {
+      color: colors.sky,
+      fontSize: 11,
+      fontWeight: '900',
+      lineHeight: 13,
+    },
+    limitCountWrap: {
+      alignItems: 'flex-start',
+      gap: 1,
     },
     limitCountEmpty: {
       color: colors.coral,
@@ -700,7 +712,7 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     },
     limitRow: {
       alignItems: 'flex-start',
-      gap: 2,
+      gap: 4,
     },
     limitTrack: {
       backgroundColor: colors.surface2,

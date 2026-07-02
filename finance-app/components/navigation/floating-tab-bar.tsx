@@ -25,6 +25,10 @@ const routeLabels: Record<string, string> = {
   settings: 'Settings',
 };
 
+export function getFloatingTabBarBottomPadding(bottomInset = 0, extra = 36, minimum = 132) {
+  return Math.max(minimum, bottomInset + 96 + extra);
+}
+
 export function FloatingTabBar({ descriptors, navigation, state }: BottomTabBarProps) {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();

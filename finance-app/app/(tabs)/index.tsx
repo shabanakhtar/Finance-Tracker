@@ -29,6 +29,7 @@ import {
   validateMaxLength,
   useConnectionStatus,
 } from '@/components/ux';
+import { getFloatingTabBarBottomPadding } from '@/components/navigation/floating-tab-bar';
 import { useAuth } from '@/contexts/auth';
 import { useCurrency } from '@/contexts/currency';
 import { useAppTheme } from '@/contexts/theme';
@@ -548,6 +549,7 @@ export default function DashboardScreen() {
                   error={editAmountValidation.message}
                   label="Amount"
                   onChangeText={(value) => setEditing({ ...editing, amount: value })}
+                  placeholder="5000"
                   required
                   style={styles.input}
                   touched={submittedFields.editAmount}
@@ -558,6 +560,7 @@ export default function DashboardScreen() {
                   error={editCategoryValidation.message}
                   label="Category"
                   onChangeText={(value) => setEditing({ ...editing, category: value })}
+                  placeholder="food"
                   required
                   style={styles.input}
                   touched={submittedFields.editCategory}
@@ -568,6 +571,7 @@ export default function DashboardScreen() {
                   keyboardType="numbers-and-punctuation"
                   label="Date"
                   onChangeText={(value) => setEditing({ ...editing, date: value })}
+                  placeholder="YYYY-MM-DD"
                   required
                   style={styles.input}
                   touched={submittedFields.editDate}
@@ -1300,7 +1304,7 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     backgroundColor: colors.background,
     gap: 16,
     padding: 20,
-    paddingBottom: Math.max(172, bottomInset + 156),
+    paddingBottom: getFloatingTabBarBottomPadding(bottomInset, 60, 172),
   },
   deleteText: {
     color: colors.coral,

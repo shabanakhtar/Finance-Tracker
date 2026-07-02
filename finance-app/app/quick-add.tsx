@@ -6,6 +6,7 @@ import { Button, Chip, SegmentedButtons } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppPalette, spacing } from '@/constants/theme';
+import { getFloatingTabBarBottomPadding } from '@/components/navigation/floating-tab-bar';
 import {
   CharacterCounter,
   ConnectionNotice,
@@ -211,6 +212,7 @@ export default function QuickAddScreen() {
             label="Custom amount"
             onBlur={() => markTouched('amount')}
             onChangeText={setAmount}
+            placeholder="500"
             required
             touched={shouldShow('amount')}
             value={amount}
@@ -243,6 +245,7 @@ export default function QuickAddScreen() {
             label="Custom category"
             onBlur={() => markTouched('category')}
             onChangeText={setCategory}
+            placeholder="food"
             required
             touched={shouldShow('category')}
             value={category}
@@ -256,6 +259,7 @@ export default function QuickAddScreen() {
             label="Date"
             onBlur={() => markTouched('date')}
             onChangeText={setDate}
+            placeholder="YYYY-MM-DD"
             required
             touched={shouldShow('date')}
             value={date}
@@ -352,7 +356,7 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
     container: {
       gap: spacing.lg,
       padding: spacing.xl,
-      paddingBottom: Math.max(spacing.xxl, bottomInset + spacing.xxl),
+      paddingBottom: getFloatingTabBarBottomPadding(bottomInset, 36, 132),
     },
     eyebrow: {
       color: colors.sky,

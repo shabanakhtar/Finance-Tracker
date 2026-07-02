@@ -6,6 +6,7 @@ This is the simplified list of what is still left. Completed P0 and P1 work has 
 
 Check these in the Android emulator:
 
+- Auth welcome, sign-in, create-account, and profile-completion screens start below the status bar.
 - Onboarding and Settings show the same theme and currency choices.
 - Sign-out confirmation appears on Home and Settings.
 - Budget save blocks empty required fields and shows inline errors.
@@ -14,8 +15,9 @@ Check these in the Android emulator:
 - Auth/onboarding copy does not mention backend infrastructure.
 - Category labels look clean and human-readable.
 - Money fields show the selected PKR/USD prefix everywhere.
-- AI usage cards read clearly at zero, partial, and max usage.
+- AI usage cards read clearly at zero, partial, and max usage without text overlap.
 - AI counters stay visible and do not collide with navigation.
+- Floating navigation does not cover content on Home, Analysis, Add, Quick Add, AI, or Settings.
 - Login and signup still work.
 - First-run setup appears after login when essentials are unfinished.
 - Financial Score explanation opens correctly.

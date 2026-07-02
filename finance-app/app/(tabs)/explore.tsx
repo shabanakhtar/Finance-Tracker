@@ -7,6 +7,7 @@ import { Button, Chip, SegmentedButtons, TextInput } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppPalette } from '@/constants/theme';
+import { getFloatingTabBarBottomPadding } from '@/components/navigation/floating-tab-bar';
 import { useAppTheme } from '@/contexts/theme';
 import {
   CharacterCounter,
@@ -483,7 +484,7 @@ function createStyles(colors: AppPalette, bottomInset = 0) {
   container: {
     gap: 16,
     padding: 20,
-    paddingBottom: Math.max(132, bottomInset + 120),
+    paddingBottom: getFloatingTabBarBottomPadding(bottomInset, 24, 132),
     paddingTop: 32,
   },
   header: {

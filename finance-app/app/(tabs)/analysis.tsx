@@ -6,6 +6,7 @@ import { Button, Card, Chip, Dialog, Portal } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedCard, AnimatedProgressBar, AppErrorState, EmptyState, SkeletonList } from '@/components/ux';
+import { getFloatingTabBarBottomPadding } from '@/components/navigation/floating-tab-bar';
 import { AppPalette, radii, spacing } from '@/constants/theme';
 import { useCurrency } from '@/contexts/currency';
 import { useAppTheme } from '@/contexts/theme';
@@ -403,7 +404,7 @@ function createStyles(colors: AppPalette, bottomInset: number) {
       backgroundColor: colors.background,
       gap: spacing.lg,
       padding: spacing.xl,
-      paddingBottom: Math.max(124, bottomInset + 112),
+      paddingBottom: getFloatingTabBarBottomPadding(bottomInset, 16, 124),
       paddingTop: 34,
     },
     detail: {
