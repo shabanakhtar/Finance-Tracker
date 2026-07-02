@@ -17,7 +17,7 @@
         "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#07111F",
+        "backgroundColor": "#F8E5D6",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -44,7 +44,7 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#F7F3EA",
+          "backgroundColor": "#F8E5D6",
           "dark": {
             "backgroundColor": "#07111F"
           }
